@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   Bell,
+  ChevronDown,
   Heart,
+  MapPin,
   Menu,
   Moon,
   Search,
@@ -18,233 +20,450 @@ import {
 import { useStore } from "@/components/providers";
 import { categories, products } from "@/lib/data";
 import { Badge } from "@/components/ui";
-import { cn } from "@/lib/format";
 
 export function Header() {
-  const { mode, setMode, theme, toggleTheme, cart, wishlist, notifications, compare, user } = useStore();
+  const {
+    theme,
+    toggleTheme,
+    cart,
+    wishlist,
+    notifications,
+    compare,
+    user,
+  } = useStore();
+
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [cats, setCats] = useState(false);
   const [notes, setNotes] = useState(false);
+
   const router = useRouter();
-  const suggestions = products.filter((p) =>
-    q.length > 1 ? p.name.toLowerCase().includes(q.toLowerCase()) : false,
-  ).slice(0, 4);
+
+  const suggestions = products
+    .filter((p) =>
+      q.length > 1
+        ? p.name.toLowerCase().includes(q.toLowerCase())
+        : false,
+    )
+    .slice(0, 4);
+
+  const cartCount = cart.reduce((n, i) => n + i.qty, 0);
+
+  function submitSearch(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!q.trim()) {
+      router.push("/products");
+      return;
+    }
+
+    router.push(`/products?q=${encodeURIComponent(q.trim())}`);
+  }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur">
+      {/* Top promise bar */}
       <div className="bg-brand text-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-1.5 text-xs">
-          <p>Fresh local groceries · Compare sellers · UPI, cards & cash on delivery</p>
+        <div className="mx-auto flex max-w-7xl items-center justify-center px-4 py-2 text-xs sm:justify-between">
+          <p className="font-medium">
+            Fresh groceries • Low prices • Delivered within a day
+          </p>
+
           <div className="hidden items-center gap-4 sm:flex">
-            <Link href="/sell" className="hover:underline">
-              Sell on Nexora
-            </Link>
-            <Link href="/track/NXR-240918-1842" className="hover:underline">
+            <Link
+              href="/track/NXR-240918-1842"
+              className="text-white/80 transition hover:text-white"
+            >
               Track order
             </Link>
           </div>
         </div>
       </div>
-      <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3">
-        <button className="lg:hidden" aria-label="Menu" onClick={() => setOpen(true)}>
-          <Menu />
-        </button>
-        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-white">N</span>
-          <span className="text-lg">Nexora</span>
-        </Link>
-        <nav className="ml-4 hidden items-center gap-1 lg:flex">
+
+      {/* Main header */}
+      <div className="mx-auto max-w-7xl px-4">
+        <div className="flex min-h-[68px] items-center gap-3">
+          {/* Mobile menu */}
           <button
-            className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-surface-2"
-            onClick={() => setCats((v) => !v)}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl hover:bg-surface-2 lg:hidden"
+            aria-label="Open menu"
+            onClick={() => setOpen(true)}
           >
-            Categories
+            <Menu size={21} />
           </button>
+
+          {/* Logo */}
           <Link
-            href="/b2b"
-            onClick={() => setMode("b2b")}
-            className={cn(
-              "rounded-lg px-3 py-2 text-sm font-medium hover:bg-surface-2",
-              mode === "b2b" && "bg-brand-soft text-brand",
-            )}
+            href="/"
+            className="flex shrink-0 items-center gap-2.5"
           >
-            B2B
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand text-lg font-bold text-white shadow-sm">
+              N
+            </span>
+
+            <span className="hidden text-xl font-bold tracking-tight sm:block">
+              Nexora
+            </span>
           </Link>
-          <Link href="/deals" className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-surface-2">
-            Deals
-          </Link>
-          <Link href="/sell" className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-surface-2">
-            Sell
-          </Link>
-        </nav>
-        <form
-          className="relative mx-2 hidden flex-1 md:block"
-          onSubmit={(e) => {
-            e.preventDefault();
-            router.push(`/products?q=${encodeURIComponent(q)}`);
-          }}
-        >
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search fruits, vegetables, groceries…"
-            className="h-11 w-full rounded-xl border border-line bg-bg pl-10 pr-24 text-sm"
-            aria-label="Search fruits, vegetables and groceries"
-          />
-          <span className="absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-lg bg-ai-soft px-2 py-1 text-[11px] font-semibold text-ai sm:inline-flex">
-            <Sparkles size={12} /> Smart search
-          </span>
-          {suggestions.length > 0 ? (
-            <ul className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-line bg-surface shadow-[var(--shadow)]">
-              {suggestions.map((s) => (
-                <li key={s.id}>
-                  <Link
-                    href={`/products/${s.id}`}
-                    className="block px-3 py-2 text-sm hover:bg-surface-2"
-                  >
-                    {s.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </form>
-        <div className="ml-auto flex items-center gap-1">
-          <button
-            className="hidden rounded-lg px-2 py-2 text-xs font-semibold sm:inline"
-            onClick={() => setMode(mode === "b2c" ? "b2b" : "b2c")}
-            aria-pressed={mode === "b2b"}
-          >
-            {mode === "b2b" ? "Business" : "Personal"}
+
+          {/* Delivery location */}
+          <button className="hidden items-center gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-surface-2 lg:flex">
+            <MapPin size={18} className="text-brand" />
+
+            <div className="leading-tight">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted">
+                Deliver to
+              </p>
+              <p className="max-w-28 truncate text-xs font-semibold">
+                Your location
+              </p>
+            </div>
+
+            <ChevronDown size={14} className="text-muted" />
           </button>
-          <button aria-label="Toggle theme" className="grid h-10 w-10 place-items-center rounded-xl hover:bg-surface-2" onClick={toggleTheme}>
-            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-          <Link href="/account/wishlist" className="relative grid h-10 w-10 place-items-center rounded-xl hover:bg-surface-2" aria-label="Wishlist">
-            <Heart size={18} />
-            {wishlist.length ? (
-              <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-cta px-1 text-[10px] text-white">
-                {wishlist.length}
-              </span>
-            ) : null}
-          </Link>
-          <Link href="/cart" className="relative grid h-10 w-10 place-items-center rounded-xl hover:bg-surface-2" aria-label="Cart">
-            <ShoppingBag size={18} />
-            {cart.length ? (
-              <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-cta px-1 text-[10px] text-white">
-                {cart.reduce((n, i) => n + i.qty, 0)}
-              </span>
-            ) : null}
-          </Link>
-          <div className="relative">
+
+          {/* Categories */}
+          <div className="relative hidden lg:block">
             <button
-              aria-label="Notifications"
-              className="relative grid h-10 w-10 place-items-center rounded-xl hover:bg-surface-2"
-              onClick={() => setNotes((v) => !v)}
+              className="flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-surface-2"
+              onClick={() => setCats((v) => !v)}
             >
-              <Bell size={18} />
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-cta" />
+              Categories
+              <ChevronDown
+                size={15}
+                className={cats ? "rotate-180 transition" : "transition"}
+              />
             </button>
-            {notes ? (
-              <div className="absolute right-0 z-30 mt-2 w-72 rounded-2xl border border-line bg-surface p-2 shadow-[var(--shadow)]">
-                {notifications.map((n) => (
-                  <div key={n.id} className="rounded-xl px-3 py-2 hover:bg-surface-2">
-                    <p className="text-sm font-medium">{n.title}</p>
-                    <p className="text-xs text-muted">{n.body}</p>
-                    <p className="text-[11px] text-muted">{n.time}</p>
-                  </div>
+          </div>
+
+          {/* Search */}
+          <form
+            className="relative ml-auto hidden flex-1 md:block"
+            onSubmit={submitSearch}
+          >
+            <Search
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted"
+              size={18}
+            />
+
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search fruits, vegetables, groceries..."
+              className="h-11 w-full rounded-xl border border-line bg-bg pl-11 pr-28 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/10"
+              aria-label="Search fruits, vegetables and groceries"
+            />
+
+            <span className="absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-lg bg-ai-soft px-2 py-1 text-[11px] font-semibold text-ai lg:inline-flex">
+              <Sparkles size={12} />
+              Smart search
+            </span>
+
+            {suggestions.length > 0 && (
+              <ul className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-line bg-surface p-1 shadow-[var(--shadow)]">
+                {suggestions.map((product) => (
+                  <li key={product.id}>
+                    <Link
+                      href={`/products/${product.id}`}
+                      className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition hover:bg-surface-2"
+                      onClick={() => setQ("")}
+                    >
+                      <Search size={15} className="text-muted" />
+                      <span>{product.name}</span>
+                    </Link>
+                  </li>
                 ))}
-              </div>
-            ) : null}
-          </div>
-          {user ? (
-            <Link href={user.role === "vendor" ? "/seller" : user.role === "admin" ? "/admin" : "/account"} className="flex h-10 items-center gap-2 rounded-xl px-2 hover:bg-surface-2" aria-label="Profile">
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-soft text-brand"><User size={17} /></span>
-              <span className="hidden max-w-28 truncate text-sm font-semibold sm:block">{user.name}</span>
+              </ul>
+            )}
+          </form>
+
+          {/* Actions */}
+          <div className="ml-auto flex items-center gap-0.5 md:ml-2">
+            {/* Theme */}
+            <button
+              aria-label="Toggle theme"
+              className="hidden h-10 w-10 place-items-center rounded-xl transition hover:bg-surface-2 sm:grid"
+              onClick={toggleTheme}
+            >
+              {theme === "dark" ? (
+                <Sun size={18} />
+              ) : (
+                <Moon size={18} />
+              )}
+            </button>
+
+            {/* Wishlist */}
+            <Link
+              href="/account/wishlist"
+              className="relative grid h-10 w-10 place-items-center rounded-xl transition hover:bg-surface-2"
+              aria-label="Wishlist"
+            >
+              <Heart size={19} />
+
+              {wishlist.length > 0 && (
+                <span className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-cta px-1 text-[10px] font-bold text-white">
+                  {wishlist.length}
+                </span>
+              )}
             </Link>
-          ) : (
-            <Link href="/login" className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white">Log in</Link>
-          )}
-        </div>
-      </div>
-      {cats ? (
-        <div className="border-t border-line bg-surface">
-          <div className="mx-auto grid max-w-7xl grid-cols-2 gap-2 px-4 py-4 sm:grid-cols-4">
-            {categories.map((c) => (
-              <Link
-                key={c.slug}
-                href={`/products?category=${c.slug}`}
-                className="rounded-xl border border-line px-3 py-3 text-sm hover:bg-surface-2"
-                onClick={() => setCats(false)}
+
+            {/* Notifications */}
+            <div className="relative">
+              <button
+                aria-label="Notifications"
+                className="relative grid h-10 w-10 place-items-center rounded-xl transition hover:bg-surface-2"
+                onClick={() => setNotes((v) => !v)}
               >
-                {c.emoji} {c.name}
+                <Bell size={19} />
+
+                {notifications.length > 0 && (
+                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-cta" />
+                )}
+              </button>
+
+              {notes && (
+                <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-2xl border border-line bg-surface shadow-[var(--shadow)]">
+                  <div className="border-b border-line px-4 py-3">
+                    <p className="font-semibold">Notifications</p>
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto p-2">
+                    {notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        className="rounded-xl px-3 py-3 transition hover:bg-surface-2"
+                      >
+                        <p className="text-sm font-semibold">{n.title}</p>
+                        <p className="mt-0.5 text-xs leading-5 text-muted">
+                          {n.body}
+                        </p>
+                        <p className="mt-1 text-[11px] text-muted">
+                          {n.time}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Cart */}
+            <Link
+              href="/cart"
+              className="relative grid h-10 w-10 place-items-center rounded-xl transition hover:bg-surface-2"
+              aria-label="Shopping cart"
+            >
+              <ShoppingBag size={20} />
+
+              {cartCount > 0 && (
+                <span className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-cta px-1 text-[10px] font-bold text-white">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+
+            {/* Profile */}
+            {user ? (
+              <Link
+                href="/account"
+                className="ml-1 flex h-10 items-center gap-2 rounded-xl px-1.5 transition hover:bg-surface-2"
+                aria-label="My account"
+              >
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-soft text-brand">
+                  <User size={17} />
+                </span>
+
+                <span className="hidden max-w-24 truncate text-sm font-semibold xl:block">
+                  {user.name}
+                </span>
               </Link>
-            ))}
+            ) : (
+              <Link
+                href="/login"
+                className="ml-1 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+              >
+                Log in
+              </Link>
+            )}
           </div>
         </div>
-      ) : null}
-      <form
-        className="px-4 pb-3 md:hidden"
-        onSubmit={(e) => {
-          e.preventDefault();
-          router.push(`/products?q=${encodeURIComponent(q)}`);
-        }}
-      >
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search Nexora"
-            className="h-11 w-full rounded-xl border border-line bg-bg pl-10 text-sm"
-          />
+
+        {/* Mobile search */}
+        <form
+          className="pb-3 md:hidden"
+          onSubmit={submitSearch}
+        >
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"
+              size={17}
+            />
+
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search fruits, vegetables & groceries"
+              className="h-11 w-full rounded-xl border border-line bg-bg pl-10 pr-4 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/10"
+              aria-label="Search groceries"
+            />
+          </div>
+        </form>
+      </div>
+
+      {/* Categories dropdown */}
+      {cats && (
+        <div className="border-t border-line bg-surface">
+          <div className="mx-auto max-w-7xl px-4 py-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+              {categories.map((category) => (
+                <Link
+                  key={category.slug}
+                  href={`/products?category=${category.slug}`}
+                  className="rounded-xl border border-line bg-bg px-3 py-3 transition hover:border-brand/30 hover:bg-brand-soft"
+                  onClick={() => setCats(false)}
+                >
+                  <span className="text-xl">{category.emoji}</span>
+                  <p className="mt-1 text-sm font-semibold">
+                    {category.name}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
-      </form>
-      {open ? (
-        <div className="fixed inset-0 z-50 bg-black/40 lg:hidden" onClick={() => setOpen(false)}>
+      )}
+
+      {/* Mobile menu */}
+      {open && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 lg:hidden"
+          onClick={() => setOpen(false)}
+        >
           <aside
-            className="h-full w-72 bg-surface p-4"
+            className="h-full w-[min(82vw,340px)] overflow-y-auto bg-surface p-5 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-4 flex items-center justify-between">
-              <strong>Menu</strong>
-              <button aria-label="Close" onClick={() => setOpen(false)}>
-                <X />
+            <div className="flex items-center justify-between border-b border-line pb-4">
+              <Link
+                href="/"
+                className="flex items-center gap-2"
+                onClick={() => setOpen(false)}
+              >
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand font-bold text-white">
+                  N
+                </span>
+                <span className="font-bold">Nexora</span>
+              </Link>
+
+              <button
+                aria-label="Close menu"
+                className="grid h-9 w-9 place-items-center rounded-xl hover:bg-surface-2"
+                onClick={() => setOpen(false)}
+              >
+                <X size={20} />
               </button>
             </div>
-            <div className="space-y-2 text-sm">
-              <Link href="/products" onClick={() => setOpen(false)} className="block rounded-lg px-2 py-2 hover:bg-surface-2">
-                Shop
+
+            {/* Delivery */}
+            <div className="mt-5 flex items-center gap-3 rounded-2xl bg-brand-soft p-4">
+              <MapPin size={20} className="text-brand" />
+
+              <div>
+                <p className="text-xs text-muted">Deliver to</p>
+                <p className="text-sm font-semibold">Your location</p>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-1">
+              <Link
+                href="/products"
+                onClick={() => setOpen(false)}
+                className="block rounded-xl px-3 py-3 text-sm font-semibold hover:bg-surface-2"
+              >
+                🛒 Shop groceries
               </Link>
-              <Link href="/b2b" onClick={() => setOpen(false)} className="block rounded-lg px-2 py-2 hover:bg-surface-2">
-                B2B dashboard
+
+              <Link
+                href="/deals"
+                onClick={() => setOpen(false)}
+                className="block rounded-xl px-3 py-3 text-sm font-semibold hover:bg-surface-2"
+              >
+                💰 Today's deals
               </Link>
-              <Link href="/deals" onClick={() => setOpen(false)} className="block rounded-lg px-2 py-2 hover:bg-surface-2">
-                Deals
+
+              <Link
+                href="/cart"
+                onClick={() => setOpen(false)}
+                className="block rounded-xl px-3 py-3 text-sm font-semibold hover:bg-surface-2"
+              >
+                🛍️ Cart {cartCount > 0 ? `(${cartCount})` : ""}
               </Link>
-              <Link href="/sell" onClick={() => setOpen(false)} className="block rounded-lg px-2 py-2 hover:bg-surface-2">
-                Sell
+
+              <Link
+                href="/account/wishlist"
+                onClick={() => setOpen(false)}
+                className="block rounded-xl px-3 py-3 text-sm font-semibold hover:bg-surface-2"
+              >
+                ❤️ Wishlist
               </Link>
-              {user?.role === "vendor" ? <Link href="/seller" onClick={() => setOpen(false)} className="block rounded-lg px-2 py-2 hover:bg-surface-2">Seller hub</Link> : null}
-              {user?.role === "admin" ? <Link href="/admin" onClick={() => setOpen(false)} className="block rounded-lg px-2 py-2 hover:bg-surface-2">Admin</Link> : null}
-              {compare.length ? (
-                <Link href="/compare" onClick={() => setOpen(false)} className="block rounded-lg px-2 py-2 hover:bg-surface-2">
-                  Compare ({compare.length})
+
+              <Link
+                href="/account"
+                onClick={() => setOpen(false)}
+                className="block rounded-xl px-3 py-3 text-sm font-semibold hover:bg-surface-2"
+              >
+                👤 My account
+              </Link>
+
+              {compare.length > 0 && (
+                <Link
+                  href="/compare"
+                  onClick={() => setOpen(false)}
+                  className="block rounded-xl px-3 py-3 text-sm font-semibold hover:bg-surface-2"
+                >
+                  ⚖️ Compare ({compare.length})
                 </Link>
-              ) : null}
+              )}
+            </div>
+
+            {/* Temporary testing access */}
+            <div className="mt-6 border-t border-line pt-5">
+              <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted">
+                Testing
+              </p>
+
+              <Link
+                href="/seller/register"
+                onClick={() => setOpen(false)}
+                className="mt-2 block rounded-xl px-3 py-2.5 text-sm text-muted hover:bg-surface-2"
+              >
+                Seller registration
+              </Link>
+
+              <Link
+                href="/admin"
+                onClick={() => setOpen(false)}
+                className="block rounded-xl px-3 py-2.5 text-sm text-muted hover:bg-surface-2"
+              >
+                Admin console
+              </Link>
             </div>
           </aside>
         </div>
-      ) : null}
-      {compare.length > 0 ? (
+      )}
+
+      {/* Compare bar */}
+      {compare.length > 0 && (
         <div className="border-t border-line bg-brand-soft px-4 py-2 text-center text-sm">
-          <Link href="/compare" className="font-medium text-brand">
-            Compare {compare.length} products <Badge tone="ai">AI comparison</Badge>
+          <Link
+            href="/compare"
+            className="font-semibold text-brand"
+          >
+            Compare {compare.length} products{" "}
+            <Badge tone="ai">AI comparison</Badge>
           </Link>
         </div>
-      ) : null}
+      )}
     </header>
   );
 }
@@ -253,45 +472,105 @@ export function Footer() {
   return (
     <footer className="mt-16 border-t border-line bg-surface">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Brand */}
         <div>
-          <p className="text-lg font-semibold">Nexora</p>
-          <p className="mt-2 text-sm text-muted">
-            A multi-vendor marketplace connecting customers and local grocery & fruit sellers.
+          <div className="flex items-center gap-2">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand font-bold text-white">
+              N
+            </span>
+            <p className="text-lg font-bold">Nexora</p>
+          </div>
+
+          <p className="mt-3 max-w-xs text-sm leading-6 text-muted">
+            Fresh groceries, everyday essentials and better prices —
+            delivered conveniently to your doorstep.
           </p>
         </div>
+
+        {/* Shop */}
         <div>
           <p className="font-semibold">Shop</p>
+
           <ul className="mt-3 space-y-2 text-sm text-muted">
             <li>
-              <Link href="/products">All products</Link>
+              <Link
+                href="/products"
+                className="hover:text-brand"
+              >
+                All groceries
+              </Link>
             </li>
             <li>
-              <Link href="/deals">Deals</Link>
+              <Link
+                href="/deals"
+                className="hover:text-brand"
+              >
+                Today's deals
+              </Link>
             </li>
             <li>
-              <Link href="/b2b">Business mode</Link>
+              <Link
+                href="/products?category=fruits"
+                className="hover:text-brand"
+              >
+                Fruits
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/products?category=vegetables"
+                className="hover:text-brand"
+              >
+                Vegetables
+              </Link>
             </li>
           </ul>
         </div>
+
+        {/* Help */}
         <div>
-          <p className="font-semibold">Partners</p>
+          <p className="font-semibold">Help</p>
+
           <ul className="mt-3 space-y-2 text-sm text-muted">
             <li>
-              <Link href="/seller/register">Become a seller</Link>
+              <Link href="/account/orders" className="hover:text-brand">
+                My orders
+              </Link>
             </li>
             <li>
-              <Link href="/seller">Seller dashboard</Link>
+              <Link href="/track/NXR-240918-1842" className="hover:text-brand">
+                Track delivery
+              </Link>
             </li>
             <li>
-              <Link href="/admin">Admin console</Link>
+              <Link href="/account/returns" className="hover:text-brand">
+                Returns
+              </Link>
+            </li>
+            <li>
+              <Link href="/account" className="hover:text-brand">
+                My account
+              </Link>
             </li>
           </ul>
         </div>
+
+        {/* Promise */}
         <div>
-          <p className="font-semibold">Trust</p>
-          <p className="mt-3 text-sm text-muted">
-            Simple checkout with UPI, cards and cash on delivery. Delivery and return rules can vary by seller.
-          </p>
+          <p className="font-semibold">Why Nexora?</p>
+
+          <div className="mt-3 space-y-3 text-sm text-muted">
+            <p>💰 Low prices</p>
+            <p>🥬 Fresh groceries</p>
+            <p>🚚 1-day delivery</p>
+            <p>💵 Cash on delivery</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-line">
+        <div className="mx-auto max-w-7xl px-4 py-5 text-center text-xs text-muted">
+          © 2026 Nexora. Fresh groceries made simple.
         </div>
       </div>
     </footer>
@@ -300,17 +579,32 @@ export function Footer() {
 
 export function BottomNav() {
   const { cart } = useStore();
+
+  const cartCount = cart.reduce((n, i) => n + i.qty, 0);
+
   const items = [
-    { href: "/", label: "Home" },
-    { href: "/products", label: "Search" },
-    { href: "/cart", label: `Cart (${cart.reduce((n, i) => n + i.qty, 0)})` },
-    { href: "/account", label: "Profile" },
+    { href: "/", label: "Home", icon: "⌂" },
+    { href: "/products", label: "Shop", icon: "⌕" },
+    { href: "/cart", label: "Cart", icon: "🛍" },
+    { href: "/account", label: "Account", icon: "◯" },
   ];
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 grid grid-cols-4 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
-      {items.map((i) => (
-        <Link key={i.href} href={i.href} className="py-3 text-center text-xs font-medium">
-          {i.label}
+    <nav className="fixed bottom-0 left-0 right-0 z-30 grid grid-cols-4 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+      {items.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          className="flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium text-muted transition hover:text-brand"
+        >
+          <span className="text-base leading-none">
+            {item.icon}
+          </span>
+          <span>
+            {item.label === "Cart" && cartCount > 0
+              ? `Cart (${cartCount})`
+              : item.label}
+          </span>
         </Link>
       ))}
     </nav>
