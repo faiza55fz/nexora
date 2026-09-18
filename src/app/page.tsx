@@ -1,15 +1,65 @@
 "use client";
 
 import Link from "next/link";
-import { categories, products } from "@/lib/data";
+import { categories, products as defaultProducts } from "@/lib/data";
 import { ProductCard } from "@/components/product-card";
 import { Badge, Button } from "@/components/ui";
 import { useStore } from "@/components/providers";
-
+import { useEffect, useState } from "react";
 export default function HomePage() {
 const { user } = useStore();
+type CatalogProduct = (typeof defaultProducts)[number] & {
+  active?: boolean;
+};
 
-const deals = products
+const [catalogProducts, setCatalogProducts] =
+  useState<CatalogProduct[]>(defaultProducts);
+
+useEffect(() => {
+  function loadCatalog() {
+    const saved = localStorage.getItem(
+      "nexora-admin-products",
+    );
+
+    if (!saved) {
+      setCatalogProducts(defaultProducts);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(saved);
+
+      if (Array.isArray(parsed)) {
+        setCatalogProducts(parsed);
+      } else {
+        setCatalogProducts(defaultProducts);
+      }
+    } catch {
+      setCatalogProducts(defaultProducts);
+    }
+  }
+
+  loadCatalog();
+
+  function handleStorage(event: StorageEvent) {
+    if (event.key === "nexora-admin-products") {
+      loadCatalog();
+    }
+  }
+
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener("focus", loadCatalog);
+
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener("focus", loadCatalog);
+  };
+}, []);
+
+const activeProducts = catalogProducts.filter(
+  (product) => product.active !== false,
+);
+const deals = activeProducts
 .filter(
 (p) =>
 p.mrp > p.price &&
@@ -17,11 +67,11 @@ p.mrp > p.price &&
 )
 .slice(0, 4);
 
-const best = [...products]
+const best = [...activeProducts]
 .sort((a, b) => b.sold - a.sold)
 .slice(0, 4);
 
-const recs = products
+const recs = activeProducts
 .filter((p) => p.aiReason)
 .slice(0, 3);
 
@@ -122,7 +172,7 @@ return ( <main className="min-h-screen bg-bg">
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {products.slice(0, 4).map((product) => (
+        {activeProducts.slice(0, 4).map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>

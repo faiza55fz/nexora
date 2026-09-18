@@ -1,9 +1,12 @@
 
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { products, reviews } from "@/lib/data";
+type Product = (typeof products)[number] & {
+  active?: boolean;
+};
 import { useStore } from "@/components/providers";
 import { Badge, Button, Card } from "@/components/ui";
 import { Stars } from "@/components/product-card";
@@ -26,12 +29,69 @@ export default function ProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const product = products.find((item) => item.id === id);
 
-  const { addToCart, toggleWishlist, wishlist } = useStore();
+const [product, setProduct] = useState<Product | null>(null);
+const [loading, setLoading] = useState(true);
 
-  const [qty, setQty] = useState(product?.moq ?? 1);
-  const [img, setImg] = useState(0);
+const { addToCart, toggleWishlist, wishlist } = useStore();
+
+const [qty, setQty] = useState(1);
+const [img, setImg] = useState(0);
+
+useEffect(() => {
+  const saved = localStorage.getItem(
+    "nexora-admin-products",
+  );
+
+  if (saved) {
+    try {
+      const savedProducts = JSON.parse(saved);
+
+      if (Array.isArray(savedProducts)) {
+        const found = savedProducts.find(
+          (item: Product) => item.id === id,
+        );
+
+        if (found) {
+          setProduct({
+            ...found,
+            active: found.active !== false,
+          });
+
+          setQty(found.moq ?? 1);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch {
+      // Fall back to the original catalog.
+    }
+  }
+
+  const fallback = products.find(
+    (item) => item.id === id,
+  );
+
+  if (fallback) {
+    setProduct({
+      ...fallback,
+      active: true,
+    });
+
+    setQty(fallback.moq ?? 1);
+  }
+
+  setLoading(false);
+}, [id]);
+if (loading) {
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-16 text-center">
+      <p className="text-sm text-muted">
+        Loading product…
+      </p>
+    </div>
+  );
+}
 
   if (!product) {
     return (
@@ -55,7 +115,32 @@ export default function ProductPage({
       </div>
     );
   }
+if (product.active === false) {
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-16 text-center">
+      <PackageCheck
+        className="mx-auto mb-4 text-muted"
+        size={42}
+      />
 
+      <h1 className="text-2xl font-semibold">
+        Product currently unavailable
+      </h1>
+
+      <p className="mt-2 text-sm text-muted">
+        This product is temporarily unavailable.
+        Please check back later or browse other groceries.
+      </p>
+
+      <Link
+        href="/products"
+        className="mt-5 inline-block font-semibold text-brand"
+      >
+        Continue shopping
+      </Link>
+    </div>
+  );
+}
   const off = discountPct(product.mrp, product.price);
 
   const productReviews = reviews.filter(

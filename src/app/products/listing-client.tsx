@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  ChevronDown,
   Filter,
   Search,
   SlidersHorizontal,
@@ -13,6 +12,10 @@ import { products, categories } from "@/lib/data";
 import { ProductCard } from "@/components/product-card";
 import { Select } from "@/components/ui";
 import { cn } from "@/lib/format";
+
+type Product = (typeof products)[number] &{
+  active?: boolean;
+};
 
 export default function ListingClient() {
   const params = useSearchParams();
@@ -26,21 +29,94 @@ export default function ListingClient() {
   const [max, setMax] = useState(100000);
   const [mobileFilters, setMobileFilters] = useState(false);
 
+  const [catalogProducts, setCatalogProducts] =
+    useState<Product[]>(products);
+
+  function loadCatalog() {
+    const saved = localStorage.getItem(
+      "nexora-admin-products",
+    );
+
+    if (!saved) {
+      setCatalogProducts(products);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(saved);
+
+      if (Array.isArray(parsed)) {
+        setCatalogProducts(parsed);
+      } else {
+        setCatalogProducts(products);
+      }
+    } catch {
+      setCatalogProducts(products);
+    }
+  }
+
+  useEffect(() => {
+    // Load admin catalog when the page opens.
+    loadCatalog();
+
+    // If admin changes the catalog in another tab/window,
+    // update this catalog automatically.
+    function handleStorage(event: StorageEvent) {
+      if (
+        event.key === "nexora-admin-products"
+      ) {
+        loadCatalog();
+      }
+    }
+
+    window.addEventListener(
+      "storage",
+      handleStorage,
+    );
+
+    // Also reload when returning to this page/tab.
+    function handleFocus() {
+      loadCatalog();
+    }
+
+    window.addEventListener(
+      "focus",
+      handleFocus,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "storage",
+        handleStorage,
+      );
+
+      window.removeEventListener(
+        "focus",
+        handleFocus,
+      );
+    };
+  }, []);
+
   const list = useMemo(() => {
-    let rows = products.filter((p) => {
+    let rows = catalogProducts.filter((p) => {
       const hay =
         `${p.name} ${p.brand} ${p.category}`.toLowerCase();
 
       const okQ =
-        !q || hay.includes(q.toLowerCase());
+        !q ||
+        hay.includes(q.toLowerCase());
 
       const okC =
-        cat === "all" || p.category === cat;
+        cat === "all" ||
+        p.category === cat;
+
+      const okActive =
+        p.active !== false;
 
       const okP =
-        p.price <= max;
+  p.price <= max;
 
-      return okQ && okC && okP;
+return okActive && okQ && okC && okP;
     });
 
     if (sort === "price-asc") {
@@ -62,10 +138,20 @@ export default function ListingClient() {
     }
 
     return rows;
-  }, [q, cat, sort, max]);
+  }, [
+    catalogProducts,
+    q,
+    cat,
+    sort,
+    max,
+  ]);
 
   const categoryList = [
-    { slug: "all", name: "All groceries", emoji: "🛒" },
+    {
+      slug: "all",
+      name: "All groceries",
+      emoji: "🛒",
+    },
     ...categories,
   ];
 
@@ -76,7 +162,9 @@ export default function ListingClient() {
   };
 
   const hasFilters =
-    q !== "" || cat !== "all" || max !== 100000;
+    q !== "" ||
+    cat !== "all" ||
+    max !== 100000;
 
   return (
     <main className="min-h-screen bg-bg">
@@ -107,6 +195,7 @@ export default function ListingClient() {
               <span className="font-semibold">
                 {list.length}
               </span>
+
               <span className="text-muted">
                 {list.length === 1
                   ? "product"
@@ -124,7 +213,9 @@ export default function ListingClient() {
             {categoryList.map((category) => (
               <button
                 key={category.slug}
-                onClick={() => setCat(category.slug)}
+                onClick={() =>
+                  setCat(category.slug)
+                }
                 className={cn(
                   "flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition",
                   cat === category.slug
@@ -132,8 +223,13 @@ export default function ListingClient() {
                     : "border-line bg-bg hover:border-brand/30 hover:bg-brand-soft",
                 )}
               >
-                <span>{category.emoji}</span>
-                <span>{category.name}</span>
+                <span>
+                  {category.emoji}
+                </span>
+
+                <span>
+                  {category.name}
+                </span>
               </button>
             ))}
           </div>
@@ -149,6 +245,7 @@ export default function ListingClient() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <SlidersHorizontal size={17} />
+
                   <h2 className="font-semibold">
                     Filters
                   </h2>
@@ -208,7 +305,10 @@ export default function ListingClient() {
                       )}
                     >
                       <span className="flex items-center gap-2">
-                        <span>{category.emoji}</span>
+                        <span>
+                          {category.emoji}
+                        </span>
+
                         {category.name}
                       </span>
 
@@ -228,7 +328,10 @@ export default function ListingClient() {
                   </p>
 
                   <span className="text-sm font-semibold">
-                    ₹{max.toLocaleString("en-IN")}
+                    ₹
+                    {max.toLocaleString(
+                      "en-IN",
+                    )}
                   </span>
                 </div>
 
@@ -238,7 +341,9 @@ export default function ListingClient() {
                   max={100000}
                   value={max}
                   onChange={(e) =>
-                    setMax(Number(e.target.value))
+                    setMax(
+                      Number(e.target.value),
+                    )
                   }
                   className="mt-4 w-full accent-[var(--brand)]"
                 />
@@ -271,7 +376,6 @@ export default function ListingClient() {
               </div>
 
               <div className="flex items-center gap-2">
-                {/* Mobile filter button */}
                 <button
                   onClick={() =>
                     setMobileFilters(true)
@@ -293,12 +397,15 @@ export default function ListingClient() {
                   <option value="relevance">
                     Recommended
                   </option>
+
                   <option value="price-asc">
                     Price: low to high
                   </option>
+
                   <option value="price-desc">
                     Price: high to low
                   </option>
+
                   <option value="rating">
                     Top rated
                   </option>
@@ -315,7 +422,9 @@ export default function ListingClient() {
 
                 {q && (
                   <button
-                    onClick={() => setQ("")}
+                    onClick={() =>
+                      setQ("")
+                    }
                     className="flex items-center gap-1 rounded-full bg-brand-soft px-3 py-1.5 text-xs font-medium text-brand"
                   >
                     Search: {q}
@@ -325,23 +434,32 @@ export default function ListingClient() {
 
                 {cat !== "all" && (
                   <button
-                    onClick={() => setCat("all")}
+                    onClick={() =>
+                      setCat("all")
+                    }
                     className="flex items-center gap-1 rounded-full bg-brand-soft px-3 py-1.5 text-xs font-medium text-brand"
                   >
                     {categoryList.find(
-                      (c) => c.slug === cat,
+                      (c) =>
+                        c.slug === cat,
                     )?.name ?? cat}
+
                     <X size={12} />
                   </button>
                 )}
 
                 {max !== 100000 && (
                   <button
-                    onClick={() => setMax(100000)}
+                    onClick={() =>
+                      setMax(100000)
+                    }
                     className="flex items-center gap-1 rounded-full bg-brand-soft px-3 py-1.5 text-xs font-medium text-brand"
                   >
                     Up to ₹
-                    {max.toLocaleString("en-IN")}
+                    {max.toLocaleString(
+                      "en-IN",
+                    )}
+
                     <X size={12} />
                   </button>
                 )}
@@ -351,7 +469,9 @@ export default function ListingClient() {
             {/* Empty state */}
             {list.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-line bg-surface px-6 py-16 text-center">
-                <div className="text-4xl">🛒</div>
+                <div className="text-4xl">
+                  🛒
+                </div>
 
                 <h2 className="mt-4 text-xl font-bold">
                   No groceries found
@@ -384,10 +504,14 @@ export default function ListingClient() {
             {list.length > 0 && (
               <div className="mt-10 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-line bg-surface p-4">
-                  <p className="text-lg">🥬</p>
+                  <p className="text-lg">
+                    🥬
+                  </p>
+
                   <p className="mt-2 text-sm font-semibold">
                     Fresh products
                   </p>
+
                   <p className="mt-1 text-xs leading-5 text-muted">
                     Fresh fruits, vegetables and daily
                     essentials.
@@ -395,20 +519,28 @@ export default function ListingClient() {
                 </div>
 
                 <div className="rounded-2xl border border-line bg-surface p-4">
-                  <p className="text-lg">💰</p>
+                  <p className="text-lg">
+                    💰
+                  </p>
+
                   <p className="mt-2 text-sm font-semibold">
                     Everyday prices
                   </p>
+
                   <p className="mt-1 text-xs leading-5 text-muted">
                     Shop essentials at competitive prices.
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-line bg-surface p-4">
-                  <p className="text-lg">🚚</p>
+                  <p className="text-lg">
+                    🚚
+                  </p>
+
                   <p className="mt-2 text-sm font-semibold">
                     1-day delivery
                   </p>
+
                   <p className="mt-1 text-xs leading-5 text-muted">
                     Convenient delivery to your doorstep.
                   </p>
@@ -423,15 +555,20 @@ export default function ListingClient() {
       {mobileFilters && (
         <div
           className="fixed inset-0 z-50 bg-black/40 lg:hidden"
-          onClick={() => setMobileFilters(false)}
+          onClick={() =>
+            setMobileFilters(false)
+          }
         >
           <aside
             className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-surface p-5 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) =>
+              e.stopPropagation()
+            }
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Filter size={18} />
+
                 <h2 className="text-lg font-bold">
                   Filters
                 </h2>
@@ -506,7 +643,10 @@ export default function ListingClient() {
                 </p>
 
                 <span className="text-sm font-semibold text-brand">
-                  ₹{max.toLocaleString("en-IN")}
+                  ₹
+                  {max.toLocaleString(
+                    "en-IN",
+                  )}
                 </span>
               </div>
 
@@ -516,7 +656,9 @@ export default function ListingClient() {
                 max={100000}
                 value={max}
                 onChange={(e) =>
-                  setMax(Number(e.target.value))
+                  setMax(
+                    Number(e.target.value),
+                  )
                 }
                 className="mt-4 w-full accent-[var(--brand)]"
               />
