@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useStore } from "@/components/providers";
 import { Badge, Button, Card } from "@/components/ui";
 
@@ -12,10 +13,18 @@ const links = [
 ];
 
 export default function AccountPage() {
+    const router = useRouter();
   const { user, logout } = useStore();
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="text-2xl font-semibold">Account</h1>
+  <button
+    onClick={() => router.back()}
+    className="mb-5 flex items-center gap-2 text-sm font-medium text-muted hover:text-brand"
+  >
+    ← Back
+  </button>
+
+  <h1 className="text-2xl font-semibold">Account</h1>
       <Card className="mt-6 p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -34,14 +43,10 @@ export default function AccountPage() {
         ))}
       </div>
       <div className="mt-6 flex flex-wrap gap-3">
-        <Link href="/b2b">
-          <Button>Open business dashboard</Button>
-        </Link>
-        <Link href="/sell">
-          <Button variant="outline">Become a seller</Button>
-        </Link>
-        <Button variant="outline" onClick={logout}>Log out</Button>
-      </div>
+  <Button variant="outline" onClick={logout}>
+    Log out
+  </Button>
+</div>
     </div>
   );
 }

@@ -235,3 +235,9 @@ export const rfqs = [
     status: "Reviewing",
   },
 ];
+export function getProduct(idOrSlug: string) {
+  return products.find(
+    (product) =>
+      product.id === idOrSlug || product.slug === idOrSlug,
+  );
+}

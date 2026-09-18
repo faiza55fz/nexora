@@ -453,17 +453,7 @@ export function Header() {
       )}
 
       {/* Compare bar */}
-      {compare.length > 0 && (
-        <div className="border-t border-line bg-brand-soft px-4 py-2 text-center text-sm">
-          <Link
-            href="/compare"
-            className="font-semibold text-brand"
-          >
-            Compare {compare.length} products{" "}
-            <Badge tone="ai">AI comparison</Badge>
-          </Link>
-        </div>
-      )}
+      
     </header>
   );
 }

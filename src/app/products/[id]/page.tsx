@@ -65,8 +65,15 @@ export default function ProductPage({
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 pb-16">
 
-      {/* Breadcrumb */}
-      <div className="mb-6 flex items-center gap-1 text-sm text-muted">
+  <Link
+    href="/products"
+    className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-brand"
+  >
+    ← Back to groceries
+  </Link>
+
+  {/* Breadcrumb */}
+  <div className="mb-6 flex items-center gap-1 text-sm text-muted">
         <Link href="/" className="hover:text-brand">
           Home
         </Link>

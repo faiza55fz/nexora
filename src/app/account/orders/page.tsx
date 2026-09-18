@@ -6,7 +6,15 @@ import { inr } from "@/lib/format";
 export default function OrdersPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
+      <Link
+        href="/account"
+        className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-brand"
+      >
+        ← Back to account
+      </Link>
+
       <h1 className="text-2xl font-semibold">Orders</h1>
+
       <div className="mt-6 space-y-3">
         {orders.map((o) => (
           <Card key={o.id} className="p-5">
@@ -17,8 +25,10 @@ export default function OrdersPage() {
                   {o.date} · {o.payment} · {o.status}
                 </p>
               </div>
+
               <p className="font-semibold">{inr(o.total)}</p>
             </div>
+
             <ul className="mt-3 text-sm text-muted">
               {o.items.map((i) => (
                 <li key={i.productId}>
@@ -26,7 +36,11 @@ export default function OrdersPage() {
                 </li>
               ))}
             </ul>
-            <Link href={`/track/${o.id}`} className="mt-3 inline-block text-sm font-semibold text-brand">
+
+            <Link
+              href={`/track/${o.id}`}
+              className="mt-3 inline-block text-sm font-semibold text-brand"
+            >
               Track
             </Link>
           </Card>
