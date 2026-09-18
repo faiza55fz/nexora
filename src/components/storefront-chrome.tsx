@@ -392,15 +392,14 @@ export function Header() {
       <Link
         href="/products"
         onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:scale-[0.98]"
-      >
-        🛒 Shop groceries
+       className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
+        >🛒 Shop groceries
       </Link>
 
       <Link
         href="/deals"
         onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:scale-[0.98]"
+        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
       >
         💰 Today's deals
       </Link>
@@ -408,7 +407,7 @@ export function Header() {
       <Link
         href="/cart"
         onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:scale-[0.98]"
+        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
       >
         🛍️ Cart {cartCount > 0 ? `(${cartCount})` : ""}
       </Link>
@@ -416,7 +415,7 @@ export function Header() {
       <Link
         href="/account/wishlist"
         onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:scale-[0.98]"
+        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
       >
         ❤️ Wishlist
       </Link>
@@ -424,7 +423,7 @@ export function Header() {
       <Link
         href="/account"
         onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:scale-[0.98]"
+        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
       >
         👤 My account
       </Link>
@@ -445,7 +444,7 @@ export function Header() {
       <Link
         href="/account/orders"
         onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:scale-[0.98]"
+        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
       >
         Track delivery
       </Link>
@@ -453,7 +452,7 @@ export function Header() {
       <Link
         href="/account/returns"
         onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:scale-[0.98]"
+        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
       >
         Returns
       </Link>
@@ -461,14 +460,14 @@ export function Header() {
       <Link
         href="/account"
         onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:scale-[0.98]"
+        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
       >
         My account
       </Link>
 
       <a
         href="tel:+91XXXXXXXXXX"
-        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:scale-[0.98]"
+        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
       >
         📞 Contact Nexora
       </a>

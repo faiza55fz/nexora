@@ -65,7 +65,6 @@ export const sellerNav = [
 
 export const adminNav = [
   { href: "/admin", label: "Overview" },
-  { href: "/admin/sellers", label: "Sellers" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/catalog", label: "Catalog" },
   { href: "/admin/orders", label: "Orders & payments" },
