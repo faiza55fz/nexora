@@ -61,7 +61,7 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-line bg-surface/90">
       {/* Top promise bar */}
       <div className="bg-brand text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-center px-4 py-2 text-xs sm:justify-between">
@@ -222,29 +222,29 @@ export function Header() {
               </button>
 
               {notes && (
-                <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-2xl border border-line bg-surface shadow-[var(--shadow)]">
-                  <div className="border-b border-line px-4 py-3">
-                    <p className="font-semibold">Notifications</p>
-                  </div>
+  <div className="fixed left-2 right-2 top-[136px] z-50 overflow-hidden rounded-2xl border border-line bg-surface shadow-[var(--shadow)] sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80">
+    <div className="border-b border-line px-4 py-3">
+      <p className="font-semibold">Notifications</p>
+    </div>
 
-                  <div className="max-h-80 overflow-y-auto p-2">
-                    {notifications.map((n) => (
-                      <div
-                        key={n.id}
-                        className="rounded-xl px-3 py-3 transition hover:bg-surface-2"
-                      >
-                        <p className="text-sm font-semibold">{n.title}</p>
-                        <p className="mt-0.5 text-xs leading-5 text-muted">
-                          {n.body}
-                        </p>
-                        <p className="mt-1 text-[11px] text-muted">
-                          {n.time}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+    <div className="max-h-80 overflow-y-auto p-2">
+      {notifications.map((n) => (
+        <div
+          key={n.id}
+          className="rounded-xl px-3 py-3 transition hover:bg-surface-2"
+        >
+          <p className="text-sm font-semibold">{n.title}</p>
+          <p className="mt-0.5 text-xs leading-5 text-muted">
+            {n.body}
+          </p>
+          <p className="mt-1 text-[11px] text-muted">
+            {n.time}
+          </p>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
             </div>
 
             {/* Cart */}
@@ -334,88 +334,172 @@ export function Header() {
       )}
 
       {/* Mobile menu */}
-      {open && (
-        <div
-          className="fixed inset-0 z-50 bg-black/40 lg:hidden"
-          onClick={() => setOpen(false)}
-        >
-          <aside
-            className="h-full w-[min(82vw,340px)] overflow-y-auto bg-surface p-5 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-line pb-4">
-              <Link
-                href="/"
-                className="flex items-center gap-2"
-                onClick={() => setOpen(false)}
-              >
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand font-bold text-white">
-                  N
-                </span>
-                <span className="font-bold">Nexora</span>
-              </Link>
+<div
+  className={`fixed inset-0 z-50 lg:hidden ${
+    open ? "pointer-events-auto" : "pointer-events-none"
+  }`}
+>
+  {/* Background overlay */}
+  <div
+    className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ease-out ${
+      open ? "opacity-100" : "opacity-0"
+    }`}
+    onClick={() => setOpen(false)}
+  />
 
-              <button
-                aria-label="Close menu"
-                className="grid h-9 w-9 place-items-center rounded-xl hover:bg-surface-2"
-                onClick={() => setOpen(false)}
-              >
-                <X size={20} />
-              </button>
-            </div>
+  {/* Sliding drawer */}
+  <aside
+    className={`absolute left-0 top-0 h-full w-[min(82vw,340px)] overflow-y-auto bg-surface p-5 shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+      open ? "translate-x-0" : "-translate-x-full"
+    }`}
+    onClick={(e) => e.stopPropagation()}
+  >
+    {/* Header */}
+    <div className="flex items-center justify-between border-b border-line pb-4">
+      <Link
+        href="/"
+        className="flex items-center gap-2 transition-transform duration-200 hover:scale-[1.02]"
+        onClick={() => setOpen(false)}
+      >
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand font-bold text-white">
+          N
+        </span>
 
-            {/* Delivery */}
-            <div className="mt-5 flex items-center gap-3 rounded-2xl bg-brand-soft p-4">
-              <MapPin size={20} className="text-brand" />
+        <span className="font-bold">Nexora</span>
+      </Link>
 
-              <div>
-                <p className="text-xs text-muted">Deliver to</p>
-                <p className="text-sm font-semibold">Your location</p>
-              </div>
-            </div>
+      <button
+        aria-label="Close menu"
+        className="grid h-9 w-9 place-items-center rounded-xl transition-all duration-200 hover:bg-surface-2 hover:scale-105 active:scale-95"
+        onClick={() => setOpen(false)}
+      >
+        <X size={20} />
+      </button>
+    </div>
 
-            <div className="mt-5 space-y-1">
-              <Link
-                href="/products"
-                onClick={() => setOpen(false)}
-                className="block rounded-xl px-3 py-3 text-sm font-semibold hover:bg-surface-2"
-              >
-                🛒 Shop groceries
-              </Link>
+    {/* Delivery */}
+    <div className="mt-5 flex items-center gap-3 rounded-2xl bg-brand-soft p-4 transition-transform duration-200 hover:scale-[1.01]">
+      <MapPin size={20} className="text-brand" />
 
-              <Link
-                href="/deals"
-                onClick={() => setOpen(false)}
-                className="block rounded-xl px-3 py-3 text-sm font-semibold hover:bg-surface-2"
-              >
-                💰 Today's deals
-              </Link>
+      <div>
+        <p className="text-xs text-muted">Deliver to</p>
+        <p className="text-sm font-semibold">Your location</p>
+      </div>
+    </div>
 
-              <Link
-                href="/cart"
-                onClick={() => setOpen(false)}
-                className="block rounded-xl px-3 py-3 text-sm font-semibold hover:bg-surface-2"
-              >
-                🛍️ Cart {cartCount > 0 ? `(${cartCount})` : ""}
-              </Link>
+    {/* Main navigation */}
+    <div className="mt-5 space-y-1">
+      <Link
+        href="/products"
+        onClick={() => setOpen(false)}
+        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:scale-[0.98]"
+      >
+        🛒 Shop groceries
+      </Link>
 
-              <Link
-                href="/account/wishlist"
-                onClick={() => setOpen(false)}
-                className="block rounded-xl px-3 py-3 text-sm font-semibold hover:bg-surface-2"
-              >
-                ❤️ Wishlist
-              </Link>
+      <Link
+        href="/deals"
+        onClick={() => setOpen(false)}
+        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:scale-[0.98]"
+      >
+        💰 Today's deals
+      </Link>
 
-              <Link
-                href="/account"
-                onClick={() => setOpen(false)}
-                className="block rounded-xl px-3 py-3 text-sm font-semibold hover:bg-surface-2"
-              >
-                👤 My account
-              </Link>
+      <Link
+        href="/cart"
+        onClick={() => setOpen(false)}
+        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:scale-[0.98]"
+      >
+        🛍️ Cart {cartCount > 0 ? `(${cartCount})` : ""}
+      </Link>
 
-              {compare.length > 0 && (
+      <Link
+        href="/account/wishlist"
+        onClick={() => setOpen(false)}
+        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:scale-[0.98]"
+      >
+        ❤️ Wishlist
+      </Link>
+
+      <Link
+        href="/account"
+        onClick={() => setOpen(false)}
+        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:scale-[0.98]"
+      >
+        👤 My account
+      </Link>
+    </div>
+
+    {/* Help */}
+    <div className="mt-6 border-t border-line pt-5">
+      <p className="mb-3 px-3 font-semibold">Help</p>
+
+      <Link
+        href="/account/orders"
+        onClick={() => setOpen(false)}
+        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:scale-[0.98]"
+      >
+        My orders
+      </Link>
+
+      <Link
+        href="/account/orders"
+        onClick={() => setOpen(false)}
+        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:scale-[0.98]"
+      >
+        Track delivery
+      </Link>
+
+      <Link
+        href="/account/returns"
+        onClick={() => setOpen(false)}
+        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:scale-[0.98]"
+      >
+        Returns
+      </Link>
+
+      <Link
+        href="/account"
+        onClick={() => setOpen(false)}
+        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:scale-[0.98]"
+      >
+        My account
+      </Link>
+
+      <a
+        href="tel:+91XXXXXXXXXX"
+        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:scale-[0.98]"
+      >
+        📞 Contact Nexora
+      </a>
+    </div>
+
+    {/* Why Nexora */}
+    <div className="mt-6 border-t border-line pt-5">
+      <p className="mb-3 px-3 font-semibold">Why Nexora?</p>
+
+      <div className="space-y-1 text-sm text-muted">
+        <div className="rounded-xl px-3 py-2 transition-transform duration-200 hover:translate-x-1">
+          💰 Low prices
+        </div>
+
+        <div className="rounded-xl px-3 py-2 transition-transform duration-200 hover:translate-x-1">
+          🥬 Fresh groceries
+        </div>
+
+        <div className="rounded-xl px-3 py-2 transition-transform duration-200 hover:translate-x-1">
+          🚚 1-day delivery
+        </div>
+
+        <div className="rounded-xl px-3 py-2 transition-transform duration-200 hover:translate-x-1">
+          💵 Cash on delivery
+        </div>
+      </div>
+    </div>
+  </aside>
+
+
+              {/*{compare.length > 0 && (
                 <Link
                   href="/compare"
                   onClick={() => setOpen(false)}
@@ -423,10 +507,10 @@ export function Header() {
                 >
                   ⚖️ Compare ({compare.length})
                 </Link>
-              )}
+              )}*/}
             </div>
 
-            {/* Temporary testing access */}
+            {/* Temporary testing access 
             <div className="mt-6 border-t border-line pt-5">
               <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted">
                 Testing
@@ -447,11 +531,8 @@ export function Header() {
               >
                 Admin console
               </Link>
-            </div>
-          </aside>
-        </div>
-      )}
-
+            </div> */}
+          
       {/* Compare bar */}
       
     </header>
@@ -537,6 +618,12 @@ export function Footer() {
                 Returns
               </Link>
             </li>
+            <a
+          href="tel:+91XXXXXXXXXX"
+         className="block py-2 text-sm text-muted hover:text-brand"
+          > 
+           Contact Nexora
+            </a>
             <li>
               <Link href="/account" className="hover:text-brand">
                 My account
