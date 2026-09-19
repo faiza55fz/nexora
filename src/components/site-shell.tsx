@@ -2,37 +2,38 @@
 
 import { usePathname } from "next/navigation";
 import {
-BottomNav,
-Footer,
-Header,
+  BottomNav,
+  Footer,
+  Header,
 } from "@/components/storefront-chrome";
 
 export function SiteShell({
-children,
+  children,
 }: {
-children: React.ReactNode;
+  children: React.ReactNode;
 }) {
-const pathname = usePathname();
+  const pathname = usePathname();
 
-const isAdmin = pathname.startsWith("/admin");
+  const isAdmin = pathname.startsWith("/admin");
+  const isDelivery = pathname.startsWith("/delivery");
 
-if (isAdmin) {
-return <main>{children}</main>;
-}
+  // Admin and delivery portals have their own layouts/navigation.
+  if (isAdmin || isDelivery) {
+    return <main>{children}</main>;
+  }
 
-return (
-<> 
-<Header />
+  // Customer website shell.
+  return (
+    <>
+      <Header />
 
-  <main className="pb-20 md:pb-0">
-    {children}
-  </main>
+      <main className="pb-20 md:pb-0">
+        {children}
+      </main>
 
-  <Footer />
+      <Footer />
 
-  <BottomNav />
-</>
-
-
-);
+      <BottomNav />
+    </>
+  );
 }

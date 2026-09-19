@@ -76,10 +76,22 @@ export type OrderStatus =
 export type Order = {
   id: string;
   date: string;
-  items: { productId: string; qty: number; price: number }[];
+  items: {
+    productId: string;
+    qty: number;
+    price: number;
+  }[];
   total: number;
   status: OrderStatus;
   payment: string;
+
+  customerName?: string;
+  customerPhone?: string;
+
   address: string;
+
+  latitude?: number;
+  longitude?: number;
+
   eta?: string;
 };
