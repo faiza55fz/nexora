@@ -8,9 +8,11 @@ import {
   Truck,
   Phone,
   UserRound,
+  X,
+  PackageCheck,
+  CircleCheck,
 } from "lucide-react";
 
-import { orders } from "@/lib/data";
 import {
   findBestDeliveryPartner,
   getDeliveryAssignments,
@@ -43,6 +45,28 @@ type DeliveryStage =
   | "out-for-delivery"
   | "near-customer"
   | "delivered";
+
+type AdminOrder = {
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  address: string;
+  subtotal: number;
+  deliveryFee: number;
+  total: number;
+  payment: string;
+  status: string;
+  createdAt: string;
+  items: {
+    id: string;
+    productId: string;
+    productName: string;
+    quantity: number;
+    price: number;
+  }[];
+};
 
 const MEMBERS_KEY = "nexora-delivery-members";
 const ASSIGNMENTS_KEY = "nexora-order-delivery";
@@ -194,7 +218,34 @@ function isDeliveryCompleted(
   return stages[orderId] === "delivered";
 }
 
+function orderStatusLabel(status: string) {
+  if (status === "placed") {
+    return "Placed";
+  }
+
+  if (status === "confirmed") {
+    return "Confirmed";
+  }
+
+  if (status === "packed") {
+    return "Packed";
+  }
+
+  if (status === "out-for-delivery") {
+    return "Out for delivery";
+  }
+
+  if (status === "delivered") {
+    return "Delivered";
+  }
+
+  return status;
+}
+
 export default function AdminOrdersPage() {
+  const [orders, setOrders] =
+    useState<AdminOrder[]>([]);
+
   const [members, setMembers] =
     useState<DeliveryMember[]>([]);
 
@@ -217,8 +268,111 @@ export default function AdminOrdersPage() {
   const [openOrderId, setOpenOrderId] =
     useState<string | null>(null);
 
+  const [selectedOrderId, setSelectedOrderId] =
+    useState<string | null>(null);
+
+  const [updatingStatus, setUpdatingStatus] =
+    useState(false);
+
+  const [statusError, setStatusError] =
+    useState("");
+
   const dropdownRef =
     useRef<HTMLDivElement | null>(null);
+
+  const selectedOrder =
+    orders.find(
+      (order) =>
+        order.id === selectedOrderId,
+    ) ?? null;
+
+  useEffect(() => {
+    async function loadOrders() {
+      try {
+        const response =
+          await fetch("/api/orders", {
+            method: "GET",
+            cache: "no-store",
+          });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data?.error ||
+              "Unable to fetch orders.",
+          );
+        }
+
+        const mappedOrders: AdminOrder[] =
+          (data.orders ?? []).map(
+            (order: any) => ({
+              id: order.id,
+              orderNumber:
+                order.order_number,
+              customerName:
+                order.customer_name,
+              customerEmail:
+                order.customer_email,
+              customerPhone:
+                order.customer_phone ?? "",
+              address:
+                order.address,
+              subtotal:
+                Number(order.subtotal),
+              deliveryFee:
+                Number(
+                  order.delivery_fee,
+                ),
+              total:
+                Number(order.total),
+              payment:
+                String(
+                  order.payment_method ??
+                    "COD",
+                ).toUpperCase(),
+              status:
+                order.status ?? "placed",
+              createdAt:
+                order.created_at,
+              items:
+                Array.isArray(
+                  order.order_items,
+                )
+                  ? order.order_items.map(
+                      (item: any) => ({
+                        id: item.id,
+                        productId:
+                          item.product_id,
+                        productName:
+                          item.product_name,
+                        quantity:
+                          Number(
+                            item.quantity,
+                          ),
+                        price:
+                          Number(
+                            item.price,
+                          ),
+                      }),
+                    )
+                  : [],
+            }),
+          );
+
+        setOrders(mappedOrders);
+      } catch (error) {
+        console.error(
+          "Failed to load admin orders:",
+          error,
+        );
+
+        setOrders([]);
+      }
+    }
+
+    loadOrders();
+  }, []);
 
   function loadDeliveryData() {
     try {
@@ -256,113 +410,197 @@ export default function AdminOrdersPage() {
     }
   }
 
-useEffect(() => {
-  const runAutoDispatch = () => {
-    try {
-      const currentMembers = getDeliveryMembers();
-      const currentAssignments = getDeliveryAssignments();
+  useEffect(() => {
+    loadDeliveryData();
 
-      let nextMembers = [...currentMembers];
-      let nextAssignments = {
-        ...currentAssignments,
+    const handleDeliveryUpdate =
+      () => {
+        loadDeliveryData();
       };
 
-      let changed = false;
+    window.addEventListener(
+      "storage",
+      handleDeliveryUpdate,
+    );
 
-      for (const order of orders) {
-        const alreadyAssigned =
-          nextAssignments[order.id];
+    window.addEventListener(
+      DELIVERY_UPDATED_EVENT,
+      handleDeliveryUpdate,
+    );
 
-        if (alreadyAssigned) continue;
+    window.addEventListener(
+      "focus",
+      handleDeliveryUpdate,
+    );
 
-        const needsDeliveryAssignment =
-          order.status === "confirmed" ||
-          order.status === "packed" ||
-          order.status === "shipped" ||
-          order.status === "out-for-delivery";
+    return () => {
+      window.removeEventListener(
+        "storage",
+        handleDeliveryUpdate,
+      );
 
-        if (!needsDeliveryAssignment) continue;
+      window.removeEventListener(
+        DELIVERY_UPDATED_EVENT,
+        handleDeliveryUpdate,
+      );
 
-        const availableMembers = nextMembers.filter(
-          (member) => member.status === "available",
-        );
+      window.removeEventListener(
+        "focus",
+        handleDeliveryUpdate,
+      );
+    };
+  }, []);
 
-        if (availableMembers.length === 0) {
-          continue;
-        }
+  useEffect(() => {
+    const runAutoDispatch = () => {
+      try {
+        const currentMembers =
+          getDeliveryMembers();
 
-        const selectedMember =
-          findBestDeliveryPartner(
-            order,
-            availableMembers,
-            nextAssignments,
-          );
+        const currentAssignments =
+          getDeliveryAssignments();
 
-        if (!selectedMember) continue;
+        let nextMembers = [
+          ...currentMembers,
+        ];
 
-        nextAssignments[order.id] = {
-          memberId: selectedMember.id,
-          memberName: selectedMember.name,
-          memberPhone: selectedMember.phone,
+        let nextAssignments = {
+          ...currentAssignments,
         };
 
-        nextMembers = nextMembers.map(
-          (member) =>
-            member.id === selectedMember.id
-              ? {
-                  ...member,
-                  status: "assigned" as DeliveryStatus,
-                  assignedOrder: order.id,
-                }
-              : member,
-        );
+        let changed = false;
 
-        changed = true;
+        for (const order of orders) {
+          const alreadyAssigned =
+            nextAssignments[
+              order.id
+            ];
+
+          if (alreadyAssigned) {
+            continue;
+          }
+
+          const needsDeliveryAssignment =
+            order.status ===
+              "confirmed" ||
+            order.status ===
+              "packed" ||
+            order.status ===
+              "shipped" ||
+            order.status ===
+              "out-for-delivery";
+
+          if (
+            !needsDeliveryAssignment
+          ) {
+            continue;
+          }
+
+          const availableMembers =
+            nextMembers.filter(
+              (member) =>
+                member.status ===
+                "available",
+            );
+
+          if (
+            availableMembers.length ===
+            0
+          ) {
+            continue;
+          }
+
+          const selectedMember =
+            findBestDeliveryPartner(
+              order as any,
+              availableMembers,
+              nextAssignments,
+            );
+
+          if (!selectedMember) {
+            continue;
+          }
+
+          nextAssignments[
+            order.id
+          ] = {
+            memberId:
+              selectedMember.id,
+            memberName:
+              selectedMember.name,
+            memberPhone:
+              selectedMember.phone,
+          };
+
+          nextMembers =
+            nextMembers.map(
+              (member) =>
+                member.id ===
+                selectedMember.id
+                  ? {
+                      ...member,
+                      status:
+                        "assigned" as DeliveryStatus,
+                      assignedOrder:
+                        order.id,
+                    }
+                  : member,
+            );
+
+          changed = true;
+        }
+
+        if (changed) {
+          localStorage.setItem(
+            MEMBERS_KEY,
+            JSON.stringify(
+              nextMembers,
+            ),
+          );
+
+          localStorage.setItem(
+            ASSIGNMENTS_KEY,
+            JSON.stringify(
+              nextAssignments,
+            ),
+          );
+        }
+
+        setMembers(nextMembers);
+        setAssignments(
+          nextAssignments,
+        );
+      } catch {
+        // Ignore invalid localStorage data.
       }
+    };
 
-      if (changed) {
-        localStorage.setItem(
-          MEMBERS_KEY,
-          JSON.stringify(nextMembers),
-        );
-
-        localStorage.setItem(
-          ASSIGNMENTS_KEY,
-          JSON.stringify(nextAssignments),
-        );
-      }
-
-      setMembers(nextMembers);
-      setAssignments(nextAssignments);
-    } catch {
-      // Ignore invalid localStorage data.
+    if (orders.length > 0) {
+      runAutoDispatch();
     }
-  };
 
-  runAutoDispatch();
-
-  window.addEventListener(
-    "storage",
-    runAutoDispatch,
-  );
-
-  window.addEventListener(
-    "focus",
-    runAutoDispatch,
-  );
-
-  return () => {
-    window.removeEventListener(
+    window.addEventListener(
       "storage",
       runAutoDispatch,
     );
 
-    window.removeEventListener(
+    window.addEventListener(
       "focus",
       runAutoDispatch,
     );
-  };
-}, []);
+
+    return () => {
+      window.removeEventListener(
+        "storage",
+        runAutoDispatch,
+      );
+
+      window.removeEventListener(
+        "focus",
+        runAutoDispatch,
+      );
+    };
+  }, [orders]);
 
   useEffect(() => {
     const handleClickOutside = (
@@ -390,6 +628,68 @@ useEffect(() => {
       );
     };
   }, []);
+
+  async function updateOrderStatus(
+    orderId: string,
+    nextStatus:
+      | "confirmed"
+      | "packed",
+  ) {
+    setUpdatingStatus(true);
+    setStatusError("");
+
+    try {
+      const response =
+        await fetch("/api/orders", {
+          method: "PATCH",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            orderId,
+            status: nextStatus,
+          }),
+        });
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            "Unable to update order status.",
+        );
+      }
+
+      setOrders((currentOrders) =>
+        currentOrders.map(
+          (order) =>
+            order.id === orderId
+              ? {
+                  ...order,
+                  status:
+                    data.order?.status ??
+                    nextStatus,
+                }
+              : order,
+        ),
+      );
+    } catch (error) {
+      console.error(
+        "Failed to update order status:",
+        error,
+      );
+
+      setStatusError(
+        error instanceof Error
+          ? error.message
+          : "Unable to update order status.",
+      );
+    } finally {
+      setUpdatingStatus(false);
+    }
+  }
 
   function saveDeliveryState(
     nextMembers: DeliveryMember[],
@@ -431,9 +731,6 @@ useEffect(() => {
     const previousAssignment =
       assignments[orderId];
 
-    /*
-     * REMOVE ASSIGNMENT
-     */
     if (!memberId) {
       const nextAssignments = {
         ...assignments,
@@ -443,7 +740,7 @@ useEffect(() => {
         orderId
       ];
 
-      let nextMembers =
+      const nextMembers =
         members.map(
           (
             member,
@@ -489,9 +786,6 @@ useEffect(() => {
       return;
     }
 
-    /*
-     * Do not assign an offline partner.
-     */
     if (
       selectedMember.status ===
       "offline"
@@ -499,10 +793,6 @@ useEffect(() => {
       return;
     }
 
-    /*
-     * Do not assign a partner who
-     * already has another active order.
-     */
     const alreadyAssigned =
       Object.entries(
         assignments,
@@ -525,10 +815,6 @@ useEffect(() => {
       return;
     }
 
-    /*
-     * Release previous partner if
-     * admin changes the assignment.
-     */
     let nextMembers =
       members.map(
         (
@@ -557,16 +843,6 @@ useEffect(() => {
         },
       );
 
-    /*
-     * Assign selected partner.
-     *
-     * IMPORTANT:
-     * Assignment does NOT mean
-     * out-for-delivery.
-     *
-     * Partner must press
-     * "Out for delivery" later.
-     */
     nextMembers =
       nextMembers.map(
         (
@@ -767,17 +1043,47 @@ useEffect(() => {
                     >
                       {/* Order */}
                       <td className="px-5 py-4 align-middle">
-                        <p className="font-medium text-ink">
-                          {
-                            order.id
-                          }
-                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedOrderId(
+                              order.id,
+                            );
+                            setStatusError("");
+                          }}
+                          className="text-left"
+                        >
+                          <p className="font-medium text-teal-700 hover:text-teal-900 hover:underline">
+                            {
+                              order.orderNumber
+                            }
+                          </p>
+
+                          <p className="mt-1 text-xs text-muted">
+                            {
+                              order.items.length
+                            }{" "}
+                            item
+                            {order.items.length ===
+                            1
+                              ? ""
+                              : "s"}
+                          </p>
+                        </button>
                       </td>
 
                       {/* Customer */}
                       <td className="px-5 py-4 align-middle">
-                        <p className="text-sm text-muted">
-                          Customer
+                        <p className="text-sm font-medium text-ink">
+                          {
+                            order.customerName
+                          }
+                        </p>
+
+                        <p className="mt-1 text-xs text-muted">
+                          {
+                            order.customerPhone
+                          }
                         </p>
                       </td>
 
@@ -793,12 +1099,9 @@ useEffect(() => {
                       {/* Status */}
                       <td className="px-5 py-4 align-middle">
                         <span className="inline-flex rounded-full bg-teal-50 px-3 py-1.5 text-sm text-teal-800">
-                          {
-                            deliveryStages[
-                              order.id
-                            ] ??
-                              order.status
-                          }
+                          {orderStatusLabel(
+                            order.status,
+                          )}
                         </span>
                       </td>
 
@@ -918,7 +1221,6 @@ useEffect(() => {
                                 </p>
                               </div>
 
-                              {/* Remove */}
                               {assignment && (
                                 <button
                                   type="button"
@@ -983,11 +1285,9 @@ useEffect(() => {
 
                                       const canSelect =
                                         selected ||
-                                        (
-                                          member.status ===
-                                            "available" &&
-                                          !assignedElsewhere
-                                        );
+                                        (member.status ===
+                                          "available" &&
+                                          !assignedElsewhere);
 
                                       return (
                                         <button
@@ -1160,6 +1460,397 @@ useEffect(() => {
           </table>
         </div>
       </div>
+
+      {/* Order details modal */}
+      {selectedOrder && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/40 p-4"
+          onMouseDown={(event) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              setSelectedOrderId(null);
+              setStatusError("");
+            }
+          }}
+        >
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-border bg-white shadow-2xl">
+            {/* Modal header */}
+            <div className="flex items-start justify-between border-b border-border px-6 py-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                  Customer order
+                </p>
+
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+                  {
+                    selectedOrder.orderNumber
+                  }
+                </h2>
+
+                <p className="mt-1 text-sm text-muted">
+                  {new Date(
+                    selectedOrder.createdAt,
+                  ).toLocaleString(
+                    "en-IN",
+                  )}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedOrderId(
+                    null,
+                  );
+                  setStatusError("");
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-6 p-6">
+              {/* Status progression */}
+              <div>
+                <p className="text-sm font-semibold text-ink">
+                  Order status
+                </p>
+
+                <div className="mt-4 grid grid-cols-3 gap-3">
+                  <div
+                    className={`rounded-2xl border p-4 ${
+                      selectedOrder.status ===
+                        "placed" ||
+                      selectedOrder.status ===
+                        "confirmed" ||
+                      selectedOrder.status ===
+                        "packed"
+                        ? "border-teal-200 bg-teal-50"
+                        : "border-border bg-slate-50"
+                    }`}
+                  >
+                    <CircleCheck
+                      size={20}
+                      className={
+                        selectedOrder.status ===
+                          "placed" ||
+                        selectedOrder.status ===
+                          "confirmed" ||
+                        selectedOrder.status ===
+                          "packed"
+                          ? "text-teal-700"
+                          : "text-slate-400"
+                      }
+                    />
+
+                    <p className="mt-2 text-sm font-medium">
+                      Placed
+                    </p>
+                  </div>
+
+                  <div
+                    className={`rounded-2xl border p-4 ${
+                      selectedOrder.status ===
+                          "confirmed" ||
+                        selectedOrder.status ===
+                          "packed"
+                        ? "border-teal-200 bg-teal-50"
+                        : "border-border bg-slate-50"
+                    }`}
+                  >
+                    <CircleCheck
+                      size={20}
+                      className={
+                        selectedOrder.status ===
+                            "confirmed" ||
+                          selectedOrder.status ===
+                            "packed"
+                          ? "text-teal-700"
+                          : "text-slate-400"
+                      }
+                    />
+
+                    <p className="mt-2 text-sm font-medium">
+                      Confirmed
+                    </p>
+                  </div>
+
+                  <div
+                    className={`rounded-2xl border p-4 ${
+                      selectedOrder.status ===
+                        "packed"
+                        ? "border-teal-200 bg-teal-50"
+                        : "border-border bg-slate-50"
+                    }`}
+                  >
+                    <PackageCheck
+                      size={20}
+                      className={
+                        selectedOrder.status ===
+                        "packed"
+                          ? "text-teal-700"
+                          : "text-slate-400"
+                      }
+                    />
+
+                    <p className="mt-2 text-sm font-medium">
+                      Packed
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                  <span className="text-sm text-muted">
+                    Current status
+                  </span>
+
+                  <span className="rounded-full bg-teal-100 px-3 py-1.5 text-sm font-medium text-teal-800">
+                    {orderStatusLabel(
+                      selectedOrder.status,
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* Customer */}
+              <div className="rounded-2xl border border-border p-5">
+                <p className="text-sm font-semibold text-ink">
+                  Customer details
+                </p>
+
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs text-muted">
+                      Name
+                    </p>
+
+                    <p className="mt-1 text-sm font-medium text-ink">
+                      {
+                        selectedOrder.customerName
+                      }
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-muted">
+                      Phone
+                    </p>
+
+                    <p className="mt-1 text-sm font-medium text-ink">
+                      {
+                        selectedOrder.customerPhone
+                      }
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-muted">
+                      Email
+                    </p>
+
+                    <p className="mt-1 break-all text-sm font-medium text-ink">
+                      {
+                        selectedOrder.customerEmail
+                      }
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-muted">
+                      Payment
+                    </p>
+
+                    <p className="mt-1 text-sm font-medium text-ink">
+                      {
+                        selectedOrder.payment
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <p className="text-xs text-muted">
+                    Delivery address
+                  </p>
+
+                  <p className="mt-1 text-sm font-medium text-ink">
+                    {
+                      selectedOrder.address
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {/* Items */}
+              <div>
+                <p className="text-sm font-semibold text-ink">
+                  Order items
+                </p>
+
+                <div className="mt-3 overflow-hidden rounded-2xl border border-border">
+                  {selectedOrder.items.map(
+                    (item, index) => (
+                      <div
+                        key={item.id}
+                        className={`flex items-center justify-between gap-4 px-4 py-4 ${
+                          index <
+                          selectedOrder
+                            .items
+                            .length -
+                            1
+                            ? "border-b border-border"
+                            : ""
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-ink">
+                            {
+                              item.productName
+                            }
+                          </p>
+
+                          <p className="mt-1 text-xs text-muted">
+                            {item.quantity} × ₹
+                            {item.price.toLocaleString(
+                              "en-IN",
+                            )}
+                          </p>
+                        </div>
+
+                        <p className="whitespace-nowrap text-sm font-semibold text-ink">
+                          ₹
+                          {(
+                            item.quantity *
+                            item.price
+                          ).toLocaleString(
+                            "en-IN",
+                          )}
+                        </p>
+                      </div>
+                    ),
+                  )}
+                </div>
+              </div>
+
+              {/* Payment summary */}
+              <div className="rounded-2xl bg-slate-50 p-5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted">
+                    Subtotal
+                  </span>
+
+                  <span className="font-medium text-ink">
+                    ₹
+                    {selectedOrder.subtotal.toLocaleString(
+                      "en-IN",
+                    )}
+                  </span>
+                </div>
+
+                <div className="mt-2 flex justify-between text-sm">
+                  <span className="text-muted">
+                    Delivery
+                  </span>
+
+                  <span className="font-medium text-ink">
+                    ₹
+                    {selectedOrder.deliveryFee.toLocaleString(
+                      "en-IN",
+                    )}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex justify-between border-t border-border pt-3">
+                  <span className="font-semibold text-ink">
+                    Total
+                  </span>
+
+                  <span className="text-lg font-semibold text-ink">
+                    ₹
+                    {selectedOrder.total.toLocaleString(
+                      "en-IN",
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* Status error */}
+              {statusError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {statusError}
+                </div>
+              )}
+
+              {/* Status action */}
+              <div className="border-t border-border pt-5">
+                {selectedOrder.status ===
+                  "placed" && (
+                  <button
+                    type="button"
+                    disabled={
+                      updatingStatus
+                    }
+                    onClick={() =>
+                      updateOrderStatus(
+                        selectedOrder.id,
+                        "confirmed",
+                      )
+                    }
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <CircleCheck
+                      size={18}
+                    />
+
+                    {updatingStatus
+                      ? "Confirming order..."
+                      : "Confirm order"}
+                  </button>
+                )}
+
+                {selectedOrder.status ===
+                  "confirmed" && (
+                  <button
+                    type="button"
+                    disabled={
+                      updatingStatus
+                    }
+                    onClick={() =>
+                      updateOrderStatus(
+                        selectedOrder.id,
+                        "packed",
+                      )
+                    }
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <PackageCheck
+                      size={18}
+                    />
+
+                    {updatingStatus
+                      ? "Marking as packed..."
+                      : "Mark as packed"}
+                  </button>
+                )}
+
+                {selectedOrder.status ===
+                  "packed" && (
+                  <div className="flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3.5 text-sm font-semibold text-emerald-700">
+                    <PackageCheck
+                      size={18}
+                    />
+
+                    Order packed
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

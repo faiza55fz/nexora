@@ -13,8 +13,6 @@ import {
   Wallet,
 } from "lucide-react";
 
-import { orders, products } from "@/lib/data";
-
 type DeliveryStatus =
   | "available"
   | "assigned"
@@ -41,6 +39,49 @@ type DeliveryStage =
   | "out-for-delivery"
   | "near-customer"
   | "delivered";
+
+type ApiOrderItem = {
+  id: string;
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  price: number;
+};
+
+type ApiOrder = {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string | null;
+  address: string;
+  subtotal: number;
+  delivery_fee: number;
+  total: number;
+  payment_method: string;
+  status: string;
+  created_at: string;
+  order_items: ApiOrderItem[];
+};
+
+type DeliveryOrderItem = {
+  productId: string;
+  qty: number;
+  price: number;
+  productName: string;
+};
+
+type DeliveryOrder = {
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  address: string;
+  items: DeliveryOrderItem[];
+  total: number;
+  payment: string;
+  status: string;
+};
 
 const MEMBERS_KEY = "nexora-delivery-members";
 const ASSIGNMENTS_KEY = "nexora-order-delivery";
@@ -183,15 +224,38 @@ function getStages(): Record<
   }
 }
 
-function getOrderItemName(
-  productId: string,
-) {
-  return (
-    products.find(
-      (product) =>
-        product.id === productId,
-    )?.name ?? "Product"
-  );
+function mapApiOrder(
+  order: ApiOrder,
+): DeliveryOrder {
+  return {
+    id: order.id,
+    orderNumber: order.order_number,
+    customerName:
+      order.customer_name,
+    customerPhone:
+      order.customer_phone ?? "",
+    address: order.address,
+    items: Array.isArray(
+      order.order_items,
+    )
+      ? order.order_items.map(
+          (item) => ({
+            productId:
+              item.product_id,
+            qty: item.quantity,
+            price: Number(item.price),
+            productName:
+              item.product_name,
+          }),
+        )
+      : [],
+    total: Number(order.total),
+    payment:
+      order.payment_method === "cod"
+        ? "Cash on Delivery"
+        : order.payment_method,
+    status: order.status,
+  };
 }
 
 export default function DeliveryPage() {
@@ -211,11 +275,56 @@ export default function DeliveryPage() {
       Record<string, DeliveryStage>
     >({});
 
+  const [apiOrders, setApiOrders] =
+    useState<ApiOrder[]>([]);
+
   const [selectedMemberId, setSelectedMemberId] =
     useState(DEMO_MEMBER_ID);
 
   const [isUpdating, setIsUpdating] =
     useState(false);
+
+  const [isLoadingOrders, setIsLoadingOrders] =
+    useState(true);
+
+  /*
+   * Fetch real orders from Supabase
+   * through the existing orders API.
+   */
+  async function loadOrders() {
+    try {
+      setIsLoadingOrders(true);
+
+      const response =
+        await fetch("/api/orders", {
+          cache: "no-store",
+        });
+
+      if (!response.ok) {
+        throw new Error(
+          "Unable to fetch orders.",
+        );
+      }
+
+      const data =
+        await response.json();
+
+      setApiOrders(
+        Array.isArray(data?.orders)
+          ? data.orders
+          : [],
+      );
+    } catch (error) {
+      console.error(
+        "Failed to load delivery orders:",
+        error,
+      );
+
+      setApiOrders([]);
+    } finally {
+      setIsLoadingOrders(false);
+    }
+  }
 
   /*
    * Read the complete shared delivery state.
@@ -230,21 +339,10 @@ export default function DeliveryPage() {
     const savedStages =
       getStages();
 
-    /*
-     * Keep the member data exactly as Admin
-     * created it.
-     *
-     * We only use the assignment/stage data
-     * to determine what this portal should show.
-     */
     setMembers(savedMembers);
     setAssignments(savedAssignments);
     setDeliveryStages(savedStages);
 
-    /*
-     * If the currently selected partner no
-     * longer exists, select the first partner.
-     */
     if (
       savedMembers.length > 0 &&
       !savedMembers.some(
@@ -260,9 +358,11 @@ export default function DeliveryPage() {
 
   useEffect(() => {
     loadDeliveryState();
+    loadOrders();
 
     const handleUpdate = () => {
       loadDeliveryState();
+      loadOrders();
     };
 
     window.addEventListener(
@@ -316,10 +416,6 @@ export default function DeliveryPage() {
    * Priority:
    * 1. Assignment map
    * 2. member.assignedOrder
-   *
-   * This fixes the situation where Admin has
-   * assigned the order but the partner portal
-   * was showing "You're all caught up".
    */
   const assignedOrderId = useMemo(() => {
     if (!currentMember) {
@@ -341,20 +437,11 @@ export default function DeliveryPage() {
 
     if (
       currentMember.assignedOrder &&
-      orders.some(
-        (order) =>
-          order.id ===
-          currentMember.assignedOrder,
-      )
+      deliveryStages[
+        currentMember.assignedOrder
+      ] !== "delivered"
     ) {
-      const stage =
-        deliveryStages[
-          currentMember.assignedOrder
-        ];
-
-      if (stage !== "delivered") {
-        return currentMember.assignedOrder;
-      }
+      return currentMember.assignedOrder;
     }
 
     return undefined;
@@ -364,13 +451,19 @@ export default function DeliveryPage() {
     deliveryStages,
   ]);
 
+  /*
+   * Match the assigned order ID with
+   * the real Supabase order.
+   */
   const assignedOrder =
     assignedOrderId
-      ? orders.find(
-          (order) =>
-            order.id ===
-            assignedOrderId,
-        )
+      ? apiOrders
+          .map(mapApiOrder)
+          .find(
+            (order) =>
+              order.id ===
+              assignedOrderId,
+          ) ?? null
       : null;
 
   const currentStage: DeliveryStage =
@@ -382,9 +475,6 @@ export default function DeliveryPage() {
 
   /*
    * Save the shared delivery state.
-   *
-   * Both Admin and Customer pages can listen
-   * for this same event and refresh.
    */
   function saveDeliveryState(
     nextMembers: DeliveryMember[],
@@ -432,113 +522,156 @@ export default function DeliveryPage() {
   }
 
   /*
-   * Delivery partner controls the delivery
-   * progression.
-   *
-   * Admin does NOT need to click
-   * "Out for delivery".
+   * Delivery partner controls the
+   * delivery progression.
    */
-  function updateDeliveryStage(
-    nextStage: DeliveryStage,
+async function updateDeliveryStage(
+  nextStage: DeliveryStage,
+) {
+  if (
+    !currentMember ||
+    !assignedOrder
   ) {
-    if (
-      !currentMember ||
-      !assignedOrder
-    ) {
-      return;
-    }
-
-    setIsUpdating(true);
-
-    try {
-      const orderId =
-        assignedOrder.id;
-
-      const nextStages = {
-        ...deliveryStages,
-        [orderId]: nextStage,
-      };
-
-      let nextMembers =
-        [...members];
-
-      let nextAssignments = {
-        ...assignments,
-      };
-
-      /*
-       * Partner physically picked up the order
-       * and is now going out for delivery.
-       */
-      if (
-        nextStage ===
-        "out-for-delivery"
-      ) {
-        nextMembers =
-          nextMembers.map(
-            (member) => {
-              if (
-                member.id !==
-                currentMember.id
-              ) {
-                return member;
-              }
-
-              return {
-                ...member,
-                status:
-                  "out-on-delivery",
-                assignedOrder:
-                  orderId,
-              };
-            },
-          );
-      }
-
-      /*
-       * Delivery completed.
-       *
-       * Remove assignment and immediately make
-       * the partner available for another order.
-       */
-      if (
-        nextStage ===
-        "delivered"
-      ) {
-        delete nextAssignments[
-          orderId
-        ];
-
-        nextMembers =
-          nextMembers.map(
-            (member) => {
-              if (
-                member.id !==
-                currentMember.id
-              ) {
-                return member;
-              }
-
-              return {
-                ...member,
-                status:
-                  "available",
-                assignedOrder:
-                  undefined,
-              };
-            },
-          );
-      }
-
-      saveDeliveryState(
-        nextMembers,
-        nextAssignments,
-        nextStages,
-      );
-    } finally {
-      setIsUpdating(false);
-    }
+    return;
   }
+
+  setIsUpdating(true);
+
+  try {
+    const orderId =
+      assignedOrder.id;
+
+    /*
+     * Keep the customer-facing order status
+     * in sync with the delivery partner action.
+     */
+    const supabaseStatus =
+      nextStage === "out-for-delivery"
+        ? "out-for-delivery"
+        : nextStage === "delivered"
+          ? "delivered"
+          : null;
+
+    if (supabaseStatus) {
+      const response =
+        await fetch("/api/orders", {
+          method: "PATCH",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            orderId,
+            status: supabaseStatus,
+          }),
+        });
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            "Unable to update order status.",
+        );
+      }
+
+      /*
+       * Update the local API order immediately
+       * so the delivery screen stays in sync.
+       */
+      setApiOrders((currentOrders) =>
+        currentOrders.map((order) =>
+          order.id === orderId
+            ? {
+                ...order,
+                status:
+                  supabaseStatus,
+              }
+            : order,
+        ),
+      );
+    }
+
+    const nextStages = {
+      ...deliveryStages,
+      [orderId]: nextStage,
+    };
+
+    let nextMembers = [...members];
+
+    const nextAssignments = {
+      ...assignments,
+    };
+
+    if (
+      nextStage ===
+      "out-for-delivery"
+    ) {
+      nextMembers =
+        nextMembers.map(
+          (member) => {
+            if (
+              member.id !==
+              currentMember.id
+            ) {
+              return member;
+            }
+
+            return {
+              ...member,
+              status:
+                "out-on-delivery",
+              assignedOrder:
+                orderId,
+            };
+          },
+        );
+    }
+
+    if (
+      nextStage ===
+      "delivered"
+    ) {
+      delete nextAssignments[
+        orderId
+      ];
+
+      nextMembers =
+        nextMembers.map(
+          (member) => {
+            if (
+              member.id !==
+              currentMember.id
+            ) {
+              return member;
+            }
+
+            return {
+              ...member,
+              status:
+                "available",
+              assignedOrder:
+                undefined,
+            };
+          },
+        );
+    }
+
+    saveDeliveryState(
+      nextMembers,
+      nextAssignments,
+      nextStages,
+    );
+  } catch (error) {
+    console.error(
+      "Failed to update delivery stage:",
+      error,
+    );
+  } finally {
+    setIsUpdating(false);
+  }
+}
 
   const statusText =
     currentMember?.status ===
@@ -660,7 +793,15 @@ export default function DeliveryPage() {
             </section>
 
             {/* Active delivery */}
-            {assignedOrder ? (
+            {isLoadingOrders ? (
+              <section className="rounded-3xl border border-border bg-white p-10 text-center shadow-sm">
+                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-teal-700" />
+
+                <p className="mt-4 text-sm text-muted">
+                  Loading delivery orders...
+                </p>
+              </section>
+            ) : assignedOrder ? (
               <section className="space-y-5">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
@@ -670,7 +811,7 @@ export default function DeliveryPage() {
 
                     <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
                       Order #
-                      {assignedOrder.id}
+                      {assignedOrder.orderNumber}
                     </h1>
                   </div>
 
@@ -695,7 +836,7 @@ export default function DeliveryPage() {
                       </p>
 
                       <p className="font-semibold text-ink">
-                        Customer
+                        {assignedOrder.customerName}
                       </p>
                     </div>
                   </div>
@@ -732,21 +873,28 @@ export default function DeliveryPage() {
                             Customer contact
                           </p>
 
-                          <p className="mt-1 text-sm text-muted">
-                            Customer phone will
-                            be connected when
-                            customer contact data
-                            is added to the order.
-                          </p>
+                          {assignedOrder.customerPhone ? (
+                            <>
+                              <p className="mt-1 text-sm font-medium text-ink">
+                                {
+                                  assignedOrder.customerPhone
+                                }
+                              </p>
 
-                          <button
-                            type="button"
-                            disabled
-                            className="mt-2 inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-medium text-slate-400"
-                          >
-                            <Phone size={13} />
-                            Call customer
-                          </button>
+                              <a
+                                href={`tel:${assignedOrder.customerPhone}`}
+                                className="mt-2 inline-flex items-center gap-2 rounded-lg bg-teal-700 px-3 py-2 text-xs font-medium text-white transition hover:bg-teal-800"
+                              >
+                                <Phone size={13} />
+                                Call customer
+                              </a>
+                            </>
+                          ) : (
+                            <p className="mt-1 text-sm text-muted">
+                              Customer phone is
+                              not available.
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -806,9 +954,7 @@ export default function DeliveryPage() {
                         >
                           <div>
                             <p className="text-sm font-medium text-ink">
-                              {getOrderItemName(
-                                item.productId,
-                              )}
+                              {item.productName}
                             </p>
 
                             <p className="mt-1 text-xs text-muted">

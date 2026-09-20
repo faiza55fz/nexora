@@ -1,14 +1,9 @@
-
 "use client";
-import Link from "next/link";
-<Link
-  href="/products"
-  className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-brand"
->
-  ← Continue shopping
-</Link>
 
-import { products } from "@/lib/data";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+import { products as staticProducts } from "@/lib/data";
 import { useStore } from "@/components/providers";
 import { Button, Card } from "@/components/ui";
 import { inr } from "@/lib/format";
@@ -27,10 +22,34 @@ import {
 export default function CartPage() {
   const { cart, setQty, removeFromCart } = useStore();
 
+  const [allProducts, setAllProducts] = useState(staticProducts);
+
+  useEffect(() => {
+    try {
+      const savedProducts =
+        localStorage.getItem("nexora-admin-products");
+
+      if (savedProducts) {
+        const adminProducts = JSON.parse(savedProducts);
+
+        if (Array.isArray(adminProducts)) {
+          setAllProducts(adminProducts);
+        }
+      }
+    } catch (error) {
+      console.error(
+        "Failed to load admin products:",
+        error,
+      );
+    }
+  }, []);
+
   const rows = cart
     .map((item) => ({
       ...item,
-      product: products.find((product) => product.id === item.productId),
+      product: allProducts.find(
+        (product) => product.id === item.productId,
+      ),
     }))
     .filter((row) => row.product);
 
@@ -45,11 +64,11 @@ export default function CartPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 pb-16">
       <Link
-  href="/products"
-  className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-brand"
->
-  ← Go back
-</Link>
+        href="/products"
+        className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-brand"
+      >
+        ← Go back
+      </Link>
 
       {/* Header */}
       <div className="mb-7">
@@ -63,7 +82,8 @@ export default function CartPage() {
 
         {rows.length > 0 && (
           <p className="mt-1 text-sm text-muted">
-            {rows.length} {rows.length === 1 ? "item" : "items"} ready for checkout
+            {rows.length}{" "}
+            {rows.length === 1 ? "item" : "items"} ready for checkout
           </p>
         )}
       </div>
@@ -71,7 +91,6 @@ export default function CartPage() {
       {/* Empty cart */}
       {rows.length === 0 ? (
         <Card className="mx-auto max-w-lg p-10 text-center">
-
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-soft">
             <ShoppingBag size={28} className="text-brand" />
           </div>
@@ -91,15 +110,12 @@ export default function CartPage() {
               <ArrowRight size={17} />
             </Button>
           </Link>
-
         </Card>
       ) : (
         <>
           <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-
             {/* Cart items */}
             <div className="space-y-3">
-
               {rows.map((row) => {
                 const product = row.product!;
 
@@ -109,7 +125,6 @@ export default function CartPage() {
                     className="overflow-hidden p-4 sm:p-5"
                   >
                     <div className="flex gap-4">
-
                       {/* Product image */}
                       <Link
                         href={`/products/${product.id}`}
@@ -125,7 +140,6 @@ export default function CartPage() {
 
                       {/* Product info */}
                       <div className="min-w-0 flex-1">
-
                         <Link
                           href={`/products/${product.id}`}
                           className="font-semibold hover:text-brand"
@@ -140,7 +154,8 @@ export default function CartPage() {
                         <p className="mt-1 text-sm font-medium">
                           {inr(product.price)}
                           <span className="ml-1 font-normal text-muted">
-                            / {product.specs.Unit ??
+                            /{" "}
+                            {product.specs.Unit ??
                               product.specs.Weight ??
                               "pack"}
                           </span>
@@ -148,9 +163,7 @@ export default function CartPage() {
 
                         {/* Quantity */}
                         <div className="mt-3 flex items-center gap-3">
-
                           <div className="flex h-9 items-center overflow-hidden rounded-lg border border-line">
-
                             <button
                               aria-label="Decrease quantity"
                               onClick={() =>
@@ -171,13 +184,15 @@ export default function CartPage() {
                             <button
                               aria-label="Increase quantity"
                               onClick={() =>
-                                setQty(row.productId, row.qty + 1)
+                                setQty(
+                                  row.productId,
+                                  row.qty + 1,
+                                )
                               }
                               className="flex h-full w-9 items-center justify-center hover:bg-surface-2"
                             >
                               <Plus size={14} />
                             </button>
-
                           </div>
 
                           <button
@@ -189,7 +204,6 @@ export default function CartPage() {
                             <Trash2 size={14} />
                             Remove
                           </button>
-
                         </div>
                       </div>
 
@@ -199,7 +213,6 @@ export default function CartPage() {
                           {inr(product.price * row.qty)}
                         </p>
                       </div>
-
                     </div>
 
                     {/* Mobile item total */}
@@ -208,7 +221,6 @@ export default function CartPage() {
                         Item total: {inr(product.price * row.qty)}
                       </p>
                     </div>
-
                   </Card>
                 );
               })}
@@ -216,7 +228,6 @@ export default function CartPage() {
               {/* Free delivery message */}
               {sub < 499 ? (
                 <div className="flex items-center gap-3 rounded-2xl border border-line bg-brand-soft p-4 text-sm">
-
                   <Truck size={19} className="shrink-0 text-brand" />
 
                   <p>
@@ -229,32 +240,26 @@ export default function CartPage() {
                       FREE delivery
                     </span>
                   </p>
-
                 </div>
               ) : (
                 <div className="flex items-center gap-3 rounded-2xl border border-line bg-brand-soft p-4 text-sm text-brand">
-
                   <CheckCircle2 size={19} />
 
                   <span className="font-medium">
                     You've unlocked FREE delivery!
                   </span>
-
                 </div>
               )}
-
             </div>
 
             {/* Summary */}
             <div>
               <Card className="sticky top-24 p-5 sm:p-6">
-
                 <h2 className="text-lg font-semibold">
                   Order summary
                 </h2>
 
                 <div className="mt-5 space-y-3 text-sm">
-
                   <div className="flex justify-between">
                     <span className="text-muted">
                       Subtotal
@@ -278,7 +283,6 @@ export default function CartPage() {
                       )}
                     </span>
                   </div>
-
                 </div>
 
                 <div className="my-5 h-px bg-line" />
@@ -307,12 +311,10 @@ export default function CartPage() {
                   <ShieldCheck size={14} />
                   Secure checkout · Cash on delivery
                 </div>
-
               </Card>
 
               {/* Benefits */}
               <div className="mt-4 grid gap-2">
-
                 <div className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3">
                   <Truck size={17} className="text-brand" />
 
@@ -320,6 +322,7 @@ export default function CartPage() {
                     <p className="text-xs font-semibold">
                       1-day delivery
                     </p>
+
                     <p className="text-[11px] text-muted">
                       Fresh groceries at your doorstep
                     </p>
@@ -333,19 +336,17 @@ export default function CartPage() {
                     <p className="text-xs font-semibold">
                       Everyday low prices
                     </p>
+
                     <p className="text-[11px] text-muted">
                       Great value on your essentials
                     </p>
                   </div>
                 </div>
-
               </div>
             </div>
-
           </div>
         </>
       )}
     </div>
   );
 }
-

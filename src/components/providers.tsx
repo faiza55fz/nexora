@@ -23,6 +23,7 @@ export type AppUser = {
 };
 
 type Store = {
+  
   user: AppUser | null;
   login: (user: AppUser) => void;
   logout: () => void;
@@ -34,6 +35,7 @@ type Store = {
   addToCart: (productId: string, qty?: number) => void;
   setQty: (productId: string, qty: number) => void;
   removeFromCart: (productId: string) => void;
+  clearCart: () => void;
   wishlist: string[];
   toggleWishlist: (productId: string) => void;
   compare: string[];
@@ -51,6 +53,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     { productId: "p1", qty: 1 },
     { productId: "p3", qty: 2 },
   ]);
+  const clearCart = useCallback(() => {
+  setCart([]);
+}, []);
   const [wishlist, setWishlist] = useState<string[]>(["p3", "p2"]);
   const [compare, setCompare] = useState<string[]>(["p1"]);
   const [hydrated, setHydrated] = useState(false);
@@ -161,6 +166,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addToCart,
       setQty,
       removeFromCart,
+      clearCart,
       wishlist,
       toggleWishlist,
       compare,
@@ -178,6 +184,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addToCart,
       setQty,
       removeFromCart,
+      clearCart,
       wishlist,
       toggleWishlist,
       compare,

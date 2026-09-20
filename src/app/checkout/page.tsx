@@ -2,19 +2,147 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, MapPin, Truck, Banknote, ShieldCheck } from "lucide-react";
+import {
+  CheckCircle2,
+  MapPin,
+  Truck,
+  Banknote,
+  ShieldCheck,
+} from "lucide-react";
 import { AuthGuard } from "@/components/auth-guard";
 import { useStore } from "@/components/providers";
 import { Button, Card, Field, Input } from "@/components/ui";
+import { products } from "@/lib/data";
 
 const steps = ["Address", "Delivery", "Payment", "Review"];
 
 export default function CheckoutPage() {
-  const { user } = useStore();
+  const { user, cart, clearCart } = useStore();
+
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const orderId = "NXR-260915-1024";
+  const [fullName, setFullName] = useState(user?.name ?? "");
+  const [phone, setPhone] = useState(user?.phone ?? "");
+  const [houseStreet, setHouseStreet] = useState("");
+  const [area, setArea] = useState("");
+  const [city, setCity] = useState("");
+  const [pin, setPin] = useState("");
+
+  const [orderId, setOrderId] = useState("");
+
+  const rows = cart
+    .map((item) => {
+      const product = products.find((p) => p.id === item.productId);
+
+      if (!product) return null;
+
+      return {
+        ...item,
+        product,
+      };
+    })
+    .filter(
+      (
+        row,
+      ): row is {
+        productId: string;
+        qty: number;
+        product: (typeof products)[number];
+      } => row !== null,
+    );
+
+  const subtotal = rows.reduce(
+    (sum, row) => sum + row.product.price * row.qty,
+    0,
+  );
+
+  const deliveryFee = subtotal === 0 || subtotal >= 499 ? 0 : 49;
+  const total = subtotal + deliveryFee;
+
+  const address = [houseStreet, area, city, pin]
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join(", ");
+
+  const placeOrder = async () => {
+    setError("");
+
+    if (!fullName.trim() || !phone.trim()) {
+      setError("Please enter your name and mobile number.");
+      setStep(0);
+      return;
+    }
+
+    if (!houseStreet.trim() || !area.trim() || !city.trim() || !pin.trim()) {
+      setError("Please complete your delivery address.");
+      setStep(0);
+      return;
+    }
+
+    if (pin.trim().length !== 6) {
+      setError("Please enter a valid 6-digit PIN code.");
+      setStep(0);
+      return;
+    }
+
+    if (!rows.length) {
+      setError("Your cart is empty.");
+      return;
+    }
+
+    if (!user?.email) {
+      setError("Your account email is missing. Please log in again.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customerName: fullName.trim(),
+          customerEmail: user.email,
+          customerPhone: phone.trim(),
+          address,
+          subtotal,
+          deliveryFee,
+          total,
+          paymentMethod: "cod",
+          items: rows.map((row) => ({
+            productId: row.product.id,
+            productName: row.product.name,
+            quantity: row.qty,
+            price: row.product.price,
+          })),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to place order.");
+      }
+
+      setOrderId(data.order.orderNumber);
+      clearCart();
+      setDone(true);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while placing your order.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <AuthGuard role="customer">
@@ -78,34 +206,54 @@ export default function CheckoutPage() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Full name">
                       <Input
-                        defaultValue={user?.name}
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
                         placeholder="Your full name"
                       />
                     </Field>
 
                     <Field label="Mobile number">
                       <Input
-                        defaultValue={user?.phone}
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
                         placeholder="10-digit mobile number"
                       />
                     </Field>
 
                     <div className="sm:col-span-2">
                       <Field label="House / Flat / Street">
-                        <Input placeholder="House number, street name" />
+                        <Input
+                          value={houseStreet}
+                          onChange={(e) => setHouseStreet(e.target.value)}
+                          placeholder="House number, street name"
+                        />
                       </Field>
                     </div>
 
                     <Field label="Area / Locality">
-                      <Input placeholder="Area or locality" />
+                      <Input
+                        value={area}
+                        onChange={(e) => setArea(e.target.value)}
+                        placeholder="Area or locality"
+                      />
                     </Field>
 
                     <Field label="City">
-                      <Input placeholder="City" />
+                      <Input
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="City"
+                      />
                     </Field>
 
                     <Field label="PIN code">
-                      <Input placeholder="6-digit PIN code" />
+                      <Input
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value)}
+                        placeholder="6-digit PIN code"
+                        inputMode="numeric"
+                        maxLength={6}
+                      />
                     </Field>
 
                     <div className="rounded-xl bg-brand-soft p-3 text-sm text-brand sm:col-span-2">
@@ -238,7 +386,7 @@ export default function CheckoutPage() {
                     <div className="flex justify-between gap-4">
                       <span className="text-muted">Deliver to</span>
                       <strong className="text-right">
-                        Selected delivery address
+                        {address || "Delivery address not entered"}
                       </strong>
                     </div>
 
@@ -261,12 +409,18 @@ export default function CheckoutPage() {
                 </div>
               ) : null}
 
+              {error ? (
+                <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  {error}
+                </div>
+              ) : null}
+
               {/* Navigation */}
               <div className="mt-8 flex justify-between gap-3 border-t border-line pt-5">
                 <Button
                   variant="outline"
                   size="lg"
-                  disabled={step === 0}
+                  disabled={step === 0 || loading}
                   onClick={() => setStep((s) => s - 1)}
                 >
                   Back
@@ -275,7 +429,10 @@ export default function CheckoutPage() {
                 {step < 3 ? (
                   <Button
                     size="lg"
-                    onClick={() => setStep((s) => s + 1)}
+                    onClick={() => {
+                      setError("");
+                      setStep((s) => s + 1);
+                    }}
                   >
                     Continue
                   </Button>
@@ -283,9 +440,10 @@ export default function CheckoutPage() {
                   <Button
                     variant="cta"
                     size="lg"
-                    onClick={() => setDone(true)}
+                    disabled={loading}
+                    onClick={placeOrder}
                   >
-                    Place order
+                    {loading ? "Placing order..." : "Place order"}
                   </Button>
                 )}
               </div>
@@ -298,19 +456,29 @@ export default function CheckoutPage() {
 
                 <div className="mt-4 space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted">Items</span>
-                    <span>Cart items</span>
+                    <span className="text-muted">
+                      Items ({cart.reduce((sum, item) => sum + item.qty, 0)})
+                    </span>
+                    <span>₹{subtotal.toFixed(2)}</span>
                   </div>
 
                   <div className="flex justify-between">
                     <span className="text-muted">Delivery</span>
-                    <span className="text-success">FREE</span>
+                    <span
+                      className={
+                        deliveryFee === 0 ? "text-success" : undefined
+                      }
+                    >
+                      {deliveryFee === 0
+                        ? "FREE"
+                        : `₹${deliveryFee.toFixed(2)}`}
+                    </span>
                   </div>
 
                   <div className="border-t border-line pt-3">
                     <div className="flex justify-between text-base font-bold">
                       <span>Total</span>
-                      <span>Shown in cart</span>
+                      <span>₹{total.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
