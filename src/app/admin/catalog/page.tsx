@@ -53,30 +53,68 @@ export default function AdminCatalog() {
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
 
-  useEffect(() => {
-    const saved = localStorage.getItem(
-      "nexora-admin-products",
-    );
+useEffect(() => {
+  async function loadProducts() {
+    try {
+      const response = await fetch("/api/products", {
+        cache: "no-store",
+      });
 
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
+      const result = await response.json();
 
-        if (Array.isArray(parsed)) {
-          setCatalogProducts(
-            parsed.map((product) => ({
-              ...product,
-              active: product.active !== false,
-            })),
-          );
-        }
-      } catch {
-        localStorage.removeItem(
-          "nexora-admin-products",
-        );
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to load products");
       }
+
+      const mappedProducts: Product[] = result.products.map(
+        (product: any) => {
+          const variant = product.product_variants?.[0];
+          const inventory = variant?.inventory;
+
+          return {
+            ...emptyProduct,
+            id: product.id,
+            name: product.name,
+            brand: product.brand || "",
+            category:
+              product.categories?.name?.toLowerCase() || "fruits",
+            subcategory: product.subcategory || "",
+            description: product.description || "",
+            active: product.active !== false,
+            rating: Number(product.rating || 0),
+            reviewCount: Number(product.review_count || 0),
+
+            mrp: Number(variant?.mrp || 0),
+            price: Number(variant?.selling_price || 0),
+            gstRate: Number(variant?.gst_rate || 0),
+
+            stock: Number(inventory?.stock_quantity || 0),
+
+            specs: {
+              Unit: variant?.variant_name || "",
+            },
+
+            image: product.product_images?.find(
+              (image: any) => image.is_primary,
+            )?.image_url || "",
+
+            images:
+              product.product_images?.map(
+                (image: any) => image.image_url,
+              ) || [],
+          };
+        },
+      );
+
+      setCatalogProducts(mappedProducts);
+    } catch (error) {
+      console.error("Failed to load products:", error);
     }
-  }, []);
+  }
+
+  loadProducts();
+}, []);
+
 
   function saveProducts(nextProducts: Product[]) {
     setCatalogProducts(nextProducts);
@@ -87,18 +125,71 @@ export default function AdminCatalog() {
     );
   }
 
-  function saveProduct(updatedProduct: Product) {
-    const nextProducts = catalogProducts.map(
-      (product) =>
+async function saveProduct(updatedProduct: Product) {
+  try {
+    const response = await fetch("/api/products", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: updatedProduct.id,
+        name: updatedProduct.name,
+        brand: updatedProduct.brand,
+        category: updatedProduct.category,
+        subcategory: updatedProduct.subcategory,
+        description: updatedProduct.description,
+        price: updatedProduct.price,
+        mrp: updatedProduct.mrp,
+        gstRate: updatedProduct.gstRate,
+        stock: updatedProduct.stock,
+        unit: updatedProduct.specs?.Unit || "",
+        active: updatedProduct.active !== false,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.message || result.error || "Failed to update product",
+      );
+    }
+
+    // Update Admin UI
+    setCatalogProducts((current) =>
+      current.map((product) =>
         product.id === updatedProduct.id
           ? updatedProduct
           : product,
+      ),
     );
 
-    saveProducts(nextProducts);
+    // Keep the current customer-side localStorage data
+    // in sync until customer products are fully moved to Supabase.
+    const savedProducts = catalogProducts.map((product) =>
+      product.id === updatedProduct.id
+        ? updatedProduct
+        : product,
+    );
+
+    localStorage.setItem(
+      "nexora-admin-products",
+      JSON.stringify(savedProducts),
+    );
+
     setSelectedProduct(updatedProduct);
     setEditing(false);
+  } catch (error) {
+    console.error("Failed to save product:", error);
+
+    alert(
+      error instanceof Error
+        ? error.message
+        : "Failed to save product",
+    );
   }
+}
 
   /*
    * Toggle active/inactive status.

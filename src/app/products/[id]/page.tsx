@@ -39,49 +39,110 @@ const [qty, setQty] = useState(1);
 const [img, setImg] = useState(0);
 
 useEffect(() => {
-  const saved = localStorage.getItem(
-    "nexora-admin-products",
-  );
-
-  if (saved) {
+  async function loadProduct() {
     try {
-      const savedProducts = JSON.parse(saved);
+      const response = await fetch("/api/products", {
+        cache: "no-store",
+      });
 
-      if (Array.isArray(savedProducts)) {
-        const found = savedProducts.find(
-          (item: Product) => item.id === id,
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to load product",
         );
-
-        if (found) {
-          setProduct({
-            ...found,
-            active: found.active !== false,
-          });
-
-          setQty(found.moq ?? 1);
-          setLoading(false);
-          return;
-        }
       }
-    } catch {
-      // Fall back to the original catalog.
+
+      const found = result.products.find(
+        (item: any) => item.id === id,
+      );
+
+      if (!found) {
+        setProduct(null);
+        return;
+      }
+
+      const variant =
+        found.product_variants?.find(
+          (item: any) => item.active !== false,
+        ) || found.product_variants?.[0];
+
+      const inventory = variant?.inventory;
+
+      const images =
+        found.product_images
+          ?.map((image: any) => image.image_url)
+          .filter(Boolean) || [];
+
+      const primaryImage =
+        found.product_images?.find(
+          (image: any) => image.is_primary,
+        )?.image_url ||
+        images[0] ||
+        "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1000&q=80";
+
+      const mappedProduct: Product = {
+        ...products[0],
+
+        id: found.id,
+        name: found.name,
+        brand: found.brand || "",
+        category:
+          found.categories?.name?.toLowerCase() || "fruits",
+        subcategory: found.subcategory || "",
+
+        description: found.description || "",
+
+        active: found.active !== false,
+
+        rating: Number(found.rating || 0),
+        reviewCount: Number(found.review_count || 0),
+
+        mrp: Number(variant?.mrp || 0),
+        price: Number(variant?.selling_price || 0),
+        gstRate: Number(variant?.gst_rate || 0),
+
+        stock: Number(
+          inventory?.stock_quantity || 0,
+        ),
+
+        deliveryEta: "Tomorrow",
+
+        specs: {
+          Unit: variant?.variant_name || "",
+        },
+
+        image: primaryImage,
+        images:
+          images.length > 0
+            ? images
+            : [primaryImage],
+
+        sold: 0,
+        sellerId: "nexora",
+        location: "",
+        tags: [],
+        highlights: [],
+        moq: 1,
+        tiers: [],
+      };
+
+      setProduct(mappedProduct);
+      setQty(mappedProduct.moq ?? 1);
+      setImg(0);
+    } catch (error) {
+      console.error(
+        "Failed to load product:",
+        error,
+      );
+
+      setProduct(null);
+    } finally {
+      setLoading(false);
     }
   }
 
-  const fallback = products.find(
-    (item) => item.id === id,
-  );
-
-  if (fallback) {
-    setProduct({
-      ...fallback,
-      active: true,
-    });
-
-    setQty(fallback.moq ?? 1);
-  }
-
-  setLoading(false);
+  loadProduct();
 }, [id]);
 if (loading) {
   return (

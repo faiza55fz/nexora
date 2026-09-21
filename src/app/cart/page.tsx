@@ -25,24 +25,126 @@ export default function CartPage() {
   const [allProducts, setAllProducts] = useState(staticProducts);
 
   useEffect(() => {
+  async function loadProducts() {
     try {
-      const savedProducts =
-        localStorage.getItem("nexora-admin-products");
+      const response = await fetch("/api/products", {
+        cache: "no-store",
+      });
 
-      if (savedProducts) {
-        const adminProducts = JSON.parse(savedProducts);
+      const result = await response.json();
 
-        if (Array.isArray(adminProducts)) {
-          setAllProducts(adminProducts);
-        }
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to load products",
+        );
       }
+
+      const mappedProducts = result.products.map(
+        (product: any) => {
+          const variant =
+            product.product_variants?.find(
+              (item: any) => item.active !== false,
+            ) ||
+            product.product_variants?.[0];
+
+          const inventory = variant?.inventory;
+
+          const images =
+            product.product_images
+              ?.map(
+                (image: any) => image.image_url,
+              )
+              .filter(Boolean) || [];
+
+          const primaryImage =
+            product.product_images?.find(
+              (image: any) => image.is_primary,
+            )?.image_url ||
+            images[0] ||
+            "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1000&q=80";
+
+          return {
+            ...staticProducts[0],
+
+            id: product.id,
+            name: product.name,
+            brand: product.brand || "",
+
+            category:
+              product.categories?.name?.toLowerCase() ||
+              "fruits",
+
+            subcategory:
+              product.subcategory || "",
+
+            description:
+              product.description || "",
+
+            active:
+              product.active !== false,
+
+            rating:
+              Number(product.rating || 0),
+
+            reviewCount:
+              Number(product.review_count || 0),
+
+            mrp:
+              Number(variant?.mrp || 0),
+
+            price:
+              Number(
+                variant?.selling_price || 0,
+              ),
+
+            gstRate:
+              Number(
+                variant?.gst_rate || 0,
+              ),
+
+            stock:
+              Number(
+                inventory?.stock_quantity || 0,
+              ),
+
+            deliveryEta: "Tomorrow",
+
+            specs: {
+              Unit:
+                variant?.variant_name || "",
+            },
+
+            image: primaryImage,
+
+            images:
+              images.length > 0
+                ? images
+                : [primaryImage],
+
+            sold: 0,
+            sellerId: "nexora",
+            location: "",
+            tags: [],
+            highlights: [],
+            moq: 1,
+            tiers: [],
+          };
+        },
+      );
+
+      setAllProducts(mappedProducts);
     } catch (error) {
       console.error(
-        "Failed to load admin products:",
+        "Failed to load products:",
         error,
       );
+
+      setAllProducts([]);
     }
-  }, []);
+  }
+
+  loadProducts();
+}, []);
 
   const rows = cart
     .map((item) => ({

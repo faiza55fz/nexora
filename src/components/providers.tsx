@@ -23,7 +23,6 @@ export type AppUser = {
 };
 
 type Store = {
-  
   user: AppUser | null;
   login: (user: AppUser) => void;
   logout: () => void;
@@ -40,7 +39,12 @@ type Store = {
   toggleWishlist: (productId: string) => void;
   compare: string[];
   toggleCompare: (productId: string) => void;
-  notifications: { id: string; title: string; body: string; time: string }[];
+  notifications: {
+    id: string;
+    title: string;
+    body: string;
+    time: string;
+  }[];
 };
 
 const Ctx = createContext<Store | null>(null);
@@ -49,39 +53,95 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [mode, setMode] = useState<Mode>("b2c");
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [cart, setCart] = useState<CartItem[]>([
-    { productId: "p1", qty: 1 },
-    { productId: "p3", qty: 2 },
-  ]);
+
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartHydrated, setCartHydrated] = useState(false);
+
   const clearCart = useCallback(() => {
-  setCart([]);
-}, []);
+    setCart([]);
+  }, []);
+
   const [wishlist, setWishlist] = useState<string[]>(["p3", "p2"]);
   const [compare, setCompare] = useState<string[]>(["p1"]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     const savedUser = localStorage.getItem("nexora-user");
+
     if (savedUser) {
-      try { setUser(JSON.parse(savedUser)); } catch { localStorage.removeItem("nexora-user"); }
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch {
+        localStorage.removeItem("nexora-user");
+      }
     }
-    const saved = localStorage.getItem("nexora-theme") as "light" | "dark" | null;
+
+    const saved = localStorage.getItem("nexora-theme") as
+      | "light"
+      | "dark"
+      | null;
+
     const initial =
-      saved ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      saved ??
+      (window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light");
+
     setTheme(initial);
-    document.documentElement.classList.toggle("dark", initial === "dark");
+    document.documentElement.classList.toggle(
+      "dark",
+      initial === "dark",
+    );
+
     setHydrated(true);
   }, []);
 
+  // Load cart from localStorage once when the app starts
+  useEffect(() => {
+    const savedCart = localStorage.getItem("nexora-cart");
+
+    if (savedCart) {
+      try {
+        const parsedCart = JSON.parse(savedCart);
+
+        if (Array.isArray(parsedCart)) {
+          setCart(parsedCart);
+        }
+      } catch {
+        localStorage.removeItem("nexora-cart");
+      }
+    }
+
+    setCartHydrated(true);
+  }, []);
+
+  // Save cart only after the initial cart has been loaded
+  useEffect(() => {
+    if (!cartHydrated) return;
+
+    localStorage.setItem(
+      "nexora-cart",
+      JSON.stringify(cart),
+    );
+  }, [cart, cartHydrated]);
+
   useEffect(() => {
     if (!hydrated) return;
-    document.documentElement.classList.toggle("dark", theme === "dark");
+
+    document.documentElement.classList.toggle(
+      "dark",
+      theme === "dark",
+    );
+
     localStorage.setItem("nexora-theme", theme);
   }, [theme, hydrated]);
 
   const login = useCallback((nextUser: AppUser) => {
     setUser(nextUser);
-    localStorage.setItem("nexora-user", JSON.stringify(nextUser));
+    localStorage.setItem(
+      "nexora-user",
+      JSON.stringify(nextUser),
+    );
   }, []);
 
   const logout = useCallback(() => {
@@ -93,41 +153,84 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
   }, []);
 
-  const addToCart = useCallback((productId: string, qty = 1) => {
-    setCart((prev) => {
-      const found = prev.find((i) => i.productId === productId);
-      if (found) {
-        return prev.map((i) =>
-          i.productId === productId ? { ...i, qty: i.qty + qty } : i,
+  const addToCart = useCallback(
+    (productId: string, qty = 1) => {
+      setCart((prev) => {
+        const found = prev.find(
+          (i) => i.productId === productId,
         );
-      }
-      return [...prev, { productId, qty }];
-    });
-  }, []);
 
-  const setQty = useCallback((productId: string, qty: number) => {
-    setCart((prev) =>
-      qty <= 0 ? prev.filter((i) => i.productId !== productId) : prev.map((i) => (i.productId === productId ? { ...i, qty } : i)),
-    );
-  }, []);
+        if (found) {
+          return prev.map((i) =>
+            i.productId === productId
+              ? { ...i, qty: i.qty + qty }
+              : i,
+          );
+        }
 
-  const removeFromCart = useCallback((productId: string) => {
-    setCart((prev) => prev.filter((i) => i.productId !== productId));
-  }, []);
+        return [...prev, { productId, qty }];
+      });
+    },
+    [],
+  );
 
-  const toggleWishlist = useCallback((productId: string) => {
-    setWishlist((prev) =>
-      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId],
-    );
-  }, []);
+  const setQty = useCallback(
+    (productId: string, qty: number) => {
+      setCart((prev) =>
+        qty <= 0
+          ? prev.filter(
+              (i) => i.productId !== productId,
+            )
+          : prev.map((i) =>
+              i.productId === productId
+                ? { ...i, qty }
+                : i,
+            ),
+      );
+    },
+    [],
+  );
 
-  const toggleCompare = useCallback((productId: string) => {
-    setCompare((prev) => {
-      if (prev.includes(productId)) return prev.filter((id) => id !== productId);
-      if (prev.length >= 3) return [...prev.slice(1), productId];
-      return [...prev, productId];
-    });
-  }, []);
+  const removeFromCart = useCallback(
+    (productId: string) => {
+      setCart((prev) =>
+        prev.filter(
+          (i) => i.productId !== productId,
+        ),
+      );
+    },
+    [],
+  );
+
+  const toggleWishlist = useCallback(
+    (productId: string) => {
+      setWishlist((prev) =>
+        prev.includes(productId)
+          ? prev.filter((id) => id !== productId)
+          : [...prev, productId],
+      );
+    },
+    [],
+  );
+
+  const toggleCompare = useCallback(
+    (productId: string) => {
+      setCompare((prev) => {
+        if (prev.includes(productId)) {
+          return prev.filter(
+            (id) => id !== productId,
+          );
+        }
+
+        if (prev.length >= 3) {
+          return [...prev.slice(1), productId];
+        }
+
+        return [...prev, productId];
+      });
+    },
+    [],
+  );
 
   const notifications = useMemo(
     () => [
@@ -193,11 +296,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={value}>
+      {children}
+    </Ctx.Provider>
+  );
 }
 
 export function useStore() {
   const ctx = useContext(Ctx);
-  if (!ctx) throw new Error("useStore must be used within AppProvider");
+
+  if (!ctx) {
+    throw new Error(
+      "useStore must be used within AppProvider",
+    );
+  }
+
   return ctx;
 }

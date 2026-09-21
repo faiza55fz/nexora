@@ -13,7 +13,7 @@ import { ProductCard } from "@/components/product-card";
 import { Select } from "@/components/ui";
 import { cn } from "@/lib/format";
 
-type Product = (typeof products)[number] &{
+type Product = (typeof products)[number] & {
   active?: boolean;
 };
 
@@ -27,113 +27,190 @@ export default function ListingClient() {
   const [cat, setCat] = useState(cat0);
   const [sort, setSort] = useState("relevance");
   const [max, setMax] = useState(100000);
-  const [mobileFilters, setMobileFilters] = useState(false);
+  const [mobileFilters, setMobileFilters] =
+    useState(false);
 
   const [catalogProducts, setCatalogProducts] =
-    useState<Product[]>(products);
-
-  function loadCatalog() {
-    const saved = localStorage.getItem(
-      "nexora-admin-products",
-    );
-
-    if (!saved) {
-      setCatalogProducts(products);
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(saved);
-
-      if (Array.isArray(parsed)) {
-        setCatalogProducts(parsed);
-      } else {
-        setCatalogProducts(products);
-      }
-    } catch {
-      setCatalogProducts(products);
-    }
-  }
+    useState<Product[]>([]);
 
   useEffect(() => {
-    // Load admin catalog when the page opens.
-    loadCatalog();
+    async function loadCatalog() {
+      try {
+        const response = await fetch("/api/products", {
+          cache: "no-store",
+        });
 
-    // If admin changes the catalog in another tab/window,
-    // update this catalog automatically.
-    function handleStorage(event: StorageEvent) {
-      if (
-        event.key === "nexora-admin-products"
-      ) {
-        loadCatalog();
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(
+            result.message || "Failed to load products",
+          );
+        }
+
+        const mappedProducts: Product[] =
+          result.products.map((product: any) => {
+            const variant =
+              product.product_variants?.find(
+                (item: any) =>
+                  item.active !== false,
+              ) ||
+              product.product_variants?.[0];
+
+            const inventory =
+              variant?.inventory;
+
+            const primaryImage =
+              product.product_images?.find(
+                (image: any) =>
+                  image.is_primary,
+              )?.image_url ||
+              product.product_images?.[0]
+                ?.image_url ||
+              "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1000&q=80";
+
+            return {
+              ...products[0],
+
+              id: product.id,
+              name: product.name,
+              brand: product.brand || "",
+
+              category:
+                product.categories?.name?.toLowerCase() ||
+                "fruits",
+
+              subcategory:
+                product.subcategory || "",
+
+              description:
+                product.description || "",
+
+              active:
+                product.active !== false,
+
+              rating:
+                Number(product.rating || 0),
+
+              reviewCount:
+                Number(
+                  product.review_count || 0,
+                ),
+
+              mrp:
+                Number(
+                  variant?.mrp || 0,
+                ),
+
+              price:
+                Number(
+                  variant?.selling_price || 0,
+                ),
+
+              gstRate:
+                Number(
+                  variant?.gst_rate || 0,
+                ),
+
+              stock:
+                Number(
+                  inventory?.stock_quantity ||
+                    0,
+                ),
+
+              deliveryEta:
+                "Tomorrow",
+
+              specs: {
+                Unit:
+                  variant?.variant_name ||
+                  "",
+              },
+
+              image:
+                primaryImage,
+
+              images:
+                product.product_images?.map(
+                  (image: any) =>
+                    image.image_url,
+                ) || [],
+
+              sold: 0,
+              sellerId: "nexora",
+              location: "",
+              tags: [],
+              highlights: [],
+              moq: 1,
+              tiers: [],
+            };
+          });
+
+        setCatalogProducts(
+          mappedProducts,
+        );
+      } catch (error) {
+        console.error(
+          "Failed to load products:",
+          error,
+        );
+
+        setCatalogProducts([]);
       }
     }
 
-    window.addEventListener(
-      "storage",
-      handleStorage,
-    );
-
-    // Also reload when returning to this page/tab.
-    function handleFocus() {
-      loadCatalog();
-    }
-
-    window.addEventListener(
-      "focus",
-      handleFocus,
-    );
-
-    return () => {
-      window.removeEventListener(
-        "storage",
-        handleStorage,
-      );
-
-      window.removeEventListener(
-        "focus",
-        handleFocus,
-      );
-    };
+    loadCatalog();
   }, []);
 
   const list = useMemo(() => {
-    let rows = catalogProducts.filter((p) => {
-      const hay =
-        `${p.name} ${p.brand} ${p.category}`.toLowerCase();
+    let rows = catalogProducts.filter(
+      (p) => {
+        const hay =
+          `${p.name} ${p.brand} ${p.category}`.toLowerCase();
 
-      const okQ =
-        !q ||
-        hay.includes(q.toLowerCase());
+        const okQ =
+          !q ||
+          hay.includes(
+            q.toLowerCase(),
+          );
 
-      const okC =
-        cat === "all" ||
-        p.category === cat;
+        const okC =
+          cat === "all" ||
+          p.category === cat;
 
-      const okActive =
-        p.active !== false;
+        const okActive =
+          p.active !== false;
 
-      const okP =
-  p.price <= max;
+        const okP =
+          p.price <= max;
 
-return okActive && okQ && okC && okP;
-    });
+        return (
+          okActive &&
+          okQ &&
+          okC &&
+          okP
+        );
+      },
+    );
 
     if (sort === "price-asc") {
       rows = [...rows].sort(
-        (a, b) => a.price - b.price,
+        (a, b) =>
+          a.price - b.price,
       );
     }
 
     if (sort === "price-desc") {
       rows = [...rows].sort(
-        (a, b) => b.price - a.price,
+        (a, b) =>
+          b.price - a.price,
       );
     }
 
     if (sort === "rating") {
       rows = [...rows].sort(
-        (a, b) => b.rating - a.rating,
+        (a, b) =>
+          b.rating - a.rating,
       );
     }
 
@@ -210,28 +287,33 @@ return okActive && okQ && okC && okP;
       <section className="border-b border-line bg-surface">
         <div className="mx-auto max-w-7xl px-4 py-4">
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {categoryList.map((category) => (
-              <button
-                key={category.slug}
-                onClick={() =>
-                  setCat(category.slug)
-                }
-                className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition",
-                  cat === category.slug
-                    ? "border-brand bg-brand text-white"
-                    : "border-line bg-bg hover:border-brand/30 hover:bg-brand-soft",
-                )}
-              >
-                <span>
-                  {category.emoji}
-                </span>
+            {categoryList.map(
+              (category) => (
+                <button
+                  key={category.slug}
+                  onClick={() =>
+                    setCat(
+                      category.slug,
+                    )
+                  }
+                  className={cn(
+                    "flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition",
+                    cat ===
+                      category.slug
+                      ? "border-brand bg-brand text-white"
+                      : "border-line bg-bg hover:border-brand/30 hover:bg-brand-soft",
+                  )}
+                >
+                  <span>
+                    {category.emoji}
+                  </span>
 
-                <span>
-                  {category.name}
-                </span>
-              </button>
-            ))}
+                  <span>
+                    {category.name}
+                  </span>
+                </button>
+              ),
+            )}
           </div>
         </div>
       </section>
@@ -244,7 +326,9 @@ return okActive && okQ && okC && okP;
             <div className="sticky top-28 rounded-2xl border border-line bg-surface p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <SlidersHorizontal size={17} />
+                  <SlidersHorizontal
+                    size={17}
+                  />
 
                   <h2 className="font-semibold">
                     Filters
@@ -253,7 +337,9 @@ return okActive && okQ && okC && okP;
 
                 {hasFilters && (
                   <button
-                    onClick={clearFilters}
+                    onClick={
+                      clearFilters
+                    }
                     className="text-xs font-semibold text-brand hover:underline"
                   >
                     Clear
@@ -276,7 +362,9 @@ return okActive && okQ && okC && okP;
                   <input
                     value={q}
                     onChange={(e) =>
-                      setQ(e.target.value)
+                      setQ(
+                        e.target.value,
+                      )
                     }
                     placeholder="Search groceries"
                     className="h-10 w-full rounded-xl border border-line bg-bg pl-9 pr-3 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/10"
@@ -291,32 +379,44 @@ return okActive && okQ && okC && okP;
                 </p>
 
                 <div className="mt-2 space-y-1">
-                  {categoryList.map((category) => (
-                    <button
-                      key={category.slug}
-                      onClick={() =>
-                        setCat(category.slug)
-                      }
-                      className={cn(
-                        "flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition",
-                        cat === category.slug
-                          ? "bg-brand-soft font-semibold text-brand"
-                          : "hover:bg-surface-2",
-                      )}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span>
-                          {category.emoji}
+                  {categoryList.map(
+                    (category) => (
+                      <button
+                        key={
+                          category.slug
+                        }
+                        onClick={() =>
+                          setCat(
+                            category.slug,
+                          )
+                        }
+                        className={cn(
+                          "flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition",
+                          cat ===
+                            category.slug
+                            ? "bg-brand-soft font-semibold text-brand"
+                            : "hover:bg-surface-2",
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span>
+                            {
+                              category.emoji
+                            }
+                          </span>
+
+                          {
+                            category.name
+                          }
                         </span>
 
-                        {category.name}
-                      </span>
-
-                      {cat === category.slug && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-                      )}
-                    </button>
-                  ))}
+                        {cat ===
+                          category.slug && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+                        )}
+                      </button>
+                    ),
+                  )}
                 </div>
               </div>
 
@@ -342,15 +442,22 @@ return okActive && okQ && okC && okP;
                   value={max}
                   onChange={(e) =>
                     setMax(
-                      Number(e.target.value),
+                      Number(
+                        e.target.value,
+                      ),
                     )
                   }
                   className="mt-4 w-full accent-[var(--brand)]"
                 />
 
                 <div className="mt-1 flex justify-between text-[11px] text-muted">
-                  <span>₹200</span>
-                  <span>₹1,00,000</span>
+                  <span>
+                    ₹200
+                  </span>
+
+                  <span>
+                    ₹1,00,000
+                  </span>
                 </div>
               </div>
             </div>
@@ -378,18 +485,24 @@ return okActive && okQ && okC && okP;
               <div className="flex items-center gap-2">
                 <button
                   onClick={() =>
-                    setMobileFilters(true)
+                    setMobileFilters(
+                      true,
+                    )
                   }
                   className="flex h-10 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold lg:hidden"
                 >
-                  <Filter size={16} />
+                  <Filter
+                    size={16}
+                  />
                   Filters
                 </button>
 
                 <Select
                   value={sort}
                   onChange={(e) =>
-                    setSort(e.target.value)
+                    setSort(
+                      e.target.value,
+                    )
                   }
                   className="h-10 w-44 bg-surface"
                   aria-label="Sort products"
@@ -435,14 +548,20 @@ return okActive && okQ && okC && okP;
                 {cat !== "all" && (
                   <button
                     onClick={() =>
-                      setCat("all")
+                      setCat(
+                        "all",
+                      )
                     }
                     className="flex items-center gap-1 rounded-full bg-brand-soft px-3 py-1.5 text-xs font-medium text-brand"
                   >
-                    {categoryList.find(
-                      (c) =>
-                        c.slug === cat,
-                    )?.name ?? cat}
+                    {
+                      categoryList.find(
+                        (c) =>
+                          c.slug ===
+                          cat,
+                      )?.name ??
+                        cat
+                    }
 
                     <X size={12} />
                   </button>
@@ -451,7 +570,9 @@ return okActive && okQ && okC && okP;
                 {max !== 100000 && (
                   <button
                     onClick={() =>
-                      setMax(100000)
+                      setMax(
+                        100000,
+                      )
                     }
                     className="flex items-center gap-1 rounded-full bg-brand-soft px-3 py-1.5 text-xs font-medium text-brand"
                   >
@@ -483,7 +604,9 @@ return okActive && okQ && okC && okP;
                 </p>
 
                 <button
-                  onClick={clearFilters}
+                  onClick={
+                    clearFilters
+                  }
                   className="mt-5 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white"
                 >
                   Clear filters
@@ -491,12 +614,18 @@ return okActive && okQ && okC && okP;
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {list.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                  />
-                ))}
+                {list.map(
+                  (product) => (
+                    <ProductCard
+                      key={
+                        product.id
+                      }
+                      product={
+                        product
+                      }
+                    />
+                  ),
+                )}
               </div>
             )}
 
@@ -576,7 +705,9 @@ return okActive && okQ && okC && okP;
 
               <button
                 onClick={() =>
-                  setMobileFilters(false)
+                  setMobileFilters(
+                    false,
+                  )
                 }
                 className="grid h-9 w-9 place-items-center rounded-xl hover:bg-surface-2"
                 aria-label="Close filters"
@@ -600,7 +731,9 @@ return okActive && okQ && okC && okP;
                 <input
                   value={q}
                   onChange={(e) =>
-                    setQ(e.target.value)
+                    setQ(
+                      e.target.value,
+                    )
                   }
                   placeholder="Search groceries"
                   className="h-11 w-full rounded-xl border border-line bg-bg pl-9 pr-3 text-sm"
@@ -615,23 +748,34 @@ return okActive && okQ && okC && okP;
               </p>
 
               <div className="mt-3 grid grid-cols-2 gap-2">
-                {categoryList.map((category) => (
-                  <button
-                    key={category.slug}
-                    onClick={() =>
-                      setCat(category.slug)
-                    }
-                    className={cn(
-                      "rounded-xl border px-3 py-3 text-left text-sm transition",
-                      cat === category.slug
-                        ? "border-brand bg-brand-soft font-semibold text-brand"
-                        : "border-line hover:bg-surface-2",
-                    )}
-                  >
-                    {category.emoji}{" "}
-                    {category.name}
-                  </button>
-                ))}
+                {categoryList.map(
+                  (category) => (
+                    <button
+                      key={
+                        category.slug
+                      }
+                      onClick={() =>
+                        setCat(
+                          category.slug,
+                        )
+                      }
+                      className={cn(
+                        "rounded-xl border px-3 py-3 text-left text-sm transition",
+                        cat ===
+                          category.slug
+                          ? "border-brand bg-brand-soft font-semibold text-brand"
+                          : "border-line hover:bg-surface-2",
+                      )}
+                    >
+                      {
+                        category.emoji
+                      }{" "}
+                      {
+                        category.name
+                      }
+                    </button>
+                  ),
+                )}
               </div>
             </div>
 
@@ -657,7 +801,9 @@ return okActive && okQ && okC && okP;
                 value={max}
                 onChange={(e) =>
                   setMax(
-                    Number(e.target.value),
+                    Number(
+                      e.target.value,
+                    ),
                   )
                 }
                 className="mt-4 w-full accent-[var(--brand)]"
@@ -666,7 +812,9 @@ return okActive && okQ && okC && okP;
 
             <div className="mt-6 flex gap-2">
               <button
-                onClick={clearFilters}
+                onClick={
+                  clearFilters
+                }
                 className="flex-1 rounded-xl border border-line px-4 py-3 text-sm font-semibold"
               >
                 Clear all
@@ -674,7 +822,9 @@ return okActive && okQ && okC && okP;
 
               <button
                 onClick={() =>
-                  setMobileFilters(false)
+                  setMobileFilters(
+                    false,
+                  )
                 }
                 className="flex-1 rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white"
               >
