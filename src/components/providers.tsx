@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import type { CartItem, Mode } from "@/lib/types";
+import { supabase } from "@/lib/supabase";
 
 export type AppUser = {
   id: string;
@@ -24,6 +25,7 @@ export type AppUser = {
 
 type Store = {
   user: AppUser | null;
+  authReady: boolean;
   login: (user: AppUser) => void;
   logout: () => void;
   mode: Mode;
@@ -53,6 +55,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [mode, setMode] = useState<Mode>("b2c");
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [authReady, setAuthReady] = useState(false);
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartHydrated, setCartHydrated] = useState(false);
@@ -65,35 +68,139 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [compare, setCompare] = useState<string[]>(["p1"]);
   const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem("nexora-user");
-
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch {
+  // Load the customer profile for a Supabase auth session
+  const loadUserFromSession = useCallback(
+    async (
+      session: {
+        user: {
+          id: string;
+          email?: string;
+          user_metadata?: {
+            name?: string;
+            phone?: string;
+          };
+        };
+      } | null,
+    ) => {
+      if (!session?.user) {
+        setUser(null);
         localStorage.removeItem("nexora-user");
+        return;
+      }
+
+      const authUser = session.user;
+
+      const { data: customer } = await supabase
+        .from("customers")
+        .select("name, email, phone")
+        .eq("id", authUser.id)
+        .maybeSingle();
+
+      const nextUser: AppUser = {
+        id: authUser.id,
+        name:
+          customer?.name ||
+          authUser.user_metadata?.name ||
+          "Nexora Customer",
+        email:
+          customer?.email ||
+          authUser.email ||
+          "",
+        phone:
+          customer?.phone ||
+          authUser.user_metadata?.phone ||
+          "",
+        role: "customer",
+      };
+
+      setUser(nextUser);
+
+      localStorage.setItem(
+        "nexora-user",
+        JSON.stringify(nextUser),
+      );
+    },
+    [],
+  );
+
+  // Restore authentication exactly once when the app starts.
+  // Auth state changes are handled only after this initial restore finishes.
+  useEffect(() => {
+    let mounted = true;
+    let initialized = false;
+
+    async function restoreSession() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!mounted) return;
+
+        if (session) {
+          // IMPORTANT:
+          // Wait for the customer profile to load BEFORE
+          // telling the rest of the app that auth is ready.
+          await loadUserFromSession(session);
+        } else {
+          setUser(null);
+          localStorage.removeItem("nexora-user");
+        }
+
+        if (!mounted) return;
+
+        initialized = true;
+        setAuthReady(true);
+      } catch {
+        if (!mounted) return;
+
+        setUser(null);
+        initialized = true;
+        setAuthReady(true);
       }
     }
 
-    const saved = localStorage.getItem("nexora-theme") as
-      | "light"
-      | "dark"
-      | null;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!mounted) return;
 
-    const initial =
-      saved ??
-      (window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light");
+        // Ignore auth events during the initial startup.
+        // getSession() above is responsible for the first restore.
+        if (!initialized) return;
 
-    setTheme(initial);
-    document.documentElement.classList.toggle(
-      "dark",
-      initial === "dark",
+        if (!session) {
+          setUser(null);
+          localStorage.removeItem("nexora-user");
+          return;
+        }
+
+        void loadUserFromSession(session);
+      },
     );
 
-    setHydrated(true);
+    void restoreSession();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [loadUserFromSession]);
+
+  const login = useCallback((nextUser: AppUser) => {
+    setUser(nextUser);
+
+    localStorage.setItem(
+      "nexora-user",
+      JSON.stringify(nextUser),
+    );
+  }, []);
+
+  const logout = useCallback(() => {
+    setUser(null);
+    localStorage.removeItem("nexora-user");
+    void supabase.auth.signOut();
   }, []);
 
   // Load cart from localStorage once when the app starts
@@ -126,6 +233,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [cart, cartHydrated]);
 
   useEffect(() => {
+    const saved = localStorage.getItem("nexora-theme") as
+      | "light"
+      | "dark"
+      | null;
+
+    const initial =
+      saved ??
+      (window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light");
+
+    setTheme(initial);
+
+    document.documentElement.classList.toggle(
+      "dark",
+      initial === "dark",
+    );
+
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
     if (!hydrated) return;
 
     document.documentElement.classList.toggle(
@@ -135,19 +264,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     localStorage.setItem("nexora-theme", theme);
   }, [theme, hydrated]);
-
-  const login = useCallback((nextUser: AppUser) => {
-    setUser(nextUser);
-    localStorage.setItem(
-      "nexora-user",
-      JSON.stringify(nextUser),
-    );
-  }, []);
-
-  const logout = useCallback(() => {
-    setUser(null);
-    localStorage.removeItem("nexora-user");
-  }, []);
 
   const toggleTheme = useCallback(() => {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
@@ -231,7 +347,116 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+  // Check pending stock-notification requests for the logged-in customer
+ useEffect(() => {
+  if (!user?.id) return;
 
+  const customerId = user.id;
+  let cancelled = false;
+
+  async function checkStockNotifications() {
+    
+    try {
+      const { data: requests, error } = await supabase
+        .from("product_stock_notifications")
+        .select("id, product_id")
+        .eq("customer_id", customerId)
+        .is("notified_at", null);
+        console.log("🔔 Stock notification check", {
+  customerId,
+  requests,
+  error,
+});
+
+      if (error || !requests?.length || cancelled) return;
+
+      for (const request of requests) {
+        const { data: product } = await supabase
+          .from("products")
+          .select("id, name, active")
+          .eq("id", request.product_id)
+          .maybeSingle();
+          console.log("🔔 Product check", {
+  request,
+  product,
+});
+
+        if (!product || !product.active || cancelled) continue;
+
+        const { data: variant } = await supabase
+          .from("product_variants")
+          .select("id")
+          .eq("product_id", product.id)
+          .eq("active", true)
+          .limit(1)
+          .maybeSingle();
+
+        if (!variant || cancelled) continue;
+
+        const { data: inventory } = await supabase
+          .from("inventory")
+          .select("stock_quantity")
+          .eq("variant_id", variant.id)
+          .maybeSingle();
+
+        if (
+          !inventory ||
+          inventory.stock_quantity <= 0 ||
+          cancelled
+        ) {
+          continue;
+        }
+
+        await supabase
+          .from("product_stock_notifications")
+          .update({
+            notified_at: new Date().toISOString(),
+          })
+          .eq("id", request.id)
+          .eq("customer_id", customerId);
+
+        if (cancelled) return;
+
+        if (
+          typeof window !== "undefined" &&
+          "Notification" in window &&
+          Notification.permission === "granted"
+        ) {
+          new Notification("Nexora — Back in stock", {
+            body: `${product.name} is available again.`,
+          });
+        }
+
+        window.dispatchEvent(
+          new CustomEvent("nexora-stock-notification", {
+            detail: {
+              productId: product.id,
+              productName: product.name,
+            },
+          }),
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Stock notification check failed:",
+        error,
+      );
+    }
+  }
+
+  void checkStockNotifications();
+
+
+  const interval = window.setInterval(
+    checkStockNotifications,
+    30000,
+  );
+
+  return () => {
+    cancelled = true;
+    window.clearInterval(interval);
+  };
+}, [user?.id]);
   const notifications = useMemo(
     () => [
       {
@@ -259,6 +484,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       user,
+      authReady,
       login,
       logout,
       mode,
@@ -278,6 +504,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }),
     [
       user,
+      authReady,
       login,
       logout,
       mode,

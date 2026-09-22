@@ -1,6 +1,11 @@
 "use client";
 
-import { Suspense, useState, type FormEvent } from "react";
+import {
+  Suspense,
+  useEffect,
+  useState,
+  type FormEvent,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Card, Button, Field, Input } from "@/components/ui";
@@ -10,7 +15,7 @@ import { supabase } from "@/lib/supabase";
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const { login } = useStore();
+  const { login, user } = useStore();
 
   const [isSignup, setIsSignup] = useState(false);
 
@@ -20,8 +25,62 @@ function LoginForm() {
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
+
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function checkSession() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      if (session?.user) {
+        const { data: customer } = await supabase
+          .from("customers")
+          .select("name, email, phone")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (!mounted) return;
+
+        const nextUser: AppUser = {
+          id: session.user.id,
+          name:
+            customer?.name ||
+            session.user.user_metadata?.name ||
+            "Nexora Customer",
+          email:
+            customer?.email ||
+            session.user.email ||
+            "",
+          phone:
+            customer?.phone ||
+            session.user.user_metadata?.phone ||
+            "",
+          role: "customer",
+        };
+
+        login(nextUser);
+
+        const next = params.get("next");
+        router.replace(next || "/");
+        return;
+      }
+
+    
+    }
+
+    checkSession();
+
+    return () => {
+      mounted = false;
+    };
+  }, [login, params, router]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -134,6 +193,10 @@ function LoginForm() {
       setLoading(false);
     }
   }
+
+  if (user) {
+  return null;
+}
 
   return (
     <div className="min-h-[75vh] bg-bg px-4 py-12">

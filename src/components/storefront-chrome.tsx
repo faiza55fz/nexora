@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import {useEffect, useState } from "react";
 import {
   Bell,
   ChevronDown,
@@ -36,6 +36,46 @@ export function Header() {
   const [open, setOpen] = useState(false);
   const [cats, setCats] = useState(false);
   const [notes, setNotes] = useState(false);
+  const [stockPopup, setStockPopup] = useState<{
+    productName: string;
+     productId: string;
+  } | null>(null);
+
+  useEffect(() => {
+    function handleStockNotification(event: Event) {
+      const customEvent = event as CustomEvent<{
+        productName: string;
+        productId: string;
+      }>;
+
+      if (!customEvent.detail?.productName) return;
+
+           if (!customEvent.detail?.productId) return;
+
+      setStockPopup({
+        productId: customEvent.detail.productId,
+        productName: customEvent.detail.productName,
+      }); 
+
+      setNotes(true);
+
+      window.setTimeout(() => {
+        setStockPopup(null);
+      }, 6000);
+    }
+
+    window.addEventListener(
+      "nexora-stock-notification",
+      handleStockNotification,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "nexora-stock-notification",
+        handleStockNotification,
+      );
+    };
+  }, []);
 
   const router = useRouter();
 
@@ -534,6 +574,48 @@ export function Header() {
           
       {/* Compare bar */}
       
+          {stockPopup && (
+        <div
+          className="fixed right-4 top-4 z-[100] w-[min(92vw,380px)] rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow)]"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-start gap-3">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-lg">
+              🛒
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">
+                Back in stock 🎉
+              </p>
+
+              <p className="mt-1 text-sm text-muted">
+                {stockPopup.productName} is available again.
+              </p>
+
+              <Link
+                href={`/products/${encodeURIComponent(
+                  stockPopup.productId,
+                )}`}
+                onClick={() => setStockPopup(null)}
+                className="mt-2 inline-block text-sm font-semibold text-brand hover:underline"
+              >
+                Shop now
+              </Link>
+            </div>
+
+            <button
+              type="button"
+              aria-label="Dismiss notification"
+              onClick={() => setStockPopup(null)}
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface-2"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

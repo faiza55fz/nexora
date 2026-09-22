@@ -22,6 +22,7 @@ export type Product = {
   sold: number;
   sellerId: string;
   stock: number;
+  active?: boolean;
   deliveryEta: string;
   location: string;
   tags: string[];

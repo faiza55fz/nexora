@@ -1,15 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { GitCompare, Heart, ShoppingCart, Star } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { useStore } from "@/components/providers";
 import { discountPct, inr, wholesalePrice } from "@/lib/format";
+import { supabase } from "@/lib/supabase";
 import type { Product } from "@/lib/types";
 
 export function Stars({ value, size = 14 }: { value: number; size?: number }) {
   return (
-    <span className="inline-flex items-center gap-0.5 text-amber-500" aria-label={`${value} out of 5`}>
+    <span
+      className="inline-flex items-center gap-0.5 text-amber-500"
+      aria-label={`${value} out of 5`}
+    >
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}
@@ -22,77 +27,193 @@ export function Stars({ value, size = 14 }: { value: number; size?: number }) {
 }
 
 export function ProductCard({ product }: { product: Product }) {
-  const { mode, addToCart, toggleWishlist, toggleCompare, wishlist, compare } = useStore();
+  const { mode, addToCart, toggleWishlist, toggleCompare, wishlist, compare } =
+    useStore();
+
   const saved = wishlist.includes(product.id);
   const compared = compare.includes(product.id);
-  const unit = mode === "b2b" ? wholesalePrice(product.tiers, product.moq) : product.price;
+  const [notifyLoading, setNotifyLoading] = useState(false);
+const [notifySaved, setNotifySaved] = useState(false);
+
+  const unit =
+    mode === "b2b"
+      ? wholesalePrice(product.tiers, product.moq)
+      : product.price;
+
   const off = discountPct(product.mrp, unit);
+
+  const isUnavailable = product.active === false;
+  const isOutOfStock = product.stock <= 0;
+  const unavailable = isUnavailable || isOutOfStock;
+  async function handleNotify() {
+  if (notifyLoading || notifySaved) return;
+
+  setNotifyLoading(true);
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert("Please log in to get notified when this product is available.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("product_stock_notifications")
+      .insert({
+        product_id: product.id,
+        customer_id: user.id,
+      });
+
+    if (error) {
+      if (error.code === "23505") {
+        setNotifySaved(true);
+        return;
+      }
+
+      throw error;
+    }
+
+    setNotifySaved(true);
+  } catch (error) {
+    console.error("Notification request failed:", error);
+    alert("Something went wrong. Please try again.");
+  } finally {
+    setNotifyLoading(false);
+  }
+}
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-[var(--shadow)]">
-      <Link href={`/products/${product.id}`} className="relative block aspect-[4/3] overflow-hidden bg-surface-2">
+      <Link
+        href={`/products/${product.id}`}
+        className="relative block aspect-[4/3] overflow-hidden bg-surface-2"
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={product.image}
           alt={product.name}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
         />
+
         {off > 0 ? (
           <span className="absolute left-3 top-3">
             <Badge tone="cta">{off}% off</Badge>
           </span>
         ) : null}
+
         {mode === "b2b" ? (
           <span className="absolute right-3 top-3">
             <Badge tone="brand">MOQ {product.moq}</Badge>
           </span>
         ) : null}
       </Link>
+
       <div className="flex flex-1 flex-col p-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted">{product.brand} · {product.location.split(" · ")[0]}</p>
-        <Link href={`/products/${product.id}`} className="mt-1 line-clamp-2 font-semibold leading-snug">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+          {product.brand} · {product.location.split(" · ")[0]}
+        </p>
+
+        <Link
+          href={`/products/${product.id}`}
+          className="mt-1 line-clamp-2 font-semibold leading-snug"
+        >
           {product.name}
         </Link>
+
         <div className="mt-2 flex items-center gap-2 text-xs text-muted">
           <Stars value={product.rating} />
           <span>
             {product.rating} ({product.reviewCount.toLocaleString("en-IN")})
           </span>
         </div>
+
         <div className="mt-3 flex items-baseline gap-2">
           <span className="text-lg font-semibold">{inr(unit)}</span>
+
           {product.mrp > unit ? (
-            <span className="text-sm text-muted line-through">{inr(product.mrp)}</span>
+            <span className="text-sm text-muted line-through">
+              {inr(product.mrp)}
+            </span>
           ) : null}
         </div>
+
         {mode === "b2b" ? (
-          <p className="mt-1 text-xs text-muted">Bulk price available · from {inr(product.tiers.at(-1)!.price)}</p>
+          <p className="mt-1 text-xs text-muted">
+            Bulk price available · from {inr(product.tiers.at(-1)!.price)}
+          </p>
         ) : (
-          <p className="mt-1 text-xs text-muted">{product.deliveryEta} · Sold by a local seller</p>
+          <p className="mt-1 text-xs text-muted">
+            {product.deliveryEta} · Sold by a local seller
+          </p>
         )}
+
         {product.aiReason ? (
-          <p className="mt-2 line-clamp-1 text-xs text-ai">{product.aiReason}</p>
+          <p className="mt-2 line-clamp-1 text-xs text-ai">
+            {product.aiReason}
+          </p>
         ) : null}
+
+        {unavailable ? (
+          <p className="mt-3 text-sm font-medium text-muted">
+            {isUnavailable ? "Currently unavailable" : "Out of stock"}
+          </p>
+        ) : null}
+
         <div className="mt-4 flex items-center gap-2">
+          {unavailable ? (
+            <button
+              type="button"
+              onClick={handleNotify}
+              disabled={notifyLoading || notifySaved}
+              className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-cta text-sm font-semibold text-white hover:bg-cta-hover disabled:cursor-not-allowed disabled:opacity-70 "
+            >
+             {notifyLoading
+               ? "Saving..."
+              : notifySaved
+                ? "You'll be notified"
+                : "Notify me when available"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() =>
+                addToCart(product.id, mode === "b2b" ? product.moq : 1)
+              }
+              className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-cta text-sm font-semibold text-white hover:bg-cta-hover"
+            >
+              <ShoppingCart size={16} /> Add
+            </button>
+          )}
+
           <button
-            onClick={() => addToCart(product.id, mode === "b2b" ? product.moq : 1)}
-            className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-cta text-sm font-semibold text-white hover:bg-cta-hover"
-          >
-            <ShoppingCart size={16} /> Add
-          </button>
-          <button
-            aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
+            type="button"
+            aria-label={
+              saved ? "Remove from wishlist" : "Add to wishlist"
+            }
             onClick={() => toggleWishlist(product.id)}
             className="grid h-10 w-10 place-items-center rounded-xl border border-line hover:bg-surface-2"
           >
-            <Heart size={16} className={saved ? "fill-cta text-cta" : ""} />
+            <Heart
+              size={16}
+              className={saved ? "fill-cta text-cta" : ""}
+            />
           </button>
+
           <button
-            aria-label={compared ? "Remove from comparison" : "Compare sellers"}
+            type="button"
+            aria-label={
+              compared ? "Remove from comparison" : "Compare sellers"
+            }
             onClick={() => toggleCompare(product.id)}
             className="grid h-10 w-10 place-items-center rounded-xl border border-line hover:bg-surface-2"
           >
-            <GitCompare size={16} className={compared ? "text-brand" : ""} />
+            <GitCompare
+              size={16}
+              className={compared ? "text-brand" : ""}
+            />
           </button>
         </div>
       </div>

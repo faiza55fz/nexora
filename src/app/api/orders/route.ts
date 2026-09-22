@@ -210,133 +210,69 @@ export async function PATCH(
 /*
  * CREATE ORDER
  */
-export async function POST(
-  request: Request,
-) {
+export async function POST(request: Request) {
   try {
-    const body =
-      (await request.json()) as CreateOrderRequest;
+    const body = await request.json();
 
     if (
-      !body.customerName?.trim() ||
-      !body.customerEmail?.trim() ||
-      !body.customerPhone?.trim() ||
-      !body.address?.trim()
+      !body.customerName ||
+      !body.customerEmail ||
+      !body.customerPhone ||
+      !body.address
     ) {
       return NextResponse.json(
-        {
-          error:
-            "Customer and delivery details are required.",
-        },
-        { status: 400 },
+        { error: "Missing customer or delivery information." },
+        { status: 400 }
       );
     }
 
-    if (!body.items?.length) {
+    if (!Array.isArray(body.items) || body.items.length === 0) {
       return NextResponse.json(
-        {
-          error: "Your cart is empty.",
-        },
-        { status: 400 },
+        { error: "Your cart is empty." },
+        { status: 400 }
       );
     }
+
+    const items = body.items.map((item: any) => ({
+      productId: String(item.productId),
+      quantity: Number(item.quantity),
+    }));
 
     if (
-      !Number.isFinite(body.subtotal) ||
-      !Number.isFinite(body.deliveryFee) ||
-      !Number.isFinite(body.total)
+      items.some(
+        (item: { productId: string; quantity: number }) =>
+          !item.productId ||
+          !Number.isInteger(item.quantity) ||
+          item.quantity <= 0
+      )
     ) {
       return NextResponse.json(
-        {
-          error: "Invalid order amount.",
-        },
-        { status: 400 },
+        { error: "Invalid cart items." },
+        { status: 400 }
       );
     }
 
-    const orderNumber =
-      generateOrderNumber();
+    const { data, error } = await supabaseAdmin.rpc(
+      "create_order_with_stock",
+      {
+        p_customer_name: body.customerName.trim(),
+        p_customer_email: body.customerEmail.trim(),
+        p_customer_phone: body.customerPhone.trim(),
+        p_address: body.address.trim(),
+        p_payment_method: "cod",
+        p_items: items,
+      }
+    );
 
-    const {
-      data: order,
-      error: orderError,
-    } = await supabaseAdmin
-      .from("orders")
-      .insert({
-        order_number:
-          orderNumber,
-        customer_name:
-          body.customerName.trim(),
-        customer_email:
-          body.customerEmail.trim(),
-        customer_phone:
-          body.customerPhone.trim(),
-        address:
-          body.address.trim(),
-        subtotal:
-          body.subtotal,
-        delivery_fee:
-          body.deliveryFee,
-        total:
-          body.total,
-        payment_method: "cod",
-        status: "placed",
-      })
-      .select()
-      .single();
-
-    if (orderError || !order) {
-      console.error(
-        "Order creation failed:",
-        orderError,
-      );
+    if (error) {
+      console.error("Create order error:", error);
 
       return NextResponse.json(
         {
           error:
-            orderError?.message ||
-            "Unable to create order.",
-          details: orderError,
+            error.message || "Unable to place the order. Please try again.",
         },
-        { status: 500 },
-      );
-    }
-
-    const items =
-      body.items.map((item) => ({
-        order_id: order.id,
-        product_id:
-          item.productId,
-        product_name:
-          item.productName,
-        quantity:
-          item.quantity,
-        price: item.price,
-      }));
-
-    const {
-      error: itemsError,
-    } = await supabaseAdmin
-      .from("order_items")
-      .insert(items);
-
-    if (itemsError) {
-      console.error(
-        "Order items creation failed:",
-        itemsError,
-      );
-
-      await supabaseAdmin
-        .from("orders")
-        .delete()
-        .eq("id", order.id);
-
-      return NextResponse.json(
-        {
-          error:
-            "Unable to save order items.",
-        },
-        { status: 500 },
+        { status: 400 }
       );
     }
 
@@ -344,26 +280,22 @@ export async function POST(
       {
         success: true,
         order: {
-          id: order.id,
-          orderNumber:
-            order.order_number,
-          status: order.status,
+          id: data.id,
+          orderNumber: data.orderNumber,
+          status: data.status,
+          subtotal: data.subtotal,
+          deliveryFee: data.deliveryFee,
+          total: data.total,
         },
       },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (error) {
-    console.error(
-      "Create order API error:",
-      error,
-    );
+    console.error("POST /api/orders error:", error);
 
     return NextResponse.json(
-      {
-        error:
-          "Invalid order request.",
-      },
-      { status: 400 },
+      { error: "Unable to place the order. Please try again." },
+      { status: 500 }
     );
   }
 }

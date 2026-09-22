@@ -178,14 +178,10 @@ export default function ListingClient() {
           cat === "all" ||
           p.category === cat;
 
-        const okActive =
-          p.active !== false;
-
         const okP =
           p.price <= max;
 
         return (
-          okActive &&
           okQ &&
           okC &&
           okP

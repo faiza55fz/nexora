@@ -116,15 +116,6 @@ useEffect(() => {
 }, []);
 
 
-  function saveProducts(nextProducts: Product[]) {
-    setCatalogProducts(nextProducts);
-
-    localStorage.setItem(
-      "nexora-admin-products",
-      JSON.stringify(nextProducts),
-    );
-  }
-
 async function saveProduct(updatedProduct: Product) {
   try {
     const response = await fetch("/api/products", {
@@ -195,46 +186,123 @@ async function saveProduct(updatedProduct: Product) {
    * Toggle active/inactive status.
    * The catalog state is the single source of truth.
    */
-  function toggleProductStatus(productId: string) {
-    const currentProduct = catalogProducts.find(
-      (product) => product.id === productId,
-    );
+async function toggleProductStatus(productId: string) {
+  const currentProduct = catalogProducts.find(
+    (product) => product.id === productId,
+  );
 
-    if (!currentProduct) return;
+  if (!currentProduct) return;
 
-    const nextStatus =
-      currentProduct.active === false;
+  const nextStatus = currentProduct.active === false;
+
+  try {
+    const response = await fetch("/api/products", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: productId,
+        active: nextStatus,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.message ||
+          result.error ||
+          "Failed to update product status",
+      );
+    }
 
     const updatedProduct: Product = {
       ...currentProduct,
       active: nextStatus,
     };
 
-    const nextProducts = catalogProducts.map(
-      (product) =>
+    setCatalogProducts((current) =>
+      current.map((product) =>
         product.id === productId
           ? updatedProduct
           : product,
+      ),
     );
 
-    saveProducts(nextProducts);
-
-    // Immediately update the open modal as well.
     setSelectedProduct(updatedProduct);
-  }
+  } catch (error) {
+    console.error(
+      "Failed to update product status:",
+      error,
+    );
 
-  function addProduct(newProduct: Product) {
-    const nextProducts = [
-      ...catalogProducts,
-      {
-        ...newProduct,
-        active: true,
+    alert(
+      error instanceof Error
+        ? error.message
+        : "Failed to update product status",
+    );
+  }
+}
+
+async function addProduct(newProduct: Product) {
+  try {
+    const response = await fetch("/api/products", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    ];
+      body: JSON.stringify({
+        id: newProduct.id,
+        name: newProduct.name,
+        brand: newProduct.brand,
+        category: newProduct.category,
+        subcategory: newProduct.subcategory,
+        description: newProduct.description,
+        price: newProduct.price,
+        mrp: newProduct.mrp,
+        gstRate: newProduct.gstRate,
+        stock: newProduct.stock,
+        unit: newProduct.specs?.Unit || "",
+        image: newProduct.image || "",
+        active: true,
+      }),
+    });
 
-    saveProducts(nextProducts);
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.message ||
+          result.error ||
+          "Failed to add product",
+      );
+    }
+
+    const addedProduct: Product = {
+      ...newProduct,
+      active: true,
+    };
+
+    setCatalogProducts((current) => [
+      ...current,
+      addedProduct,
+    ]);
+
     setAdding(false);
+  } catch (error) {
+    console.error(
+      "Failed to add product:",
+      error,
+    );
+
+    alert(
+      error instanceof Error
+        ? error.message
+        : "Failed to add product",
+    );
   }
+}
 
   const activeCount = catalogProducts.filter(
     (product) => product.active !== false,

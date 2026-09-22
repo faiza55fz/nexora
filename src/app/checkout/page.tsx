@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -12,7 +12,7 @@ import {
 import { AuthGuard } from "@/components/auth-guard";
 import { useStore } from "@/components/providers";
 import { Button, Card, Field, Input } from "@/components/ui";
-import { products } from "@/lib/data";
+import { products as staticProducts } from "@/lib/data";
 
 const steps = ["Address", "Delivery", "Payment", "Review"];
 
@@ -33,9 +33,113 @@ export default function CheckoutPage() {
 
   const [orderId, setOrderId] = useState("");
 
+  const [allProducts, setAllProducts] = useState(staticProducts);
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const response = await fetch("/api/products", {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(
+            result.message || "Failed to load products",
+          );
+        }
+
+        const mappedProducts = result.products.map(
+          (product: any) => {
+            const variant =
+              product.product_variants?.find(
+                (item: any) => item.active !== false,
+              ) ||
+              product.product_variants?.[0];
+
+            const inventory = variant?.inventory;
+
+            const images =
+              product.product_images
+                ?.map(
+                  (image: any) => image.image_url,
+                )
+                .filter(Boolean) || [];
+
+            const primaryImage =
+              product.product_images?.find(
+                (image: any) => image.is_primary,
+              )?.image_url ||
+              images[0] ||
+              "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1000&q=80";
+
+            return {
+              ...staticProducts[0],
+              id: product.id,
+              name: product.name,
+              brand: product.brand || "",
+              category:
+                product.categories?.name?.toLowerCase() ||
+                "fruits",
+              subcategory:
+                product.subcategory || "",
+              description:
+                product.description || "",
+              active:
+                product.active !== false,
+              rating:
+                Number(product.rating || 0),
+              reviewCount:
+                Number(product.review_count || 0),
+              mrp:
+                Number(variant?.mrp || 0),
+              price:
+                Number(variant?.selling_price || 0),
+              gstRate:
+                Number(variant?.gst_rate || 0),
+              stock:
+                Number(inventory?.stock_quantity || 0),
+              deliveryEta: "Tomorrow",
+              specs: {
+                Unit:
+                  variant?.variant_name || "",
+              },
+              image: primaryImage,
+              images:
+                images.length > 0
+                  ? images
+                  : [primaryImage],
+              sold: 0,
+              sellerId: "nexora",
+              location: "",
+              tags: [],
+              highlights: [],
+              moq: 1,
+              tiers: [],
+            };
+          },
+        );
+
+        setAllProducts(mappedProducts);
+      } catch (error) {
+        console.error(
+          "Failed to load products:",
+          error,
+        );
+
+        setAllProducts([]);
+      }
+    }
+
+    loadProducts();
+  }, []);
+
   const rows = cart
     .map((item) => {
-      const product = products.find((p) => p.id === item.productId);
+      const product = allProducts.find(
+        (p) => p.id === item.productId,
+      );
 
       if (!product) return null;
 
@@ -50,7 +154,7 @@ export default function CheckoutPage() {
       ): row is {
         productId: string;
         qty: number;
-        product: (typeof products)[number];
+        product: (typeof staticProducts)[number];
       } => row !== null,
     );
 
@@ -59,7 +163,9 @@ export default function CheckoutPage() {
     0,
   );
 
-  const deliveryFee = subtotal === 0 || subtotal >= 499 ? 0 : 49;
+  const deliveryFee =
+    subtotal === 0 || subtotal >= 499 ? 0 : 49;
+
   const total = subtotal + deliveryFee;
 
   const address = [houseStreet, area, city, pin]
@@ -71,19 +177,30 @@ export default function CheckoutPage() {
     setError("");
 
     if (!fullName.trim() || !phone.trim()) {
-      setError("Please enter your name and mobile number.");
+      setError(
+        "Please enter your name and mobile number.",
+      );
       setStep(0);
       return;
     }
 
-    if (!houseStreet.trim() || !area.trim() || !city.trim() || !pin.trim()) {
-      setError("Please complete your delivery address.");
+    if (
+      !houseStreet.trim() ||
+      !area.trim() ||
+      !city.trim() ||
+      !pin.trim()
+    ) {
+      setError(
+        "Please complete your delivery address.",
+      );
       setStep(0);
       return;
     }
 
     if (pin.trim().length !== 6) {
-      setError("Please enter a valid 6-digit PIN code.");
+      setError(
+        "Please enter a valid 6-digit PIN code.",
+      );
       setStep(0);
       return;
     }
@@ -94,7 +211,9 @@ export default function CheckoutPage() {
     }
 
     if (!user?.email) {
-      setError("Your account email is missing. Please log in again.");
+      setError(
+        "Your account email is missing. Please log in again.",
+      );
       return;
     }
 
@@ -127,7 +246,9 @@ export default function CheckoutPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Unable to place order.");
+        throw new Error(
+          data.error || "Unable to place order.",
+        );
       }
 
       setOrderId(data.order.orderNumber);
@@ -157,7 +278,10 @@ export default function CheckoutPage() {
               ← Back to cart
             </Link>
 
-            <h1 className="mt-4 text-3xl font-bold">Checkout</h1>
+            <h1 className="mt-4 text-3xl font-bold">
+              Checkout
+            </h1>
+
             <p className="mt-1 text-sm text-muted">
               Complete your order in just a few simple steps.
             </p>
@@ -177,7 +301,10 @@ export default function CheckoutPage() {
                 <span className="hidden sm:inline">
                   {i + 1}. {s}
                 </span>
-                <span className="sm:hidden">{i + 1}</span>
+
+                <span className="sm:hidden">
+                  {i + 1}
+                </span>
               </li>
             ))}
           </ol>
@@ -197,6 +324,7 @@ export default function CheckoutPage() {
                       <h2 className="text-lg font-semibold">
                         Delivery address
                       </h2>
+
                       <p className="text-sm text-muted">
                         Where should we deliver your groceries?
                       </p>
@@ -207,7 +335,9 @@ export default function CheckoutPage() {
                     <Field label="Full name">
                       <Input
                         value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
+                        onChange={(e) =>
+                          setFullName(e.target.value)
+                        }
                         placeholder="Your full name"
                       />
                     </Field>
@@ -215,7 +345,9 @@ export default function CheckoutPage() {
                     <Field label="Mobile number">
                       <Input
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
+                        onChange={(e) =>
+                          setPhone(e.target.value)
+                        }
                         placeholder="10-digit mobile number"
                       />
                     </Field>
@@ -224,7 +356,9 @@ export default function CheckoutPage() {
                       <Field label="House / Flat / Street">
                         <Input
                           value={houseStreet}
-                          onChange={(e) => setHouseStreet(e.target.value)}
+                          onChange={(e) =>
+                            setHouseStreet(e.target.value)
+                          }
                           placeholder="House number, street name"
                         />
                       </Field>
@@ -233,7 +367,9 @@ export default function CheckoutPage() {
                     <Field label="Area / Locality">
                       <Input
                         value={area}
-                        onChange={(e) => setArea(e.target.value)}
+                        onChange={(e) =>
+                          setArea(e.target.value)
+                        }
                         placeholder="Area or locality"
                       />
                     </Field>
@@ -241,7 +377,9 @@ export default function CheckoutPage() {
                     <Field label="City">
                       <Input
                         value={city}
-                        onChange={(e) => setCity(e.target.value)}
+                        onChange={(e) =>
+                          setCity(e.target.value)
+                        }
                         placeholder="City"
                       />
                     </Field>
@@ -249,7 +387,9 @@ export default function CheckoutPage() {
                     <Field label="PIN code">
                       <Input
                         value={pin}
-                        onChange={(e) => setPin(e.target.value)}
+                        onChange={(e) =>
+                          setPin(e.target.value)
+                        }
                         placeholder="6-digit PIN code"
                         inputMode="numeric"
                         maxLength={6}
@@ -257,8 +397,8 @@ export default function CheckoutPage() {
                     </Field>
 
                     <div className="rounded-xl bg-brand-soft p-3 text-sm text-brand sm:col-span-2">
-                      📍 Your delivery location will be used to estimate
-                      delivery time and availability.
+                      📍 Your delivery location will be used
+                      to estimate delivery time and availability.
                     </div>
                   </div>
                 </div>
@@ -276,6 +416,7 @@ export default function CheckoutPage() {
                       <h2 className="text-lg font-semibold">
                         Delivery options
                       </h2>
+
                       <p className="text-sm text-muted">
                         Choose when you'd like your order.
                       </p>
@@ -292,6 +433,7 @@ export default function CheckoutPage() {
                     <div className="flex-1">
                       <div className="flex items-center justify-between gap-3">
                         <strong>Tomorrow</strong>
+
                         <span className="rounded-full bg-brand px-2.5 py-1 text-xs font-semibold text-white">
                           Recommended
                         </span>
@@ -305,13 +447,19 @@ export default function CheckoutPage() {
 
                   <div className="rounded-2xl border border-line p-5">
                     <div className="flex items-center gap-3">
-                      <CheckCircle2 size={20} className="text-success" />
+                      <CheckCircle2
+                        size={20}
+                        className="text-success"
+                      />
+
                       <div>
                         <p className="font-semibold">
                           Freshness guaranteed
                         </p>
+
                         <p className="text-sm text-muted">
-                          Your groceries are packed close to delivery time.
+                          Your groceries are packed close to
+                          delivery time.
                         </p>
                       </div>
                     </div>
@@ -331,6 +479,7 @@ export default function CheckoutPage() {
                       <h2 className="text-lg font-semibold">
                         Payment method
                       </h2>
+
                       <p className="text-sm text-muted">
                         Simple and secure payment.
                       </p>
@@ -347,11 +496,15 @@ export default function CheckoutPage() {
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <strong>Cash on delivery</strong>
-                        <span className="text-xl">💵</span>
+
+                        <span className="text-xl">
+                          💵
+                        </span>
                       </div>
 
                       <p className="mt-1 text-sm text-muted">
-                        Pay when your groceries arrive at your doorstep.
+                        Pay when your groceries arrive at your
+                        doorstep.
                       </p>
                     </div>
                   </label>
@@ -363,8 +516,8 @@ export default function CheckoutPage() {
                     />
 
                     <p className="text-sm text-muted">
-                      No card or online payment details are required for this
-                      order.
+                      No card or online payment details are
+                      required for this order.
                     </p>
                   </div>
                 </div>
@@ -377,33 +530,50 @@ export default function CheckoutPage() {
                     <h2 className="text-lg font-semibold">
                       Review your order
                     </h2>
+
                     <p className="mt-1 text-sm text-muted">
-                      Please check everything before placing your order.
+                      Please check everything before placing
+                      your order.
                     </p>
                   </div>
 
                   <div className="space-y-3 rounded-2xl bg-surface-2 p-5 text-sm">
                     <div className="flex justify-between gap-4">
-                      <span className="text-muted">Deliver to</span>
+                      <span className="text-muted">
+                        Deliver to
+                      </span>
+
                       <strong className="text-right">
-                        {address || "Delivery address not entered"}
+                        {address ||
+                          "Delivery address not entered"}
                       </strong>
                     </div>
 
                     <div className="flex justify-between gap-4">
-                      <span className="text-muted">Delivery</span>
-                      <strong>Tomorrow by 8 PM</strong>
+                      <span className="text-muted">
+                        Delivery
+                      </span>
+
+                      <strong>
+                        Tomorrow by 8 PM
+                      </strong>
                     </div>
 
                     <div className="flex justify-between gap-4">
-                      <span className="text-muted">Payment</span>
-                      <strong>Cash on delivery</strong>
+                      <span className="text-muted">
+                        Payment
+                      </span>
+
+                      <strong>
+                        Cash on delivery
+                      </strong>
                     </div>
                   </div>
 
                   <div className="rounded-2xl border border-brand/20 bg-brand-soft p-4">
                     <p className="text-sm font-semibold text-brand">
-                      🚚 Your order will be delivered within 1 day.
+                      🚚 Your order will be delivered within
+                      1 day.
                     </p>
                   </div>
                 </div>
@@ -421,7 +591,9 @@ export default function CheckoutPage() {
                   variant="outline"
                   size="lg"
                   disabled={step === 0 || loading}
-                  onClick={() => setStep((s) => s - 1)}
+                  onClick={() =>
+                    setStep((s) => s - 1)
+                  }
                 >
                   Back
                 </Button>
@@ -443,7 +615,9 @@ export default function CheckoutPage() {
                     disabled={loading}
                     onClick={placeOrder}
                   >
-                    {loading ? "Placing order..." : "Place order"}
+                    {loading
+                      ? "Placing order..."
+                      : "Place order"}
                   </Button>
                 )}
               </div>
@@ -452,21 +626,36 @@ export default function CheckoutPage() {
             {/* Order summary */}
             <div className="h-fit space-y-4">
               <Card className="p-5">
-                <h3 className="font-semibold">Order summary</h3>
+                <h3 className="font-semibold">
+                  Order summary
+                </h3>
 
                 <div className="mt-4 space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted">
-                      Items ({cart.reduce((sum, item) => sum + item.qty, 0)})
+                      Items (
+                      {cart.reduce(
+                        (sum, item) => sum + item.qty,
+                        0,
+                      )}
+                      )
                     </span>
-                    <span>₹{subtotal.toFixed(2)}</span>
+
+                    <span>
+                      ₹{subtotal.toFixed(2)}
+                    </span>
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-muted">Delivery</span>
+                    <span className="text-muted">
+                      Delivery
+                    </span>
+
                     <span
                       className={
-                        deliveryFee === 0 ? "text-success" : undefined
+                        deliveryFee === 0
+                          ? "text-success"
+                          : undefined
                       }
                     >
                       {deliveryFee === 0
@@ -478,7 +667,10 @@ export default function CheckoutPage() {
                   <div className="border-t border-line pt-3">
                     <div className="flex justify-between text-base font-bold">
                       <span>Total</span>
-                      <span>₹{total.toFixed(2)}</span>
+
+                      <span>
+                        ₹{total.toFixed(2)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -488,18 +680,27 @@ export default function CheckoutPage() {
                 <div className="space-y-4 text-sm">
                   <div className="flex gap-3">
                     <span>🥬</span>
+
                     <div>
-                      <p className="font-medium">Fresh groceries</p>
+                      <p className="font-medium">
+                        Fresh groceries
+                      </p>
+
                       <p className="text-muted">
-                        Quality products for your everyday needs.
+                        Quality products for your everyday
+                        needs.
                       </p>
                     </div>
                   </div>
 
                   <div className="flex gap-3">
                     <span>💰</span>
+
                     <div>
-                      <p className="font-medium">Everyday low prices</p>
+                      <p className="font-medium">
+                        Everyday low prices
+                      </p>
+
                       <p className="text-muted">
                         Great value on your daily essentials.
                       </p>
@@ -508,8 +709,12 @@ export default function CheckoutPage() {
 
                   <div className="flex gap-3">
                     <span>🚚</span>
+
                     <div>
-                      <p className="font-medium">1-day delivery</p>
+                      <p className="font-medium">
+                        1-day delivery
+                      </p>
+
                       <p className="text-muted">
                         Get your order delivered quickly.
                       </p>
@@ -531,7 +736,10 @@ export default function CheckoutPage() {
           >
             <div className="w-full max-w-md rounded-3xl bg-surface p-7 text-center shadow-2xl">
               <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-success-soft text-success">
-                <CheckCircle2 size={52} strokeWidth={2.2} />
+                <CheckCircle2
+                  size={52}
+                  strokeWidth={2.2}
+                />
               </div>
 
               <h2
@@ -542,30 +750,41 @@ export default function CheckoutPage() {
               </h2>
 
               <p className="mt-2 text-muted">
-                Thank you, {user?.name?.split(" ")[0] || "there"}. Your
-                grocery order has been confirmed.
+                Thank you,{" "}
+                {user?.name?.split(" ")[0] || "there"}.
+                Your grocery order has been confirmed.
               </p>
 
               <div className="mt-5 rounded-2xl bg-surface-2 p-4 text-left text-sm">
                 <div className="flex justify-between">
                   <span>Order number</span>
+
                   <strong>{orderId}</strong>
                 </div>
 
                 <div className="mt-2 flex justify-between">
                   <span>Delivery</span>
-                  <strong>Tomorrow by 8 PM</strong>
+
+                  <strong>
+                    Tomorrow by 8 PM
+                  </strong>
                 </div>
 
                 <div className="mt-2 flex justify-between">
                   <span>Payment</span>
-                  <strong>Cash on delivery</strong>
+
+                  <strong>
+                    Cash on delivery
+                  </strong>
                 </div>
               </div>
 
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <Link href={`/track/${orderId}`}>
-                  <Button className="w-full" size="lg">
+                  <Button
+                    className="w-full"
+                    size="lg"
+                  >
                     Track order
                   </Button>
                 </Link>

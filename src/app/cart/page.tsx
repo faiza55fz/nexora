@@ -25,126 +25,131 @@ export default function CartPage() {
   const [allProducts, setAllProducts] = useState(staticProducts);
 
   useEffect(() => {
-  async function loadProducts() {
-    try {
-      const response = await fetch("/api/products", {
-        cache: "no-store",
-      });
+    async function loadProducts() {
+      try {
+        const response = await fetch("/api/products", {
+          cache: "no-store",
+        });
 
-      const result = await response.json();
+        const result = await response.json();
 
-      if (!response.ok || !result.success) {
-        throw new Error(
-          result.message || "Failed to load products",
+        if (!response.ok || !result.success) {
+          throw new Error(
+            result.message || "Failed to load products",
+          );
+        }
+
+        const mappedProducts = result.products.map(
+          (product: any) => {
+            const variant =
+              product.product_variants?.find(
+                (item: any) => item.active !== false,
+              ) ||
+              product.product_variants?.[0];
+
+            const inventory = variant?.inventory;
+
+            const images =
+              product.product_images
+                ?.map(
+                  (image: any) => image.image_url,
+                )
+                .filter(Boolean) || [];
+
+            const primaryImage =
+              product.product_images?.find(
+                (image: any) => image.is_primary,
+              )?.image_url ||
+              images[0] ||
+              "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1000&q=80";
+
+            return {
+              ...staticProducts[0],
+
+              id: product.id,
+              name: product.name,
+              brand: product.brand || "",
+
+              category:
+                product.categories?.name?.toLowerCase() ||
+                "fruits",
+
+              subcategory:
+                product.subcategory || "",
+
+              description:
+                product.description || "",
+
+              active:
+                product.active !== false,
+
+              rating:
+                Number(product.rating || 0),
+
+              reviewCount:
+                Number(product.review_count || 0),
+
+              mrp:
+                Number(variant?.mrp || 0),
+
+              price:
+                Number(
+                  variant?.selling_price || 0,
+                ),
+
+              gstRate:
+                Number(
+                  variant?.gst_rate || 0,
+                ),
+
+              stock:
+                Number(
+                  inventory?.stock_quantity || 0,
+                ),
+
+              maxOrderQuantity:
+                Number(
+                  variant?.max_order_quantity || 5,
+                ),
+
+              deliveryEta: "Tomorrow",
+
+              specs: {
+                Unit:
+                  variant?.variant_name || "",
+              },
+
+              image: primaryImage,
+
+              images:
+                images.length > 0
+                  ? images
+                  : [primaryImage],
+
+              sold: 0,
+              sellerId: "nexora",
+              location: "",
+              tags: [],
+              highlights: [],
+              moq: 1,
+              tiers: [],
+            };
+          },
         );
+
+        setAllProducts(mappedProducts);
+      } catch (error) {
+        console.error(
+          "Failed to load products:",
+          error,
+        );
+
+        setAllProducts([]);
       }
-
-      const mappedProducts = result.products.map(
-        (product: any) => {
-          const variant =
-            product.product_variants?.find(
-              (item: any) => item.active !== false,
-            ) ||
-            product.product_variants?.[0];
-
-          const inventory = variant?.inventory;
-
-          const images =
-            product.product_images
-              ?.map(
-                (image: any) => image.image_url,
-              )
-              .filter(Boolean) || [];
-
-          const primaryImage =
-            product.product_images?.find(
-              (image: any) => image.is_primary,
-            )?.image_url ||
-            images[0] ||
-            "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1000&q=80";
-
-          return {
-            ...staticProducts[0],
-
-            id: product.id,
-            name: product.name,
-            brand: product.brand || "",
-
-            category:
-              product.categories?.name?.toLowerCase() ||
-              "fruits",
-
-            subcategory:
-              product.subcategory || "",
-
-            description:
-              product.description || "",
-
-            active:
-              product.active !== false,
-
-            rating:
-              Number(product.rating || 0),
-
-            reviewCount:
-              Number(product.review_count || 0),
-
-            mrp:
-              Number(variant?.mrp || 0),
-
-            price:
-              Number(
-                variant?.selling_price || 0,
-              ),
-
-            gstRate:
-              Number(
-                variant?.gst_rate || 0,
-              ),
-
-            stock:
-              Number(
-                inventory?.stock_quantity || 0,
-              ),
-
-            deliveryEta: "Tomorrow",
-
-            specs: {
-              Unit:
-                variant?.variant_name || "",
-            },
-
-            image: primaryImage,
-
-            images:
-              images.length > 0
-                ? images
-                : [primaryImage],
-
-            sold: 0,
-            sellerId: "nexora",
-            location: "",
-            tags: [],
-            highlights: [],
-            moq: 1,
-            tiers: [],
-          };
-        },
-      );
-
-      setAllProducts(mappedProducts);
-    } catch (error) {
-      console.error(
-        "Failed to load products:",
-        error,
-      );
-
-      setAllProducts([]);
     }
-  }
 
-  loadProducts();
-}, []);
+    loadProducts();
+  }, []);
 
   const rows = cart
     .map((item) => ({
@@ -156,11 +161,14 @@ export default function CartPage() {
     .filter((row) => row.product);
 
   const sub = rows.reduce(
-    (total, row) => total + row.product!.price * row.qty,
+    (total, row) =>
+      total + row.product!.price * row.qty,
     0,
   );
 
-  const ship = sub === 0 || sub >= 499 ? 0 : 49;
+  const ship =
+    sub === 0 || sub >= 499 ? 0 : 49;
+
   const total = sub + ship;
 
   return (
@@ -185,7 +193,10 @@ export default function CartPage() {
         {rows.length > 0 && (
           <p className="mt-1 text-sm text-muted">
             {rows.length}{" "}
-            {rows.length === 1 ? "item" : "items"} ready for checkout
+            {rows.length === 1
+              ? "item"
+              : "items"}{" "}
+            ready for checkout
           </p>
         )}
       </div>
@@ -194,7 +205,10 @@ export default function CartPage() {
       {rows.length === 0 ? (
         <Card className="mx-auto max-w-lg p-10 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-soft">
-            <ShoppingBag size={28} className="text-brand" />
+            <ShoppingBag
+              size={28}
+              className="text-brand"
+            />
           </div>
 
           <h2 className="mt-5 text-xl font-semibold">
@@ -202,12 +216,16 @@ export default function CartPage() {
           </h2>
 
           <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted">
-            Looks like you haven't added anything yet. Explore fresh
-            groceries and everyday essentials.
+            Looks like you haven't added anything
+            yet. Explore fresh groceries and
+            everyday essentials.
           </p>
 
           <Link href="/products">
-            <Button variant="cta" className="mt-6">
+            <Button
+              variant="cta"
+              className="mt-6"
+            >
               Start shopping
               <ArrowRight size={17} />
             </Button>
@@ -220,6 +238,29 @@ export default function CartPage() {
             <div className="space-y-3">
               {rows.map((row) => {
                 const product = row.product!;
+
+                const maxOrderQuantity = Math.max(
+                  1,
+                  Number(
+                    (product as any)
+                      .maxOrderQuantity || 5,
+                  ),
+                );
+
+                const currentStock = Math.max(
+                  0,
+                  Number(
+                    (product as any).stock || 0,
+                  ),
+                );
+
+                const quantityLimit = Math.min(
+                  maxOrderQuantity,
+                  currentStock,
+                );
+
+                const canIncrease =
+                  row.qty < quantityLimit;
 
                 return (
                   <Card
@@ -271,7 +312,10 @@ export default function CartPage() {
                               onClick={() =>
                                 setQty(
                                   row.productId,
-                                  Math.max(1, row.qty - 1),
+                                  Math.max(
+                                    1,
+                                    row.qty - 1,
+                                  ),
                                 )
                               }
                               className="flex h-full w-9 items-center justify-center hover:bg-surface-2"
@@ -285,13 +329,19 @@ export default function CartPage() {
 
                             <button
                               aria-label="Increase quantity"
-                              onClick={() =>
-                                setQty(
-                                  row.productId,
-                                  row.qty + 1,
-                                )
-                              }
-                              className="flex h-full w-9 items-center justify-center hover:bg-surface-2"
+                              disabled={!canIncrease}
+                              onClick={() => {
+                                if (
+                                  row.qty <
+                                  quantityLimit
+                                ) {
+                                  setQty(
+                                    row.productId,
+                                    row.qty + 1,
+                                  );
+                                }
+                              }}
+                              className="flex h-full w-9 items-center justify-center hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-40"
                             >
                               <Plus size={14} />
                             </button>
@@ -299,7 +349,9 @@ export default function CartPage() {
 
                           <button
                             onClick={() =>
-                              removeFromCart(row.productId)
+                              removeFromCart(
+                                row.productId,
+                              )
                             }
                             className="flex items-center gap-1.5 text-xs font-medium text-danger hover:underline"
                           >
@@ -307,12 +359,28 @@ export default function CartPage() {
                             Remove
                           </button>
                         </div>
+
+                        {/* Quantity limit */}
+                       {row.qty >= quantityLimit && quantityLimit > 0 && (
+                          <p className="mt-2 text-[11px] text-muted">
+                               Maximum {quantityLimit} per order
+                          </p>
+                        )} 
+
+                        {currentStock === 0 && (
+                          <p className="mt-2 text-[11px] font-medium text-danger">
+                            Currently out of stock
+                          </p>
+                        )}
                       </div>
 
                       {/* Item total */}
                       <div className="hidden text-right sm:block">
                         <p className="font-semibold">
-                          {inr(product.price * row.qty)}
+                          {inr(
+                            product.price *
+                              row.qty,
+                          )}
                         </p>
                       </div>
                     </div>
@@ -320,7 +388,11 @@ export default function CartPage() {
                     {/* Mobile item total */}
                     <div className="mt-3 flex justify-end border-t border-line pt-3 sm:hidden">
                       <p className="text-sm font-semibold">
-                        Item total: {inr(product.price * row.qty)}
+                        Item total:{" "}
+                        {inr(
+                          product.price *
+                            row.qty,
+                        )}
                       </p>
                     </div>
                   </Card>
@@ -330,7 +402,10 @@ export default function CartPage() {
               {/* Free delivery message */}
               {sub < 499 ? (
                 <div className="flex items-center gap-3 rounded-2xl border border-line bg-brand-soft p-4 text-sm">
-                  <Truck size={19} className="shrink-0 text-brand" />
+                  <Truck
+                    size={19}
+                    className="shrink-0 text-brand"
+                  />
 
                   <p>
                     Add{" "}
@@ -418,7 +493,10 @@ export default function CartPage() {
               {/* Benefits */}
               <div className="mt-4 grid gap-2">
                 <div className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3">
-                  <Truck size={17} className="text-brand" />
+                  <Truck
+                    size={17}
+                    className="text-brand"
+                  />
 
                   <div>
                     <p className="text-xs font-semibold">
@@ -432,7 +510,10 @@ export default function CartPage() {
                 </div>
 
                 <div className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3">
-                  <Tag size={17} className="text-brand" />
+                  <Tag
+                    size={17}
+                    className="text-brand"
+                  />
 
                   <div>
                     <p className="text-xs font-semibold">
