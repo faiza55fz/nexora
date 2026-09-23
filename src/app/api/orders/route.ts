@@ -121,7 +121,7 @@ export async function GET() {
 }
 
 /*
- * PATCH ORDER STATUS
+ * PATCH ORDER STATUS / CANCEL ORDER
  */
 export async function PATCH(
   request: Request,
@@ -148,9 +148,7 @@ export async function PATCH(
       );
     }
 
-    if (
-      !allowedStatuses.includes(status)
-    ) {
+    if (!allowedStatuses.includes(status)) {
       return NextResponse.json(
         {
           error: "Invalid order status.",
@@ -159,6 +157,47 @@ export async function PATCH(
       );
     }
 
+    /*
+     * Customer cancellation
+     *
+     * Stock must be restored atomically with
+     * the order status change.
+     */
+    if (status === "cancelled") {
+      const { data, error } =
+        await supabaseAdmin.rpc(
+          "cancel_order_with_stock",
+          {
+            p_order_id: orderId,
+          },
+        );
+
+      if (error) {
+        console.error(
+          "Cancelling order failed:",
+          error,
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              error.message ||
+              "Unable to cancel the order.",
+          },
+          { status: 400 },
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        order: data,
+      });
+    }
+
+    /*
+     * Other status updates remain unchanged.
+     * These are currently used by admin/order management.
+     */
     const { data, error } =
       await supabaseAdmin
         .from("orders")

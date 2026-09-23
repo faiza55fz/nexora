@@ -1,9 +1,139 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getProduct, orders } from "@/lib/data";
 import { Card } from "@/components/ui";
 import { inr } from "@/lib/format";
+import { supabase } from "@/lib/supabase";
+
+type OrderItem = {
+  id: string;
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  price: number;
+};
+
+type Order = {
+  id: string;
+  order_number: string;
+  subtotal: number;
+  delivery_fee: number;
+  total: number;
+  payment_method: string;
+  status: string;
+  created_at: string;
+  order_items: OrderItem[];
+};
 
 export default function OrdersPage() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [cancellingId, setCancellingId] = useState<string | null>(
+    null,
+  );
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(
+    null,
+  );
+
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  async function loadOrders() {
+    try {
+      setLoading(true);
+      setError("");
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        setError("Please log in to view your orders.");
+        return;
+      }
+
+      const response = await fetch("/api/orders/my", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        cache: "no-store",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Unable to load your orders.",
+        );
+      }
+
+      setOrders(data.orders ?? []);
+    } catch (error) {
+      console.error("Loading orders failed:", error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load your orders.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCancel(orderId: string) {
+    try {
+      setCancellingId(orderId);
+      setError("");
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        setError("Please log in to cancel your order.");
+        return;
+      }
+
+      const response = await fetch(
+        "/api/orders/cancel",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            orderId,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Unable to cancel the order.",
+        );
+      }
+
+      await loadOrders();
+    } catch (error) {
+      console.error("Cancelling order failed:", error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to cancel the order.",
+      );
+    } finally {
+      setCancellingId(null);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <Link
@@ -15,37 +145,155 @@ export default function OrdersPage() {
 
       <h1 className="text-2xl font-semibold">Orders</h1>
 
+      {loading && (
+        <p className="mt-6 text-sm text-muted">
+          Loading your orders...
+        </p>
+      )}
+
+      {!loading && error && (
+        <Card className="mt-6 p-5">
+          <p className="text-sm text-red-600">{error}</p>
+        </Card>
+      )}
+
+      {!loading && !error && orders.length === 0 && (
+        <Card className="mt-6 p-6">
+          <p className="font-medium">No orders yet</p>
+
+          <p className="mt-1 text-sm text-muted">
+            Your orders will appear here after you
+            place an order.
+          </p>
+
+          <Link
+            href="/products"
+            className="mt-4 inline-block text-sm font-semibold text-brand"
+          >
+            Start shopping →
+          </Link>
+        </Card>
+      )}
+
       <div className="mt-6 space-y-3">
-        {orders.map((o) => (
-          <Card key={o.id} className="p-5">
-            <div className="flex flex-wrap justify-between gap-2">
-              <div>
-                <p className="font-semibold">{o.id}</p>
-                <p className="text-sm text-muted">
-                  {o.date} · {o.payment} · {o.status}
+        {orders.map((order) => {
+          const canCancel =
+            order.status === "placed" ||
+            order.status === "confirmed";
+
+          const isCancelling =
+            cancellingId === order.id;
+
+          return (
+            <Card
+              key={order.id}
+              className="p-5"
+            >
+              <div className="flex flex-wrap justify-between gap-2">
+                <div>
+                  <p className="font-semibold">
+                    {order.order_number}
+                  </p>
+
+                  <p className="text-sm text-muted">
+                    {new Date(
+                      order.created_at,
+                    ).toLocaleDateString(
+                      "en-IN",
+                      {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      },
+                    )}{" "}
+                    ·{" "}
+                    {order.payment_method.toUpperCase()}{" "}
+                    · {order.status}
+                  </p>
+                </div>
+
+                <p className="font-semibold">
+                  {inr(Number(order.total))}
                 </p>
               </div>
 
-              <p className="font-semibold">{inr(o.total)}</p>
-            </div>
+              <ul className="mt-3 text-sm text-muted">
+                {order.order_items?.map(
+                  (item) => (
+                    <li key={item.id}>
+                      {item.product_name} ×{" "}
+                      {item.quantity}
+                    </li>
+                  ),
+                )}
+              </ul>
 
-            <ul className="mt-3 text-sm text-muted">
-              {o.items.map((i) => (
-                <li key={i.productId}>
-                  {getProduct(i.productId)?.name} × {i.qty}
-                </li>
-              ))}
-            </ul>
+              <div className="mt-3 flex flex-wrap items-center gap-4">
+                <Link
+                  href={`/track/${order.id}`}
+                  className="text-sm font-semibold text-brand"
+                >
+                  Track
+                </Link>
 
-            <Link
-              href={`/track/${o.id}`}
-              className="mt-3 inline-block text-sm font-semibold text-brand"
-            >
-              Track
-            </Link>
-          </Card>
-        ))}
+                {canCancel && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setConfirmCancelId(order.id)
+                    }
+                    disabled={isCancelling}
+                    className="text-sm font-semibold text-red-600 transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 hover:text-red-700 disabled:opacity-50"
+                  >
+                    {isCancelling
+                      ? "Cancelling..."
+                      : "Cancel order"}
+                  </button>
+                )}
+              </div>
+            </Card>
+          );
+        })}
       </div>
+
+      {confirmCancelId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-semibold">
+              Cancel order?
+            </h2>
+
+            <p className="mt-2 text-sm text-muted">
+              Are you sure you want to cancel this order?
+            </p>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setConfirmCancelId(null)
+                }
+                className="rounded-xl border border-border px-4 py-2 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 hover:bg-gray-50"
+              >
+                Keep order
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const orderId = confirmCancelId;
+
+                  setConfirmCancelId(null);
+                  handleCancel(orderId);
+                }}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 hover:bg-red-700"
+              >
+                Cancel order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

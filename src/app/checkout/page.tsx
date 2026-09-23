@@ -11,10 +11,25 @@ import {
 } from "lucide-react";
 import { AuthGuard } from "@/components/auth-guard";
 import { useStore } from "@/components/providers";
-import { Button, Card, Field, Input } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { products as staticProducts } from "@/lib/data";
+import { supabase } from "@/lib/supabase";
 
 const steps = ["Address", "Delivery", "Payment", "Review"];
+
+type Address = {
+  id: string;
+  label: string;
+  full_name: string;
+  phone: string;
+  address_line1: string;
+  address_line2: string | null;
+  landmark: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+  is_default: boolean;
+};
 
 export default function CheckoutPage() {
   const { user, cart, clearCart } = useStore();
@@ -24,16 +39,66 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [fullName, setFullName] = useState(user?.name ?? "");
-  const [phone, setPhone] = useState(user?.phone ?? "");
-  const [houseStreet, setHouseStreet] = useState("");
-  const [area, setArea] = useState("");
-  const [city, setCity] = useState("");
-  const [pin, setPin] = useState("");
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [addressesLoading, setAddressesLoading] = useState(true);
+  const [showAddressOptions, setShowAddressOptions] =
+    useState(false);
 
   const [orderId, setOrderId] = useState("");
 
   const [allProducts, setAllProducts] = useState(staticProducts);
+
+  useEffect(() => {
+    async function loadAddresses() {
+      setAddressesLoading(true);
+
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+
+      if (!currentUser) {
+        setAddressesLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("customer_addresses")
+        .select("*")
+        .eq("customer_id", currentUser.id)
+        .order("is_default", {
+          ascending: false,
+        })
+        .order("created_at", {
+          ascending: false,
+        });
+
+      if (error) {
+        console.error(
+          "Failed to load addresses:",
+          error,
+        );
+        setAddresses([]);
+      } else {
+        const loadedAddresses = data ?? [];
+
+        setAddresses(loadedAddresses);
+
+        const defaultAddress =
+          loadedAddresses.find(
+            (address) => address.is_default,
+          ) ?? loadedAddresses[0];
+
+        if (defaultAddress) {
+          setSelectedAddressId(defaultAddress.id);
+        }
+      }
+
+      setAddressesLoading(false);
+    }
+
+    loadAddresses();
+  }, []);
 
   useEffect(() => {
     async function loadProducts() {
@@ -168,38 +233,34 @@ export default function CheckoutPage() {
 
   const total = subtotal + deliveryFee;
 
-  const address = [houseStreet, area, city, pin]
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .join(", ");
+  const selectedAddress = addresses.find(
+    (address) =>
+      address.id === selectedAddressId,
+  );
+
+  const formattedAddress = selectedAddress
+    ? [
+        selectedAddress.address_line1,
+        selectedAddress.address_line2,
+        selectedAddress.landmark,
+        `${selectedAddress.city}, ${selectedAddress.state} - ${selectedAddress.pincode}`,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "";
+
+  const selectAddress = (id: string) => {
+    setSelectedAddressId(id);
+    setShowAddressOptions(false);
+    setError("");
+  };
 
   const placeOrder = async () => {
     setError("");
 
-    if (!fullName.trim() || !phone.trim()) {
+    if (!selectedAddress) {
       setError(
-        "Please enter your name and mobile number.",
-      );
-      setStep(0);
-      return;
-    }
-
-    if (
-      !houseStreet.trim() ||
-      !area.trim() ||
-      !city.trim() ||
-      !pin.trim()
-    ) {
-      setError(
-        "Please complete your delivery address.",
-      );
-      setStep(0);
-      return;
-    }
-
-    if (pin.trim().length !== 6) {
-      setError(
-        "Please enter a valid 6-digit PIN code.",
+        "Please select a delivery address.",
       );
       setStep(0);
       return;
@@ -226,10 +287,12 @@ export default function CheckoutPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          customerName: fullName.trim(),
+          customerName:
+            selectedAddress.full_name.trim(),
           customerEmail: user.email,
-          customerPhone: phone.trim(),
-          address,
+          customerPhone:
+            selectedAddress.phone.trim(),
+          address: formattedAddress,
           subtotal,
           deliveryFee,
           total,
@@ -326,81 +389,203 @@ export default function CheckoutPage() {
                       </h2>
 
                       <p className="text-sm text-muted">
-                        Where should we deliver your groceries?
+                        Select where you'd like your groceries
+                        delivered.
                       </p>
                     </div>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Full name">
-                      <Input
-                        value={fullName}
-                        onChange={(e) =>
-                          setFullName(e.target.value)
-                        }
-                        placeholder="Your full name"
-                      />
-                    </Field>
-
-                    <Field label="Mobile number">
-                      <Input
-                        value={phone}
-                        onChange={(e) =>
-                          setPhone(e.target.value)
-                        }
-                        placeholder="10-digit mobile number"
-                      />
-                    </Field>
-
-                    <div className="sm:col-span-2">
-                      <Field label="House / Flat / Street">
-                        <Input
-                          value={houseStreet}
-                          onChange={(e) =>
-                            setHouseStreet(e.target.value)
-                          }
-                          placeholder="House number, street name"
-                        />
-                      </Field>
+                  {addressesLoading ? (
+                    <div className="rounded-2xl border border-line p-5 text-sm text-muted">
+                      Loading your saved addresses...
                     </div>
+                  ) : addresses.length === 0 ? (
+                    <div className="rounded-2xl border border-line p-6 text-center">
+                      <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-brand-soft text-brand">
+                        <MapPin size={22} />
+                      </div>
 
-                    <Field label="Area / Locality">
-                      <Input
-                        value={area}
-                        onChange={(e) =>
-                          setArea(e.target.value)
-                        }
-                        placeholder="Area or locality"
-                      />
-                    </Field>
+                      <h3 className="mt-4 font-semibold">
+                        No saved address yet
+                      </h3>
 
-                    <Field label="City">
-                      <Input
-                        value={city}
-                        onChange={(e) =>
-                          setCity(e.target.value)
-                        }
-                        placeholder="City"
-                      />
-                    </Field>
+                      <p className="mt-1 text-sm text-muted">
+                        Add a delivery address to continue
+                        with your order.
+                      </p>
 
-                    <Field label="PIN code">
-                      <Input
-                        value={pin}
-                        onChange={(e) =>
-                          setPin(e.target.value)
-                        }
-                        placeholder="6-digit PIN code"
-                        inputMode="numeric"
-                        maxLength={6}
-                      />
-                    </Field>
-
-                    <div className="rounded-xl bg-brand-soft p-3 text-sm text-brand sm:col-span-2">
-                      📍 Your delivery location will be used
-                      to estimate delivery time and availability.
+                      <Link
+                        href="/account/addresses"
+                        className="mt-4 inline-block text-sm font-semibold text-brand hover:underline"
+                      >
+                        Add an address →
+                      </Link>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Selected address */}
+                      {selectedAddress ? (
+                        <div className="rounded-2xl border-2 border-brand bg-brand-soft p-5">
+                          <div className="flex items-start gap-3">
+                            <div className="mt-0.5">
+                              <input
+                                type="radio"
+                                checked
+                                readOnly
+                                className="h-4 w-4 accent-brand"
+                              />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-semibold">
+                                  {selectedAddress.label}
+                                </span>
+
+                                {selectedAddress.is_default ? (
+                                  <span className="rounded-full bg-brand px-2 py-0.5 text-[11px] font-semibold text-white">
+                                    Default
+                                  </span>
+                                ) : null}
+                              </div>
+
+                              <p className="mt-2 font-medium">
+                                {selectedAddress.full_name}
+                              </p>
+
+                              <p className="mt-1 text-sm text-muted">
+                                {formattedAddress}
+                              </p>
+
+                              <p className="mt-2 text-sm text-muted">
+                                📞 {selectedAddress.phone}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 flex flex-wrap items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setShowAddressOptions(
+                                  (value) => !value,
+                                )
+                              }
+                              className="text-sm font-semibold text-brand hover:underline"
+                            >
+                              {showAddressOptions
+                                ? "Close"
+                                : "Change address"}
+                            </button>
+
+                            <Link
+                              href="/account/addresses"
+                              className="text-sm font-semibold text-muted hover:text-brand hover:underline"
+                            >
+                              Manage addresses
+                            </Link>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {/* Address options */}
+                      {showAddressOptions ? (
+                        <div className="space-y-3 rounded-2xl border border-line p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <h3 className="font-semibold">
+                              Choose an address
+                            </h3>
+
+                            <Link
+                              href="/account/addresses"
+                              className="text-sm font-semibold text-brand hover:underline"
+                            >
+                              + Add new
+                            </Link>
+                          </div>
+
+                          {addresses.map((addressOption) => {
+                            const isSelected =
+                              addressOption.id ===
+                              selectedAddressId;
+
+                            const optionAddress = [
+                              addressOption.address_line1,
+                              addressOption.address_line2,
+                              addressOption.landmark,
+                              `${addressOption.city}, ${addressOption.state} - ${addressOption.pincode}`,
+                            ]
+                              .filter(Boolean)
+                              .join(", ");
+
+                            return (
+                              <button
+                                key={addressOption.id}
+                                type="button"
+                                onClick={() =>
+                                  selectAddress(
+                                    addressOption.id,
+                                  )
+                                }
+                                className={`w-full rounded-2xl border-2 p-4 text-left transition ${
+                                  isSelected
+                                    ? "border-brand bg-brand-soft"
+                                    : "border-line hover:border-brand/50"
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <input
+                                    type="radio"
+                                    checked={isSelected}
+                                    readOnly
+                                    className="mt-1 h-4 w-4 accent-brand"
+                                  />
+
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="font-semibold">
+                                        {
+                                          addressOption.label
+                                        }
+                                      </span>
+
+                                      {addressOption.is_default ? (
+                                        <span className="rounded-full bg-brand px-2 py-0.5 text-[11px] font-semibold text-white">
+                                          Default
+                                        </span>
+                                      ) : null}
+                                    </div>
+
+                                    <p className="mt-1 font-medium">
+                                      {
+                                        addressOption.full_name
+                                      }
+                                    </p>
+
+                                    <p className="mt-1 text-sm text-muted">
+                                      {optionAddress}
+                                    </p>
+
+                                    <p className="mt-1 text-sm text-muted">
+                                      📞{" "}
+                                      {
+                                        addressOption.phone
+                                      }
+                                    </p>
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+
+                      <div className="rounded-xl bg-brand-soft p-3 text-sm text-brand">
+                        📍 Your selected delivery address will
+                        be used for your order.
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : null}
 
@@ -543,9 +728,9 @@ export default function CheckoutPage() {
                         Deliver to
                       </span>
 
-                      <strong className="text-right">
-                        {address ||
-                          "Delivery address not entered"}
+                      <strong className="max-w-[70%] text-right">
+                        {formattedAddress ||
+                          "Delivery address not selected"}
                       </strong>
                     </div>
 
@@ -601,8 +786,24 @@ export default function CheckoutPage() {
                 {step < 3 ? (
                   <Button
                     size="lg"
+                    disabled={
+                      step === 0 &&
+                      (!selectedAddress ||
+                        addressesLoading)
+                    }
                     onClick={() => {
                       setError("");
+
+                      if (
+                        step === 0 &&
+                        !selectedAddress
+                      ) {
+                        setError(
+                          "Please select a delivery address.",
+                        );
+                        return;
+                      }
+
                       setStep((s) => s + 1);
                     }}
                   >

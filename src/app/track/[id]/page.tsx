@@ -115,6 +115,9 @@ export default async function TrackPage({
     );
   }
 
+  const isCancelled =
+    order.status === "cancelled";
+
   const idx = getStatusIndex(
     order.status,
   );
@@ -122,7 +125,9 @@ export default async function TrackPage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="text-2xl font-semibold">
-        Track your order 
+        {isCancelled
+          ? "Order cancelled"
+          : "Track your order"}
       </h1>
 
       <p className="mt-1 text-sm text-muted">
@@ -132,36 +137,55 @@ export default async function TrackPage({
         · {order.address}
       </p>
 
-      <Card className="mt-6 p-6">
-        <ol className="space-y-4">
-          {timeline.map((t, i) => (
-            <li
-              key={t.key}
-              className="flex gap-3"
-            >
-              <span
-                className={`mt-1 h-3 w-3 rounded-full ${
-                  i <= idx
-                    ? "bg-success"
-                    : "bg-line"
-                }`}
-              />
+      {isCancelled ? (
+        <Card className="mt-6 p-6">
+          <div className="flex items-start gap-3">
+            <span className="mt-1 h-3 w-3 rounded-full bg-line" />
 
-              <div>
-                <p className="font-medium">
-                  {t.label}
-                </p>
+            <div>
+              <p className="font-medium">
+                Order cancelled
+              </p>
 
-                {i === idx ? (
-                  <p className="text-sm text-muted">
-                    Current status
+              <p className="mt-1 text-sm text-muted">
+                This order has been cancelled.
+                
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <Card className="mt-6 p-6">
+          <ol className="space-y-4">
+            {timeline.map((t, i) => (
+              <li
+                key={t.key}
+                className="flex gap-3"
+              >
+                <span
+                  className={`mt-1 h-3 w-3 rounded-full ${
+                    i <= idx
+                      ? "bg-success"
+                      : "bg-line"
+                  }`}
+                />
+
+                <div>
+                  <p className="font-medium">
+                    {t.label}
                   </p>
-                ) : null}
-              </div>
-            </li>
-          ))}
-        </ol>
-      </Card>
+
+                  {i === idx ? (
+                    <p className="text-sm text-muted">
+                      Current status
+                    </p>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </Card>
+      )}
 
       <Card className="mt-4 p-6">
         <h2 className="font-semibold">

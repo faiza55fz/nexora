@@ -20,6 +20,7 @@ import {
 import { useStore } from "@/components/providers";
 import { categories, products } from "@/lib/data";
 import { Badge } from "@/components/ui";
+import { supabase } from "@/lib/supabase";
 
 export function Header() {
   const {
@@ -36,10 +37,44 @@ export function Header() {
   const [open, setOpen] = useState(false);
   const [cats, setCats] = useState(false);
   const [notes, setNotes] = useState(false);
+  const [defaultAddress, setDefaultAddress] = useState<{
+    label: string;
+    city: string;
+    address_line1: string;
+  } | null>(null);
   const [stockPopup, setStockPopup] = useState<{
     productName: string;
      productId: string;
   } | null>(null);
+
+  useEffect(() => {
+    async function loadDefaultAddress() {
+      if (!user) {
+        setDefaultAddress(null);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("customer_addresses")
+        .select("label, city, address_line1")
+        .eq("customer_id", user.id)
+        .eq("is_default", true)
+        .maybeSingle();
+
+      if (error) {
+        console.error(
+          "Failed to load default address:",
+          error,
+        );
+        setDefaultAddress(null);
+        return;
+      }
+
+      setDefaultAddress(data);
+    }
+
+    loadDefaultAddress();
+  }, [user]);
 
   useEffect(() => {
     function handleStockNotification(event: Event) {
@@ -147,15 +182,21 @@ export function Header() {
           </Link>
 
           {/* Delivery location */}
-          <button className="hidden items-center gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-surface-2 lg:flex">
+          <button 
+          type="button"
+          onClick={() => router.push("/account/addresses")}
+          className="hidden items-center gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-surface-2 lg:flex">
             <MapPin size={18} className="text-brand" />
 
             <div className="leading-tight">
               <p className="text-[10px] font-medium uppercase tracking-wide text-muted">
-                Deliver to
-              </p>
+               Deliver to
+               </p>
+
               <p className="max-w-28 truncate text-xs font-semibold">
-                Your location
+                {defaultAddress
+                    ? `${defaultAddress.label} · ${defaultAddress.city}`
+                    : "Add address"}
               </p>
             </div>
 
@@ -418,14 +459,40 @@ export function Header() {
     </div>
 
     {/* Delivery */}
-    <div className="mt-5 flex items-center gap-3 rounded-2xl bg-brand-soft p-4 transition-transform duration-200 hover:scale-[1.01]">
-      <MapPin size={20} className="text-brand" />
+{/* Delivery */}
+<button
+  type="button"
+  onClick={() => {
+    setOpen(false);
+    router.push("/account/addresses");
+  }}
+  className="mt-5 flex w-full items-center gap-3 rounded-2xl bg-brand-soft p-4 text-left transition-transform duration-200 hover:scale-[1.01]"
+>
+  <MapPin size={20} className="text-brand" />
 
-      <div>
-        <p className="text-xs text-muted">Deliver to</p>
-        <p className="text-sm font-semibold">Your location</p>
-      </div>
-    </div>
+  <div className="min-w-0">
+    <p className="text-xs text-muted">
+      Deliver to
+    </p>
+
+    <p className="truncate text-sm font-semibold">
+      {defaultAddress
+        ? `${defaultAddress.label} · ${defaultAddress.city}`
+        : "Add delivery address"}
+    </p>
+
+    {defaultAddress ? (
+      <p className="mt-0.5 truncate text-xs text-muted">
+        {defaultAddress.address_line1}
+      </p>
+    ) : null}
+  </div>
+
+  <ChevronDown
+    size={16}
+    className="ml-auto shrink-0 text-muted"
+  />
+</button>
 
     {/* Main navigation */}
     <div className="mt-5 space-y-1">
@@ -469,48 +536,29 @@ export function Header() {
       </Link>
     </div>
 
-    {/* Help */}
+    {/* Contact Nexora */}
     <div className="mt-6 border-t border-line pt-5">
-      <p className="mb-3 px-3 font-semibold">Help</p>
-
-      <Link
-        href="/account/orders"
-        onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:scale-[0.98]"
-      >
-        My orders
-      </Link>
-
-      <Link
-        href="/account/orders"
-        onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
-      >
-        Track delivery
-      </Link>
-
-      <Link
-        href="/account/returns"
-        onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
-      >
-        Returns
-      </Link>
-
-      <Link
-        href="/account"
-        onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
-      >
-        My account
-      </Link>
+      <p className="mb-3 px-3 font-semibold">Contact Nexora</p>
 
       <a
         href="tel:+91XXXXXXXXXX"
-        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
+        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:scale-[0.98]"
       >
         📞 Contact Nexora
       </a>
+    </div>
+
+    {/* FAQs */}
+    <div className="mt-5 border-t border-line pt-5">
+      <p className="mb-3 px-3 font-semibold">FAQs</p>
+
+      <Link
+        href="/faq"
+        onClick={() => setOpen(false)}
+        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
+      >
+        ❓ View FAQs & Help
+      </Link>
     </div>
 
     {/* Why Nexora */}
