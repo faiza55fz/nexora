@@ -898,56 +898,118 @@ export default function CheckoutPage() {
                       your order.
                     </p>
                   </div>
-                                    {addToOrderId && existingOrder ? (
-                    <div className="rounded-2xl border border-line p-5">
-                      <h3 className="font-semibold">
-                        Updated order
-                      </h3>
+                  {addToOrderId && existingOrder ? (
+  <div className="rounded-2xl border border-line p-5">
+    <h3 className="font-semibold">
+      Updated order
+    </h3>
 
-                      <p className="mt-1 text-sm text-muted">
-                        Your existing items and the new items
-                        you're adding are shown below.
-                      </p>
+    <p className="mt-1 text-sm text-muted">
+      Your existing items and the new items you're adding
+      are shown below.
+    </p>
 
-                      <div className="mt-4 space-y-2 text-sm">
-                        {existingOrder.order_items.map(
-                          (item) => (
-                            <div
-                              key={item.id}
-                              className="flex justify-between gap-4"
-                            >
-                              <span>
-                                {item.product_name} ×{" "}
-                                {item.quantity}
-                              </span>
+    <div className="mt-4 space-y-2 text-sm">
+      {/* Existing order items */}
+      {existingOrder.order_items.map((item) => (
+        <div
+          key={item.id}
+          className="flex justify-between gap-4"
+        >
+          <span>
+            {item.product_name} × {item.quantity}
+          </span>
 
-                              <span>
-                                ₹
-                                {(
-                                  Number(item.price) *
-                                  item.quantity
-                                ).toFixed(2)}
-                              </span>
-                            </div>
-                          ),
-                        )}
+          <span>
+            ₹
+            {(
+              Number(item.price) * item.quantity
+            ).toFixed(2)}
+          </span>
+        </div>
+      ))}
 
-                        <div className="mt-3 border-t border-line pt-3">
-                          <div className="flex justify-between font-bold">
-                            <span>Total</span>
+      {/* Newly added items */}
+      {rows.map((row) => (
+        <div
+          key={`new-${row.product.id}`}
+          className="flex justify-between gap-4"
+        >
+          <span>
+            {row.product.name} × {row.qty}
+          </span>
 
-                            <span>
-                              ₹
-                              {Number(
-                                existingOrder.total,
-                              ).toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
+          <span>
+            ₹
+            {(row.product.price * row.qty).toFixed(2)}
+          </span>
+        </div>
+      ))}
 
+      {/* Updated totals */}
+      {(() => {
+        const newItemsSubtotal = rows.reduce(
+          (sum, row) =>
+            sum + row.product.price * row.qty,
+          0,
+        );
+
+        const updatedSubtotal =
+          Number(existingOrder.subtotal) +
+          newItemsSubtotal;
+
+        const updatedDeliveryFee =
+          updatedSubtotal === 0 ||
+          updatedSubtotal >= 499
+            ? 0
+            : 49;
+
+        const updatedTotal =
+          updatedSubtotal + updatedDeliveryFee;
+
+        return (
+          <div className="mt-3 border-t border-line pt-3 space-y-2">
+            <div className="flex justify-between">
+              <span className="text-muted">
+                Subtotal
+              </span>
+
+              <span>
+                ₹{updatedSubtotal.toFixed(2)}
+              </span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-muted">
+                Delivery
+              </span>
+
+              <span
+                className={
+                  updatedDeliveryFee === 0
+                    ? "text-success"
+                    : undefined
+                }
+              >
+                {updatedDeliveryFee === 0
+                  ? "FREE"
+                  : `₹${updatedDeliveryFee.toFixed(2)}`}
+              </span>
+            </div>
+
+            <div className="flex justify-between font-bold">
+              <span>Total</span>
+
+              <span>
+                ₹{updatedTotal.toFixed(2)}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  </div>
+) : null}
                   <div className="space-y-3 rounded-2xl bg-surface-2 p-5 text-sm">
                     <div className="flex justify-between gap-4">
                       <span className="text-muted">

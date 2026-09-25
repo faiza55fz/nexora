@@ -40,6 +40,17 @@ type DeliveryStage =
   | "near-customer"
   | "delivered";
 
+type DeliveryBlock = {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  earnings: number;
+  duration: string;
+  pickupLocation: string;
+  deliveryArea: string;
+};
+
 type ApiOrderItem = {
   id: string;
   product_id: string;
@@ -87,6 +98,42 @@ const MEMBERS_KEY = "nexora-delivery-members";
 const ASSIGNMENTS_KEY = "nexora-order-delivery";
 const DELIVERY_STAGES_KEY =
   "nexora-delivery-order-stages";
+
+const DELIVERY_BLOCKS_KEY =
+  "nexora-delivery-booked-blocks";
+
+const DEFAULT_BLOCKS: DeliveryBlock[] = [
+  {
+    id: "block-1",
+    title: "Morning delivery block",
+    date: "Today",
+    time: "8:00 AM – 11:00 AM",
+    earnings: 450,
+    duration: "3 hours",
+    pickupLocation: "Nexora Central Hub",
+    deliveryArea: "Shivamogga North",
+  },
+  {
+    id: "block-2",
+    title: "Afternoon delivery block",
+    date: "Today",
+    time: "1:00 PM – 4:00 PM",
+    earnings: 500,
+    duration: "3 hours",
+    pickupLocation: "Nexora Central Hub",
+    deliveryArea: "Shivamogga South",
+  },
+  {
+    id: "block-3",
+    title: "Evening delivery block",
+    date: "Tomorrow",
+    time: "5:00 PM – 8:00 PM",
+    earnings: 550,
+    duration: "3 hours",
+    pickupLocation: "Nexora Central Hub",
+    deliveryArea: "Shivamogga East",
+  },
+];
 
 const DELIVERY_UPDATED_EVENT =
   "nexora-delivery-updated";
@@ -224,6 +271,28 @@ function getStages(): Record<
   }
 }
 
+function getBookedBlockIds(): Record<string, string[]> {
+  try {
+    const saved = localStorage.getItem(
+      DELIVERY_BLOCKS_KEY,
+    );
+
+    if (!saved) {
+      return {};
+    }
+
+    const parsed = JSON.parse(saved);
+
+    if (parsed && typeof parsed === "object") {
+      return parsed;
+    }
+
+    return {};
+  } catch {
+    return {};
+  }
+}
+
 function mapApiOrder(
   order: ApiOrder,
 ): DeliveryOrder {
@@ -287,6 +356,9 @@ export default function DeliveryPage() {
   const [isLoadingOrders, setIsLoadingOrders] =
     useState(true);
 
+  const [bookedBlockIds, setBookedBlockIds] =
+    useState<Record<string, string[]>>({});
+
   /*
    * Fetch real orders from Supabase
    * through the existing orders API.
@@ -339,9 +411,13 @@ export default function DeliveryPage() {
     const savedStages =
       getStages();
 
+    const savedBookedBlockIds =
+      getBookedBlockIds();
+
     setMembers(savedMembers);
     setAssignments(savedAssignments);
     setDeliveryStages(savedStages);
+    setBookedBlockIds(savedBookedBlockIds);
 
     if (
       savedMembers.length > 0 &&
@@ -452,8 +528,15 @@ export default function DeliveryPage() {
   ]);
 
   /*
-   * Match the assigned order ID with
-   * the real Supabase order.
+   * Match the assignment with the real
+   * Supabase order.
+   *
+   * The Admin Delivery page can store the
+   * local order ID, while the API may expose
+   * the same order using its Supabase ID or
+   * order number. Support both forms so an
+   * assigned delivery is not hidden from the
+   * partner portal.
    */
   const assignedOrder =
     assignedOrderId
@@ -462,7 +545,9 @@ export default function DeliveryPage() {
           .find(
             (order) =>
               order.id ===
-              assignedOrderId,
+                assignedOrderId ||
+              order.orderNumber ===
+                assignedOrderId,
           ) ?? null
       : null;
 
@@ -470,7 +555,13 @@ export default function DeliveryPage() {
     assignedOrderId
       ? deliveryStages[
           assignedOrderId
-        ] ?? "assigned"
+        ] ??
+        (assignedOrder
+          ? deliveryStages[
+              assignedOrder.id
+            ]
+          : undefined) ??
+        "assigned"
       : "assigned";
 
   /*
@@ -596,6 +687,13 @@ async function updateDeliveryStage(
     const nextStages = {
       ...deliveryStages,
       [orderId]: nextStage,
+      ...(assignedOrderId &&
+      assignedOrderId !== orderId
+        ? {
+            [assignedOrderId]:
+              nextStage,
+          }
+        : {}),
     };
 
     let nextMembers = [...members];
@@ -673,6 +771,38 @@ async function updateDeliveryStage(
   }
 }
 
+  function bookDeliveryBlock(blockId: string) {
+    if (!currentMember) {
+      return;
+    }
+
+    const currentBooked =
+      bookedBlockIds[currentMember.id] ?? [];
+
+    if (currentBooked.includes(blockId)) {
+      return;
+    }
+
+    const nextBookedBlockIds = {
+      ...bookedBlockIds,
+      [currentMember.id]: [
+        ...currentBooked,
+        blockId,
+      ],
+    };
+
+    localStorage.setItem(
+      DELIVERY_BLOCKS_KEY,
+      JSON.stringify(nextBookedBlockIds),
+    );
+
+    setBookedBlockIds(nextBookedBlockIds);
+
+    window.dispatchEvent(
+      new Event(DELIVERY_UPDATED_EVENT),
+    );
+  }
+
   const statusText =
     currentMember?.status ===
     "out-on-delivery"
@@ -696,6 +826,26 @@ async function updateDeliveryStage(
             "offline"
           ? "bg-slate-100 text-slate-600"
           : "bg-emerald-50 text-emerald-700";
+    function openCustomerNavigation() {
+  if (!assignedOrder?.address) {
+    return;
+  }
+
+  const destination = encodeURIComponent(
+    assignedOrder.address,
+  );
+
+  const mapsUrl =
+    `https://www.google.com/maps/dir/?api=1` +
+    `&destination=${destination}` +
+    `&travelmode=driving`;
+
+  window.open(
+    mapsUrl,
+    "_blank",
+    "noopener,noreferrer",
+  );
+}      
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
@@ -789,6 +939,117 @@ async function updateDeliveryStage(
                 >
                   {statusText}
                 </span>
+              </div>
+            </section>
+
+            {/* Available delivery blocks */}
+            <section className="rounded-3xl border border-border bg-white p-6 shadow-sm">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-teal-700">
+                    Delivery blocks
+                  </p>
+
+                  <h2 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+                    Book a delivery block
+                  </h2>
+
+                  <p className="mt-1 text-sm leading-6 text-muted">
+                    See your earnings and delivery area before accepting a block.
+                  </p>
+                </div>
+
+                <span className="inline-flex w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+                  {DEFAULT_BLOCKS.length} blocks available
+                </span>
+              </div>
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-3">
+                {DEFAULT_BLOCKS.map((block) => {
+                  const isBooked = (
+                    bookedBlockIds[currentMember.id] ?? []
+                  ).includes(block.id);
+
+                  return (
+                    <div
+                      key={block.id}
+                      className="rounded-2xl border border-border bg-slate-50 p-5"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-ink">
+                            {block.title}
+                          </p>
+                          <p className="mt-1 text-sm text-muted">
+                            {block.date} · {block.time}
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="text-lg font-semibold text-emerald-700">
+                            ₹{block.earnings.toLocaleString("en-IN")}
+                          </p>
+                          <p className="text-xs text-muted">estimated earnings</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 space-y-3 text-sm">
+                        <div className="flex items-start gap-3">
+                          <Clock3 size={16} className="mt-0.5 shrink-0 text-teal-700" />
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                              Duration
+                            </p>
+                            <p className="mt-0.5 text-ink">{block.duration}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <MapPin size={16} className="mt-0.5 shrink-0 text-teal-700" />
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                              Pickup
+                            </p>
+                            <p className="mt-0.5 text-ink">{block.pickupLocation}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <Truck size={16} className="mt-0.5 shrink-0 text-teal-700" />
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                              Delivery area
+                            </p>
+                            <p className="mt-0.5 text-ink">{block.deliveryArea}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={isBooked}
+                        onClick={() => bookDeliveryBlock(block.id)}
+                        className={`mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                          isBooked
+                            ? "cursor-default bg-emerald-50 text-emerald-700"
+                            : "bg-teal-700 text-white hover:bg-teal-800"
+                        }`}
+                      >
+                        {isBooked ? (
+                          <>
+                            <CheckCircle2 size={17} />
+                            Block booked
+                          </>
+                        ) : (
+                          <>
+                            <Clock3 size={17} />
+                            Book this block
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </section>
 
@@ -902,25 +1163,63 @@ async function updateDeliveryStage(
                 </div>
 
                 {/* Map */}
-                <div className="overflow-hidden rounded-3xl border border-border bg-white shadow-sm">
-                  <div className="flex h-[300px] items-center justify-center bg-slate-100">
-                    <div className="text-center">
-                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white text-teal-700 shadow-sm">
-                        <MapPin size={27} />
-                      </div>
+                {/* Navigation */}
+<div className="overflow-hidden rounded-3xl border border-border bg-white shadow-sm">
+  <div className="relative h-[300px] overflow-hidden bg-slate-100">
+    {/* Map-style background */}
+    <div className="absolute inset-0 opacity-60">
+      <div className="absolute left-[8%] top-[22%] h-px w-[84%] rotate-[8deg] bg-slate-300" />
+      <div className="absolute left-[15%] top-[58%] h-px w-[75%] -rotate-[12deg] bg-slate-300" />
+      <div className="absolute left-[38%] top-[5%] h-[90%] w-px rotate-[7deg] bg-slate-300" />
+      <div className="absolute left-[68%] top-[10%] h-[85%] w-px -rotate-[18deg] bg-slate-300" />
+      <div className="absolute left-[5%] top-[42%] h-20 w-20 rounded-full border border-slate-200 bg-white/50" />
+      <div className="absolute right-[8%] top-[18%] h-28 w-28 rounded-full border border-slate-200 bg-white/50" />
+    </div>
 
-                      <p className="mt-4 font-semibold text-ink">
-                        Delivery map
-                      </p>
+    {/* Destination pin */}
+    <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-700 text-white shadow-lg">
+        <MapPin size={28} />
+      </div>
 
-                      <p className="mt-1 max-w-sm text-sm text-muted">
-                        Live GPS tracking will be
-                        connected after the core
-                        delivery workflow is stable.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+      <div className="mt-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink shadow-sm">
+        Customer
+      </div>
+    </div>
+
+    {/* Navigation button */}
+    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/40 to-transparent p-5 pt-12">
+      <button
+        type="button"
+        onClick={openCustomerNavigation}
+        disabled={!assignedOrder.address}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-700 px-5 py-4 text-sm font-semibold text-white shadow-lg transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <MapPin size={18} />
+        Navigate to customer
+      </button>
+    </div>
+  </div>
+
+  <div className="p-5">
+    <div className="flex items-start gap-3">
+      <MapPin
+        size={19}
+        className="mt-0.5 shrink-0 text-teal-700"
+      />
+
+      <div className="min-w-0">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+          Customer location
+        </p>
+
+        <p className="mt-1 text-sm leading-6 text-ink">
+          {assignedOrder.address}
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
 
                 {/* Order details */}
                 <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
