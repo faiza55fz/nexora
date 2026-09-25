@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter,useSearchParams } from "next/navigation";
 import {useEffect, useState } from "react";
 import {
   Bell,
@@ -113,6 +113,12 @@ export function Header() {
   }, []);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+const addToOrderId = searchParams.get("addToOrder");
+
+const cartHref = addToOrderId
+  ? `/cart?addToOrder=${encodeURIComponent(addToOrderId)}`
+  : "/cart";
 
   const suggestions = products
     .filter((p) =>
@@ -260,18 +266,8 @@ export function Header() {
 
           {/* Actions */}
           <div className="ml-auto flex items-center gap-0.5 md:ml-2">
-            {/* Theme */}
-            <button
-              aria-label="Toggle theme"
-              className="hidden h-10 w-10 place-items-center rounded-xl transition hover:bg-surface-2 sm:grid"
-              onClick={toggleTheme}
-            >
-              {theme === "dark" ? (
-                <Sun size={18} />
-              ) : (
-                <Moon size={18} />
-              )}
-            </button>
+            
+            
 
             {/* Wishlist */}
             <Link
@@ -330,7 +326,7 @@ export function Header() {
 
             {/* Cart */}
             <Link
-              href="/cart"
+              href={cartHref}
               className="relative grid h-10 w-10 place-items-center rounded-xl transition hover:bg-surface-2"
               aria-label="Shopping cart"
             >
@@ -512,7 +508,7 @@ export function Header() {
       </Link>
 
       <Link
-        href="/cart"
+        href={cartHref}
         onClick={() => setOpen(false)}
         className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
       >
@@ -785,13 +781,19 @@ export function Footer() {
 
 export function BottomNav() {
   const { cart } = useStore();
+  const searchParams = useSearchParams();
+  const addToOrderId = searchParams.get("addToOrder");
+
+  const cartHref = addToOrderId
+    ? `/cart?addToOrder=${encodeURIComponent(addToOrderId)}`
+    : "/cart";
 
   const cartCount = cart.reduce((n, i) => n + i.qty, 0);
 
   const items = [
     { href: "/", label: "Home", icon: "⌂" },
     { href: "/products", label: "Shop", icon: "⌕" },
-    { href: "/cart", label: "Cart", icon: "🛍" },
+    { href: cartHref, label: "Cart", icon: "🛍" },
     { href: "/account", label: "Account", icon: "◯" },
   ];
 

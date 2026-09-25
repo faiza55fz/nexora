@@ -10,6 +10,8 @@ const links = [
   { href: "/account/wishlist", label: "Wishlist" },
   { href: "/account/loyalty", label: "Loyalty" },
   { href: "/account/returns", label: "Returns" },
+  { href: "/account/addresses", label: "Address Book" },
+  { href: "/account/settings", label: "Settings" },
 ];
 
 export default function AccountPage() {
@@ -68,11 +70,6 @@ export default function AccountPage() {
             <p className="text-sm text-muted">
               {user.email}
               {user.phone ? ` · ${user.phone}` : ""}
-            </p>
-
-            <p className="mt-2 text-sm">
-              Your customer profile is ready. Add your delivery address
-              during checkout.
             </p>
           </div>
 

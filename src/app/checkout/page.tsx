@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   CheckCircle2,
   MapPin,
@@ -30,9 +31,28 @@ type Address = {
   pincode: string;
   is_default: boolean;
 };
+type ExistingOrder = {
+  id: string;
+  order_number: string;
+  subtotal: number;
+  delivery_fee: number;
+  total: number;
+  payment_method: string;
+  status: string;
+  order_items: {
+    id: string;
+    product_id: string;
+    product_name: string;
+    quantity: number;
+    price: number;
+  }[];
+};
 
 export default function CheckoutPage() {
   const { user, cart, clearCart } = useStore();
+
+  const searchParams = useSearchParams();
+  const addToOrderId = searchParams.get("addToOrder") || "";
 
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
@@ -41,13 +61,17 @@ export default function CheckoutPage() {
 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
-  const [addressesLoading, setAddressesLoading] = useState(true);
+  const [addressesLoading, setAddressesLoading] =
+    useState(true);
   const [showAddressOptions, setShowAddressOptions] =
     useState(false);
 
   const [orderId, setOrderId] = useState("");
+  const [existingOrder, setExistingOrder] =
+  useState<ExistingOrder | null>(null);
 
-  const [allProducts, setAllProducts] = useState(staticProducts);
+  const [allProducts, setAllProducts] =
+    useState(staticProducts);
 
   useEffect(() => {
     async function loadAddresses() {
@@ -99,7 +123,63 @@ export default function CheckoutPage() {
 
     loadAddresses();
   }, []);
+  useEffect(() => {
+    if (!addToOrderId) return;
 
+    async function loadExistingOrder() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          throw new Error(
+            "Your session has expired. Please log in again.",
+          );
+        }
+
+        const response = await fetch("/api/orders/my", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || "Unable to load your existing order.",
+          );
+        }
+
+        const order = data.orders?.find(
+          (item: ExistingOrder) =>
+            item.id === addToOrderId,
+        );
+
+        if (!order) {
+          throw new Error("Existing order could not be found.");
+        }
+
+        setExistingOrder(order);
+        setOrderId(order.order_number);
+      } catch (error) {
+        console.error(
+          "Failed to load existing order:",
+          error,
+        );
+
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load your existing order.",
+        );
+      }
+    }
+
+    loadExistingOrder();
+  }, [addToOrderId]);
   useEffect(() => {
     async function loadProducts() {
       try {
@@ -142,6 +222,7 @@ export default function CheckoutPage() {
             return {
               ...staticProducts[0],
               id: product.id,
+              variantId: variant?.id,
               name: product.name,
               brand: product.brand || "",
               category:
@@ -281,6 +362,102 @@ export default function CheckoutPage() {
     try {
       setLoading(true);
 
+      /*
+       * ADD MORE ITEMS TO EXISTING ORDER
+       *
+       * When checkout is opened with:
+       * /checkout?addToOrder=ORDER_ID
+       *
+       * update the existing order instead of
+       * creating a new order.
+       */
+            if (addToOrderId) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          throw new Error(
+            "Your session has expired. Please log in again.",
+          );
+        }
+
+        const response = await fetch(
+          "/api/orders/add-items",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              orderId: addToOrderId,
+              items: rows.map((row) => ({
+                productId: row.product.id,
+                productName: row.product.name,
+                quantity: row.qty,
+                price: row.product.price,
+                variantId:
+                  (row.product as any).variantId ||
+                  undefined,
+              })),
+            }),
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error ||
+              "Unable to update the existing order.",
+          );
+        }
+
+        const ordersResponse = await fetch(
+          "/api/orders/my",
+          {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            cache: "no-store",
+          },
+        );
+
+        const ordersData =
+          await ordersResponse.json();
+
+        if (!ordersResponse.ok) {
+          throw new Error(
+            ordersData.error ||
+              "Unable to load the updated order.",
+          );
+        }
+
+        const updatedOrder =
+          ordersData.orders?.find(
+            (order: ExistingOrder) =>
+              order.id === addToOrderId,
+          );
+
+        if (!updatedOrder) {
+          throw new Error(
+            "The order was updated, but its invoice could not be loaded.",
+          );
+        }
+
+        setExistingOrder(updatedOrder);
+        setOrderId(updatedOrder.order_number);
+
+        clearCart();
+        setDone(true);
+
+        return;
+      }
+
+      /*
+       * NORMAL NEW ORDER
+       */
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: {
@@ -721,6 +898,55 @@ export default function CheckoutPage() {
                       your order.
                     </p>
                   </div>
+                                    {addToOrderId && existingOrder ? (
+                    <div className="rounded-2xl border border-line p-5">
+                      <h3 className="font-semibold">
+                        Updated order
+                      </h3>
+
+                      <p className="mt-1 text-sm text-muted">
+                        Your existing items and the new items
+                        you're adding are shown below.
+                      </p>
+
+                      <div className="mt-4 space-y-2 text-sm">
+                        {existingOrder.order_items.map(
+                          (item) => (
+                            <div
+                              key={item.id}
+                              className="flex justify-between gap-4"
+                            >
+                              <span>
+                                {item.product_name} ×{" "}
+                                {item.quantity}
+                              </span>
+
+                              <span>
+                                ₹
+                                {(
+                                  Number(item.price) *
+                                  item.quantity
+                                ).toFixed(2)}
+                              </span>
+                            </div>
+                          ),
+                        )}
+
+                        <div className="mt-3 border-t border-line pt-3">
+                          <div className="flex justify-between font-bold">
+                            <span>Total</span>
+
+                            <span>
+                              ₹
+                              {Number(
+                                existingOrder.total,
+                              ).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
 
                   <div className="space-y-3 rounded-2xl bg-surface-2 p-5 text-sm">
                     <div className="flex justify-between gap-4">
@@ -817,8 +1043,12 @@ export default function CheckoutPage() {
                     onClick={placeOrder}
                   >
                     {loading
-                      ? "Placing order..."
-                      : "Place order"}
+  ? addToOrderId
+    ? "Adding to existing order..."
+    : "Placing order..."
+  : addToOrderId
+    ? "Add to existing order"
+    : "Place order"}
                   </Button>
                 )}
               </div>
@@ -947,13 +1177,18 @@ export default function CheckoutPage() {
                 id="order-success-title"
                 className="mt-5 text-2xl font-bold"
               >
-                Order placed successfully!
+                {addToOrderId
+                  ? "Order updated successfully!"
+                  : "Order placed successfully!"}
               </h2>
 
               <p className="mt-2 text-muted">
-                Thank you,{" "}
-                {user?.name?.split(" ")[0] || "there"}.
-                Your grocery order has been confirmed.
+                {addToOrderId
+                  ? "Your selected products have been added to your existing order."
+                  : `Thank you, ${
+                      user?.name?.split(" ")[0] ||
+                      "there"
+                    }. Your grocery order has been confirmed.`}
               </p>
 
               <div className="mt-5 rounded-2xl bg-surface-2 p-4 text-left text-sm">

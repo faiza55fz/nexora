@@ -9,7 +9,21 @@ import { discountPct, inr, wholesalePrice } from "@/lib/format";
 import { supabase } from "@/lib/supabase";
 import type { Product } from "@/lib/types";
 
-export function Stars({ value, size = 14 }: { value: number; size?: number }) {
+type ProductCardProps = {
+  product: Product & {
+    variantId?: string;
+    maxOrderQuantity?: number;
+  };
+  addToOrderMode?: boolean;
+};
+
+export function Stars({
+  value,
+  size = 14,
+}: {
+  value: number;
+  size?: number;
+}) {
   return (
     <span
       className="inline-flex items-center gap-0.5 text-amber-500"
@@ -19,21 +33,35 @@ export function Stars({ value, size = 14 }: { value: number; size?: number }) {
         <Star
           key={i}
           size={size}
-          className={i + 1 <= Math.round(value) ? "fill-current" : "opacity-30"}
+          className={
+            i + 1 <= Math.round(value) ? "fill-current" : "opacity-30"
+          }
         />
       ))}
     </span>
   );
 }
 
-export function ProductCard({ product }: { product: Product }) {
-  const { mode, addToCart, toggleWishlist, toggleCompare, wishlist, compare } =
-    useStore();
+export function ProductCard({
+  product,
+  addToOrderMode = false,
+}: ProductCardProps) {
+  const {
+    mode,
+    addToCart,
+    addToExistingOrder,
+    existingOrderItems,
+    toggleWishlist,
+    toggleCompare,
+    wishlist,
+    compare,
+  } = useStore();
 
   const saved = wishlist.includes(product.id);
   const compared = compare.includes(product.id);
+
   const [notifyLoading, setNotifyLoading] = useState(false);
-const [notifySaved, setNotifySaved] = useState(false);
+  const [notifySaved, setNotifySaved] = useState(false);
 
   const unit =
     mode === "b2b"
@@ -45,45 +73,69 @@ const [notifySaved, setNotifySaved] = useState(false);
   const isUnavailable = product.active === false;
   const isOutOfStock = product.stock <= 0;
   const unavailable = isUnavailable || isOutOfStock;
+
+  const existingOrderItem = existingOrderItems.find(
+    (item) => item.variantId === product.variantId,
+  );
+
   async function handleNotify() {
-  if (notifyLoading || notifySaved) return;
+    if (notifyLoading || notifySaved) return;
 
-  setNotifyLoading(true);
+    setNotifyLoading(true);
 
-  try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (!user) {
-      alert("Please log in to get notified when this product is available.");
-      return;
-    }
-
-    const { error } = await supabase
-      .from("product_stock_notifications")
-      .insert({
-        product_id: product.id,
-        customer_id: user.id,
-      });
-
-    if (error) {
-      if (error.code === "23505") {
-        setNotifySaved(true);
+      if (!user) {
+        alert("Please log in to get notified when this product is available.");
         return;
       }
 
-      throw error;
+      const { error } = await supabase
+        .from("product_stock_notifications")
+        .insert({
+          product_id: product.id,
+          customer_id: user.id,
+        });
+
+      if (error) {
+        if (error.code === "23505") {
+          setNotifySaved(true);
+          return;
+        }
+
+        throw error;
+      }
+
+      setNotifySaved(true);
+    } catch (error) {
+      console.error("Notification request failed:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setNotifyLoading(false);
+    }
+  }
+
+  function handleAddToExistingOrder() {
+    if (!product.variantId) {
+      alert("This product is not available right now.");
+      return;
     }
 
-    setNotifySaved(true);
-  } catch (error) {
-    console.error("Notification request failed:", error);
-    alert("Something went wrong. Please try again.");
-  } finally {
-    setNotifyLoading(false);
+    addToExistingOrder({
+      productId: product.id,
+      variantId: product.variantId,
+      name: product.name,
+      price: unit,
+      quantity: 1,
+      maxQuantity: Math.min(
+        product.maxOrderQuantity ?? 5,
+        product.stock,
+      ),
+    });
   }
-}
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-[var(--shadow)]">
@@ -91,47 +143,47 @@ const [notifySaved, setNotifySaved] = useState(false);
         href={`/products/${product.id}`}
         className="relative block aspect-[4/3] overflow-hidden bg-surface-2"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={product.image}
           alt={product.name}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
         />
 
         {off > 0 ? (
-          <span className="absolute left-3 top-3">
-            <Badge tone="cta">{off}% off</Badge>
-          </span>
+          <div className="absolute left-3 top-3">
+            <Badge>{off}% OFF</Badge>
+          </div>
         ) : null}
 
         {mode === "b2b" ? (
-          <span className="absolute right-3 top-3">
-            <Badge tone="brand">MOQ {product.moq}</Badge>
-          </span>
+          <div className="absolute right-3 top-3">
+            <Badge>Bulk</Badge>
+          </div>
         ) : null}
       </Link>
 
       <div className="flex flex-1 flex-col p-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted">
-          {product.brand} · {product.location.split(" · ")[0]}
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              {product.brand}
+            </p>
 
-        <Link
-          href={`/products/${product.id}`}
-          className="mt-1 line-clamp-2 font-semibold leading-snug"
-        >
-          {product.name}
-        </Link>
+            <Link
+              href={`/products/${product.id}`}
+              className="mt-1 block font-semibold text-foreground transition hover:text-brand"
+            >
+              {product.name}
+            </Link>
+          </div>
 
-        <div className="mt-2 flex items-center gap-2 text-xs text-muted">
           <Stars value={product.rating} />
-          <span>
-            {product.rating} ({product.reviewCount.toLocaleString("en-IN")})
-          </span>
         </div>
 
-        <div className="mt-3 flex items-baseline gap-2">
-          <span className="text-lg font-semibold">{inr(unit)}</span>
+        <div className="mt-2 flex items-baseline gap-2">
+          <span className="text-lg font-bold text-foreground">
+            {inr(unit)}
+          </span>
 
           {product.mrp > unit ? (
             <span className="text-sm text-muted line-through">
@@ -139,22 +191,6 @@ const [notifySaved, setNotifySaved] = useState(false);
             </span>
           ) : null}
         </div>
-
-        {mode === "b2b" ? (
-          <p className="mt-1 text-xs text-muted">
-            Bulk price available · from {inr(product.tiers.at(-1)!.price)}
-          </p>
-        ) : (
-          <p className="mt-1 text-xs text-muted">
-            {product.deliveryEta} · Sold by a local seller
-          </p>
-        )}
-
-        {product.aiReason ? (
-          <p className="mt-2 line-clamp-1 text-xs text-ai">
-            {product.aiReason}
-          </p>
-        ) : null}
 
         {unavailable ? (
           <p className="mt-3 text-sm font-medium text-muted">
@@ -168,52 +204,84 @@ const [notifySaved, setNotifySaved] = useState(false);
               type="button"
               onClick={handleNotify}
               disabled={notifyLoading || notifySaved}
-              className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-cta text-sm font-semibold text-white hover:bg-cta-hover disabled:cursor-not-allowed disabled:opacity-70 "
+              className="flex-1 rounded-xl border border-line px-3 py-2 text-sm font-semibold transition hover:border-brand disabled:cursor-default disabled:opacity-70"
             >
-             {notifyLoading
-               ? "Saving..."
-              : notifySaved
-                ? "You'll be notified"
-                : "Notify me when available"}
+              {notifyLoading
+                ? "Saving..."
+                : notifySaved
+                  ? "You'll be notified"
+                  : "Notify me when available"}
+            </button>
+          ) : addToOrderMode ? (
+            <button
+              type="button"
+              onClick={handleAddToExistingOrder}
+              disabled={
+                !product.variantId ||
+                Boolean(
+                  existingOrderItem &&
+                    existingOrderItem.quantity >=
+                      existingOrderItem.maxQuantity,
+                )
+              }
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <ShoppingCart size={16} />
+
+              {existingOrderItem
+                ? existingOrderItem.quantity >=
+                  existingOrderItem.maxQuantity
+                  ? "Limit reached"
+                  : "Added · Add more"
+                : "Add to order"}
             </button>
           ) : (
             <button
               type="button"
               onClick={() =>
-                addToCart(product.id, mode === "b2b" ? product.moq : 1)
+                addToCart(
+                  product.id,
+                  mode === "b2b" ? product.moq : 1,
+                )
               }
-              className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-cta text-sm font-semibold text-white hover:bg-cta-hover"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90"
             >
-              <ShoppingCart size={16} /> Add
+              <ShoppingCart size={16} />
+              Add
             </button>
           )}
 
           <button
             type="button"
+            onClick={() => toggleWishlist(product.id)}
             aria-label={
               saved ? "Remove from wishlist" : "Add to wishlist"
             }
-            onClick={() => toggleWishlist(product.id)}
-            className="grid h-10 w-10 place-items-center rounded-xl border border-line hover:bg-surface-2"
+            className={`rounded-xl border p-2 transition ${
+              saved
+                ? "border-brand text-brand"
+                : "border-line text-muted hover:text-brand"
+            }`}
           >
             <Heart
-              size={16}
-              className={saved ? "fill-cta text-cta" : ""}
+              size={17}
+              className={saved ? "fill-current" : ""}
             />
           </button>
 
           <button
             type="button"
-            aria-label={
-              compared ? "Remove from comparison" : "Compare sellers"
-            }
             onClick={() => toggleCompare(product.id)}
-            className="grid h-10 w-10 place-items-center rounded-xl border border-line hover:bg-surface-2"
+            aria-label={
+              compared ? "Remove from compare" : "Add to compare"
+            }
+            className={`rounded-xl border p-2 transition ${
+              compared
+                ? "border-brand text-brand"
+                : "border-line text-muted hover:text-brand"
+            }`}
           >
-            <GitCompare
-              size={16}
-              className={compared ? "text-brand" : ""}
-            />
+            <GitCompare size={17} />
           </button>
         </div>
       </div>

@@ -15,6 +15,8 @@ import { cn } from "@/lib/format";
 
 type Product = (typeof products)[number] & {
   active?: boolean;
+  variantId?: string;
+  maxOrderQuantity?: number;
 };
 
 export default function ListingClient() {
@@ -22,6 +24,7 @@ export default function ListingClient() {
 
   const q0 = params.get("q") ?? "";
   const cat0 = params.get("category") ?? "all";
+  const addToOrderId = params.get("addToOrder");
 
   const [q, setQ] = useState(q0);
   const [cat, setCat] = useState(cat0);
@@ -143,6 +146,15 @@ export default function ListingClient() {
               highlights: [],
               moq: 1,
               tiers: [],
+
+              variantId:
+                variant?.id,
+
+              maxOrderQuantity:
+                Number(
+                  variant?.max_order_quantity ||
+                    5,
+                ),
             };
           });
 
@@ -241,6 +253,30 @@ export default function ListingClient() {
 
   return (
     <main className="min-h-screen bg-bg">
+      {/* Existing order mode */}
+      {addToOrderId && (
+        <section className="border-b border-brand/20 bg-brand-soft">
+          <div className="mx-auto max-w-7xl px-4 py-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-brand">
+                  Adding items to your existing order
+                </p>
+
+                <p className="mt-1 text-xs text-muted">
+                  Select the groceries you want to add. They
+                  will not be added to your normal cart.
+                </p>
+              </div>
+
+              <span className="text-xs font-medium text-muted">
+                Order ID: {addToOrderId}
+              </span>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Page header */}
       <section className="border-b border-line bg-surface">
         <div className="mx-auto max-w-7xl px-4 py-7 sm:py-9">

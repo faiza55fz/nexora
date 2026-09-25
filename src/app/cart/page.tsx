@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { products as staticProducts } from "@/lib/data";
@@ -20,6 +21,9 @@ import {
 } from "lucide-react";
 
 export default function CartPage() {
+  const searchParams = useSearchParams();
+  const addToOrderId = searchParams.get("addToOrder");
+
   const { cart, setQty, removeFromCart } = useStore();
 
   const [allProducts, setAllProducts] = useState(staticProducts);
@@ -361,11 +365,12 @@ export default function CartPage() {
                         </div>
 
                         {/* Quantity limit */}
-                       {row.qty >= quantityLimit && quantityLimit > 0 && (
-                          <p className="mt-2 text-[11px] text-muted">
-                               Maximum {quantityLimit} per order
-                          </p>
-                        )} 
+                        {row.qty >= quantityLimit &&
+                          quantityLimit > 0 && (
+                            <p className="mt-2 text-[11px] text-muted">
+                              Maximum {quantityLimit} per order
+                            </p>
+                          )}
 
                         {currentStock === 0 && (
                           <p className="mt-2 text-[11px] font-medium text-danger">
@@ -474,7 +479,13 @@ export default function CartPage() {
                   </span>
                 </div>
 
-                <Link href="/checkout">
+                <Link
+                  href={
+                    addToOrderId
+                      ? `/checkout?addToOrder=${addToOrderId}`
+                      : "/checkout"
+                  }
+                >
                   <Button
                     variant="cta"
                     className="mt-5 w-full"

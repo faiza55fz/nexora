@@ -23,24 +23,45 @@ export type AppUser = {
   vendorStatus?: "not-registered" | "pending" | "approved";
 };
 
+export type ExistingOrderItem = {
+  productId: string;
+  variantId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  maxQuantity: number;
+};
+
 type Store = {
   user: AppUser | null;
   authReady: boolean;
   login: (user: AppUser) => void;
   logout: () => void;
+
   mode: Mode;
   setMode: (m: Mode) => void;
+
   theme: "light" | "dark";
   toggleTheme: () => void;
+
   cart: CartItem[];
   addToCart: (productId: string, qty?: number) => void;
   setQty: (productId: string, qty: number) => void;
   removeFromCart: (productId: string) => void;
   clearCart: () => void;
+
+  existingOrderItems: ExistingOrderItem[];
+  addToExistingOrder: (item: ExistingOrderItem) => void;
+  setExistingOrderQty: (variantId: string, qty: number) => void;
+  removeFromExistingOrder: (variantId: string) => void;
+  clearExistingOrderItems: () => void;
+
   wishlist: string[];
   toggleWishlist: (productId: string) => void;
+
   compare: string[];
   toggleCompare: (productId: string) => void;
+
   notifications: {
     id: string;
     title: string;
@@ -60,12 +81,88 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartHydrated, setCartHydrated] = useState(false);
 
+  const [existingOrderItems, setExistingOrderItems] = useState<
+    ExistingOrderItem[]
+  >([]);
+
   const clearCart = useCallback(() => {
     setCart([]);
   }, []);
 
-  const [wishlist, setWishlist] = useState<string[]>(["p3", "p2"]);
-  const [compare, setCompare] = useState<string[]>(["p1"]);
+  const clearExistingOrderItems = useCallback(() => {
+    setExistingOrderItems([]);
+  }, []);
+
+  const addToExistingOrder = useCallback(
+    (item: ExistingOrderItem) => {
+      setExistingOrderItems((prev) => {
+        const found = prev.find(
+          (existing) => existing.variantId === item.variantId,
+        );
+
+        if (found) {
+          return prev.map((existing) =>
+            existing.variantId === item.variantId
+              ? {
+                  ...existing,
+                  quantity: Math.min(
+                    existing.quantity + item.quantity,
+                    existing.maxQuantity,
+                  ),
+                }
+              : existing,
+          );
+        }
+
+        return [...prev, item];
+      });
+    },
+    [],
+  );
+
+  const setExistingOrderQty = useCallback(
+    (variantId: string, qty: number) => {
+      setExistingOrderItems((prev) =>
+        qty <= 0
+          ? prev.filter(
+              (item) => item.variantId !== variantId,
+            )
+          : prev.map((item) =>
+              item.variantId === variantId
+                ? {
+                    ...item,
+                    quantity: Math.min(
+                      qty,
+                      item.maxQuantity,
+                    ),
+                  }
+                : item,
+            ),
+      );
+    },
+    [],
+  );
+
+  const removeFromExistingOrder = useCallback(
+    (variantId: string) => {
+      setExistingOrderItems((prev) =>
+        prev.filter(
+          (item) => item.variantId !== variantId,
+        ),
+      );
+    },
+    [],
+  );
+
+  const [wishlist, setWishlist] = useState<string[]>([
+    "p3",
+    "p2",
+  ]);
+
+  const [compare, setCompare] = useState<string[]>([
+    "p1",
+  ]);
+
   const [hydrated, setHydrated] = useState(false);
 
   // Load the customer profile for a Supabase auth session
@@ -233,14 +330,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [cart, cartHydrated]);
 
   useEffect(() => {
-    const saved = localStorage.getItem("nexora-theme") as
-      | "light"
-      | "dark"
-      | null;
+    const saved = localStorage.getItem(
+      "nexora-theme",
+    ) as "light" | "dark" | null;
 
     const initial =
       saved ??
-      (window.matchMedia("(prefers-color-scheme: dark)").matches
+      (window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches
         ? "dark"
         : "light");
 
@@ -262,11 +360,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       theme === "dark",
     );
 
-    localStorage.setItem("nexora-theme", theme);
+    localStorage.setItem(
+      "nexora-theme",
+      theme,
+    );
   }, [theme, hydrated]);
 
   const toggleTheme = useCallback(() => {
-    setTheme((t) => (t === "dark" ? "light" : "dark"));
+    setTheme((t) =>
+      t === "dark" ? "light" : "dark",
+    );
   }, []);
 
   const addToCart = useCallback(
@@ -284,7 +387,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           );
         }
 
-        return [...prev, { productId, qty }];
+        return [
+          ...prev,
+          {
+            productId,
+            qty,
+          },
+        ];
       });
     },
     [],
@@ -299,7 +408,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             )
           : prev.map((i) =>
               i.productId === productId
-                ? { ...i, qty }
+                ? {
+                    ...i,
+                    qty,
+                  }
                 : i,
             ),
       );
@@ -322,7 +434,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (productId: string) => {
       setWishlist((prev) =>
         prev.includes(productId)
-          ? prev.filter((id) => id !== productId)
+          ? prev.filter(
+              (id) => id !== productId,
+            )
           : [...prev, productId],
       );
     },
@@ -339,124 +453,209 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
 
         if (prev.length >= 3) {
-          return [...prev.slice(1), productId];
+          return [
+            ...prev.slice(1),
+            productId,
+          ];
         }
 
-        return [...prev, productId];
+        return [
+          ...prev,
+          productId,
+        ];
       });
     },
     [],
   );
+
   // Check pending stock-notification requests for the logged-in customer
- useEffect(() => {
-  if (!user?.id) return;
+  useEffect(() => {
+    if (!user?.id) return;
 
-  const customerId = user.id;
-  let cancelled = false;
+    const customerId = user.id;
+    let cancelled = false;
 
-  async function checkStockNotifications() {
-    
-    try {
-      const { data: requests, error } = await supabase
-        .from("product_stock_notifications")
-        .select("id, product_id")
-        .eq("customer_id", customerId)
-        .is("notified_at", null);
-        console.log("🔔 Stock notification check", {
-  customerId,
-  requests,
-  error,
-});
+    async function checkStockNotifications() {
+      try {
+        const {
+          data: requests,
+          error,
+        } = await supabase
+          .from(
+            "product_stock_notifications",
+          )
+          .select("id, product_id")
+          .eq(
+            "customer_id",
+            customerId,
+          )
+          .is(
+            "notified_at",
+            null,
+          );
 
-      if (error || !requests?.length || cancelled) return;
-
-      for (const request of requests) {
-        const { data: product } = await supabase
-          .from("products")
-          .select("id, name, active")
-          .eq("id", request.product_id)
-          .maybeSingle();
-          console.log("🔔 Product check", {
-  request,
-  product,
-});
-
-        if (!product || !product.active || cancelled) continue;
-
-        const { data: variant } = await supabase
-          .from("product_variants")
-          .select("id")
-          .eq("product_id", product.id)
-          .eq("active", true)
-          .limit(1)
-          .maybeSingle();
-
-        if (!variant || cancelled) continue;
-
-        const { data: inventory } = await supabase
-          .from("inventory")
-          .select("stock_quantity")
-          .eq("variant_id", variant.id)
-          .maybeSingle();
+        console.log(
+          "🔔 Stock notification check",
+          {
+            customerId,
+            requests,
+            error,
+          },
+        );
 
         if (
-          !inventory ||
-          inventory.stock_quantity <= 0 ||
+          error ||
+          !requests?.length ||
           cancelled
         ) {
-          continue;
+          return;
         }
 
-        await supabase
-          .from("product_stock_notifications")
-          .update({
-            notified_at: new Date().toISOString(),
-          })
-          .eq("id", request.id)
-          .eq("customer_id", customerId);
+        for (const request of requests) {
+          const {
+            data: product,
+          } = await supabase
+            .from("products")
+            .select(
+              "id, name, active",
+            )
+            .eq(
+              "id",
+              request.product_id,
+            )
+            .maybeSingle();
 
-        if (cancelled) return;
-
-        if (
-          typeof window !== "undefined" &&
-          "Notification" in window &&
-          Notification.permission === "granted"
-        ) {
-          new Notification("Nexora — Back in stock", {
-            body: `${product.name} is available again.`,
-          });
-        }
-
-        window.dispatchEvent(
-          new CustomEvent("nexora-stock-notification", {
-            detail: {
-              productId: product.id,
-              productName: product.name,
+          console.log(
+            "🔔 Product check",
+            {
+              request,
+              product,
             },
-          }),
+          );
+
+          if (
+            !product ||
+            !product.active ||
+            cancelled
+          ) {
+            continue;
+          }
+
+          const {
+            data: variant,
+          } = await supabase
+            .from("product_variants")
+            .select("id")
+            .eq(
+              "product_id",
+              product.id,
+            )
+            .eq(
+              "active",
+              true,
+            )
+            .limit(1)
+            .maybeSingle();
+
+          if (!variant || cancelled) {
+            continue;
+          }
+
+          const {
+            data: inventory,
+          } = await supabase
+            .from("inventory")
+            .select(
+              "stock_quantity",
+            )
+            .eq(
+              "variant_id",
+              variant.id,
+            )
+            .maybeSingle();
+
+          if (
+            !inventory ||
+            inventory.stock_quantity <=
+              0 ||
+            cancelled
+          ) {
+            continue;
+          }
+
+          await supabase
+            .from(
+              "product_stock_notifications",
+            )
+            .update({
+              notified_at:
+                new Date().toISOString(),
+            })
+            .eq(
+              "id",
+              request.id,
+            )
+            .eq(
+              "customer_id",
+              customerId,
+            );
+
+          if (cancelled) return;
+
+          if (
+            typeof window !==
+              "undefined" &&
+            "Notification" in
+              window &&
+            Notification.permission ===
+              "granted"
+          ) {
+            new Notification(
+              "Nexora — Back in stock",
+              {
+                body: `${product.name} is available again.`,
+              },
+            );
+          }
+
+          window.dispatchEvent(
+            new CustomEvent(
+              "nexora-stock-notification",
+              {
+                detail: {
+                  productId:
+                    product.id,
+                  productName:
+                    product.name,
+                },
+              },
+            ),
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Stock notification check failed:",
+          error,
         );
       }
-    } catch (error) {
-      console.error(
-        "Stock notification check failed:",
-        error,
-      );
     }
-  }
 
-  void checkStockNotifications();
+    void checkStockNotifications();
 
+    const interval =
+      window.setInterval(
+        checkStockNotifications,
+        30000,
+      );
 
-  const interval = window.setInterval(
-    checkStockNotifications,
-    30000,
-  );
+    return () => {
+      cancelled = true;
+      window.clearInterval(
+        interval,
+      );
+    };
+  }, [user?.id]);
 
-  return () => {
-    cancelled = true;
-    window.clearInterval(interval);
-  };
-}, [user?.id]);
   const notifications = useMemo(
     () => [
       {
@@ -491,15 +690,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setMode,
       theme,
       toggleTheme,
+
       cart,
       addToCart,
       setQty,
       removeFromCart,
       clearCart,
+
+      existingOrderItems,
+      addToExistingOrder,
+      setExistingOrderQty,
+      removeFromExistingOrder,
+      clearExistingOrderItems,
+
       wishlist,
       toggleWishlist,
+
       compare,
       toggleCompare,
+
       notifications,
     }),
     [
@@ -510,15 +719,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       mode,
       theme,
       toggleTheme,
+
       cart,
       addToCart,
       setQty,
       removeFromCart,
       clearCart,
+
+      existingOrderItems,
+      addToExistingOrder,
+      setExistingOrderQty,
+      removeFromExistingOrder,
+      clearExistingOrderItems,
+
       wishlist,
       toggleWishlist,
+
       compare,
       toggleCompare,
+
       notifications,
     ],
   );
