@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import {
   BottomNav,
@@ -7,7 +8,7 @@ import {
   Header,
 } from "@/components/storefront-chrome";
 
-export function SiteShell({
+function SiteShellContent({
   children,
 }: {
   children: React.ReactNode;
@@ -35,5 +36,17 @@ export function SiteShell({
 
       <BottomNav />
     </>
+  );
+}
+
+export function SiteShell({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <SiteShellContent>{children}</SiteShellContent>
+    </Suspense>
   );
 }

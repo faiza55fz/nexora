@@ -13,6 +13,8 @@ type CreateOrderRequest = {
   customerEmail: string;
   customerPhone: string;
   address: string;
+  latitude?: number | null;
+  longitude?: number | null;
   subtotal: number;
   deliveryFee: number;
   total: number;
@@ -69,6 +71,8 @@ export async function GET() {
           customer_email,
           customer_phone,
           address,
+          latitude,
+          longitude,
           subtotal,
           delivery_fee,
           total,
@@ -251,7 +255,8 @@ export async function PATCH(
  */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body =
+      (await request.json()) as CreateOrderRequest;
 
     if (
       !body.customerName ||
@@ -260,58 +265,104 @@ export async function POST(request: Request) {
       !body.address
     ) {
       return NextResponse.json(
-        { error: "Missing customer or delivery information." },
-        { status: 400 }
+        {
+          error:
+            "Missing customer or delivery information.",
+        },
+        { status: 400 },
       );
     }
 
-    if (!Array.isArray(body.items) || body.items.length === 0) {
+    if (
+      !Array.isArray(body.items) ||
+      body.items.length === 0
+    ) {
       return NextResponse.json(
-        { error: "Your cart is empty." },
-        { status: 400 }
+        {
+          error: "Your cart is empty.",
+        },
+        { status: 400 },
       );
     }
 
-    const items = body.items.map((item: any) => ({
+    /*
+     * Coordinates are optional for now.
+     *
+     * They will be null for addresses that don't
+     * have a saved location yet.
+     */
+    const latitude =
+      typeof body.latitude === "number" &&
+      Number.isFinite(body.latitude)
+        ? body.latitude
+        : null;
+
+    const longitude =
+      typeof body.longitude === "number" &&
+      Number.isFinite(body.longitude)
+        ? body.longitude
+        : null;
+
+    const items = body.items.map((item) => ({
       productId: String(item.productId),
       quantity: Number(item.quantity),
     }));
 
     if (
       items.some(
-        (item: { productId: string; quantity: number }) =>
+        (item) =>
           !item.productId ||
           !Number.isInteger(item.quantity) ||
-          item.quantity <= 0
+          item.quantity <= 0,
       )
     ) {
       return NextResponse.json(
-        { error: "Invalid cart items." },
-        { status: 400 }
+        {
+          error: "Invalid cart items.",
+        },
+        { status: 400 },
       );
     }
 
-    const { data, error } = await supabaseAdmin.rpc(
-      "create_order_with_stock",
-      {
-        p_customer_name: body.customerName.trim(),
-        p_customer_email: body.customerEmail.trim(),
-        p_customer_phone: body.customerPhone.trim(),
-        p_address: body.address.trim(),
-        p_payment_method: "cod",
-        p_items: items,
-      }
-    );
+    const { data, error } =
+      await supabaseAdmin.rpc(
+        "create_order_with_stock",
+        {
+          p_customer_name:
+            body.customerName.trim(),
+
+          p_customer_email:
+            body.customerEmail.trim(),
+
+          p_customer_phone:
+            body.customerPhone.trim(),
+
+          p_address:
+            body.address.trim(),
+
+          p_payment_method: "cod",
+
+          p_items: items,
+
+          p_latitude: latitude,
+
+          p_longitude: longitude,
+        },
+      );
 
     if (error) {
-      console.error("Create order error:", error);
+      console.error(
+        "Create order error:",
+        error,
+      );
 
       return NextResponse.json(
         {
           error:
-            error.message || "Unable to place the order. Please try again.",
+            error.message ||
+            "Unable to place the order. Please try again.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -327,14 +378,20 @@ export async function POST(request: Request) {
           total: data.total,
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
-    console.error("POST /api/orders error:", error);
+    console.error(
+      "POST /api/orders error:",
+      error,
+    );
 
     return NextResponse.json(
-      { error: "Unable to place the order. Please try again." },
-      { status: 500 }
+      {
+        error:
+          "Unable to place the order. Please try again.",
+      },
+      { status: 500 },
     );
   }
 }

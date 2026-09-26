@@ -15,7 +15,8 @@ import { useStore } from "@/components/providers";
 import { Button, Card } from "@/components/ui";
 import { products as staticProducts } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
-
+import LocationPicker from "@/components/location-picker";
+import { Suspense } from "react";
 const steps = ["Address", "Delivery", "Payment", "Review"];
 
 type Address = {
@@ -30,7 +31,10 @@ type Address = {
   state: string;
   pincode: string;
   is_default: boolean;
+  latitude: number | null;
+  longitude: number | null;
 };
+
 type ExistingOrder = {
   id: string;
   order_number: string;
@@ -66,9 +70,14 @@ export default function CheckoutPage() {
   const [showAddressOptions, setShowAddressOptions] =
     useState(false);
 
+  const [selectedLatitude, setSelectedLatitude] =
+    useState<number | null>(null);
+  const [selectedLongitude, setSelectedLongitude] =
+    useState<number | null>(null);
+
   const [orderId, setOrderId] = useState("");
   const [existingOrder, setExistingOrder] =
-  useState<ExistingOrder | null>(null);
+    useState<ExistingOrder | null>(null);
 
   const [allProducts, setAllProducts] =
     useState(staticProducts);
@@ -123,6 +132,7 @@ export default function CheckoutPage() {
 
     loadAddresses();
   }, []);
+
   useEffect(() => {
     if (!addToOrderId) return;
 
@@ -149,7 +159,8 @@ export default function CheckoutPage() {
 
         if (!response.ok) {
           throw new Error(
-            data.error || "Unable to load your existing order.",
+            data.error ||
+              "Unable to load your existing order.",
           );
         }
 
@@ -159,7 +170,9 @@ export default function CheckoutPage() {
         );
 
         if (!order) {
-          throw new Error("Existing order could not be found.");
+          throw new Error(
+            "Existing order could not be found.",
+          );
         }
 
         setExistingOrder(order);
@@ -180,6 +193,7 @@ export default function CheckoutPage() {
 
     loadExistingOrder();
   }, [addToOrderId]);
+
   useEffect(() => {
     async function loadProducts() {
       try {
@@ -245,7 +259,9 @@ export default function CheckoutPage() {
               gstRate:
                 Number(variant?.gst_rate || 0),
               stock:
-                Number(inventory?.stock_quantity || 0),
+                Number(
+                  inventory?.stock_quantity || 0,
+                ),
               deliveryEta: "Tomorrow",
               specs: {
                 Unit:
@@ -305,7 +321,8 @@ export default function CheckoutPage() {
     );
 
   const subtotal = rows.reduce(
-    (sum, row) => sum + row.product.price * row.qty,
+    (sum, row) =>
+      sum + row.product.price * row.qty,
     0,
   );
 
@@ -318,6 +335,26 @@ export default function CheckoutPage() {
     (address) =>
       address.id === selectedAddressId,
   );
+
+  /*
+   * Keep the map location synchronized with
+   * the currently selected saved address.
+   */
+  useEffect(() => {
+    if (!selectedAddress) {
+      setSelectedLatitude(null);
+      setSelectedLongitude(null);
+      return;
+    }
+
+    setSelectedLatitude(
+      selectedAddress.latitude ?? null,
+    );
+
+    setSelectedLongitude(
+      selectedAddress.longitude ?? null,
+    );
+  }, [selectedAddress]);
 
   const formattedAddress = selectedAddress
     ? [
@@ -371,7 +408,7 @@ export default function CheckoutPage() {
        * update the existing order instead of
        * creating a new order.
        */
-            if (addToOrderId) {
+      if (addToOrderId) {
         const {
           data: { session },
         } = await supabase.auth.getSession();
@@ -466,14 +503,26 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           customerName:
             selectedAddress.full_name.trim(),
+
           customerEmail: user.email,
+
           customerPhone:
             selectedAddress.phone.trim(),
+
           address: formattedAddress,
+
           subtotal,
+
           deliveryFee,
+
           total,
+
           paymentMethod: "cod",
+
+          latitude: selectedLatitude,
+
+          longitude: selectedLongitude,
+
           items: rows.map((row) => ({
             productId: row.product.id,
             productName: row.product.name,
@@ -761,6 +810,16 @@ export default function CheckoutPage() {
                         📍 Your selected delivery address will
                         be used for your order.
                       </div>
+
+                      {/* Exact delivery location map */}
+                      <LocationPicker
+                        latitude={selectedLatitude}
+                        longitude={selectedLongitude}
+                        onLocationChange={(lat, lng) => {
+                          setSelectedLatitude(lat);
+                          setSelectedLongitude(lng);
+                        }}
+                      />
                     </div>
                   )}
                 </div>
@@ -898,118 +957,136 @@ export default function CheckoutPage() {
                       your order.
                     </p>
                   </div>
+
                   {addToOrderId && existingOrder ? (
-  <div className="rounded-2xl border border-line p-5">
-    <h3 className="font-semibold">
-      Updated order
-    </h3>
+                    <div className="rounded-2xl border border-line p-5">
+                      <h3 className="font-semibold">
+                        Updated order
+                      </h3>
 
-    <p className="mt-1 text-sm text-muted">
-      Your existing items and the new items you're adding
-      are shown below.
-    </p>
+                      <p className="mt-1 text-sm text-muted">
+                        Your existing items and the new items you're adding
+                        are shown below.
+                      </p>
 
-    <div className="mt-4 space-y-2 text-sm">
-      {/* Existing order items */}
-      {existingOrder.order_items.map((item) => (
-        <div
-          key={item.id}
-          className="flex justify-between gap-4"
-        >
-          <span>
-            {item.product_name} × {item.quantity}
-          </span>
+                      <div className="mt-4 space-y-2 text-sm">
+                        {existingOrder.order_items.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex justify-between gap-4"
+                          >
+                            <span>
+                              {item.product_name} ×{" "}
+                              {item.quantity}
+                            </span>
 
-          <span>
-            ₹
-            {(
-              Number(item.price) * item.quantity
-            ).toFixed(2)}
-          </span>
-        </div>
-      ))}
+                            <span>
+                              ₹
+                              {(
+                                Number(item.price) *
+                                item.quantity
+                              ).toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
 
-      {/* Newly added items */}
-      {rows.map((row) => (
-        <div
-          key={`new-${row.product.id}`}
-          className="flex justify-between gap-4"
-        >
-          <span>
-            {row.product.name} × {row.qty}
-          </span>
+                        {rows.map((row) => (
+                          <div
+                            key={`new-${row.product.id}`}
+                            className="flex justify-between gap-4"
+                          >
+                            <span>
+                              {row.product.name} × {row.qty}
+                            </span>
 
-          <span>
-            ₹
-            {(row.product.price * row.qty).toFixed(2)}
-          </span>
-        </div>
-      ))}
+                            <span>
+                              ₹
+                              {(
+                                row.product.price *
+                                row.qty
+                              ).toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
 
-      {/* Updated totals */}
-      {(() => {
-        const newItemsSubtotal = rows.reduce(
-          (sum, row) =>
-            sum + row.product.price * row.qty,
-          0,
-        );
+                        {(() => {
+                          const newItemsSubtotal =
+                            rows.reduce(
+                              (sum, row) =>
+                                sum +
+                                row.product.price *
+                                  row.qty,
+                              0,
+                            );
 
-        const updatedSubtotal =
-          Number(existingOrder.subtotal) +
-          newItemsSubtotal;
+                          const updatedSubtotal =
+                            Number(
+                              existingOrder.subtotal,
+                            ) + newItemsSubtotal;
 
-        const updatedDeliveryFee =
-          updatedSubtotal === 0 ||
-          updatedSubtotal >= 499
-            ? 0
-            : 49;
+                          const updatedDeliveryFee =
+                            updatedSubtotal === 0 ||
+                            updatedSubtotal >= 499
+                              ? 0
+                              : 49;
 
-        const updatedTotal =
-          updatedSubtotal + updatedDeliveryFee;
+                          const updatedTotal =
+                            updatedSubtotal +
+                            updatedDeliveryFee;
 
-        return (
-          <div className="mt-3 border-t border-line pt-3 space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted">
-                Subtotal
-              </span>
+                          return (
+                            <div className="mt-3 space-y-2 border-t border-line pt-3">
+                              <div className="flex justify-between">
+                                <span className="text-muted">
+                                  Subtotal
+                                </span>
 
-              <span>
-                ₹{updatedSubtotal.toFixed(2)}
-              </span>
-            </div>
+                                <span>
+                                  ₹
+                                  {updatedSubtotal.toFixed(
+                                    2,
+                                  )}
+                                </span>
+                              </div>
 
-            <div className="flex justify-between">
-              <span className="text-muted">
-                Delivery
-              </span>
+                              <div className="flex justify-between">
+                                <span className="text-muted">
+                                  Delivery
+                                </span>
 
-              <span
-                className={
-                  updatedDeliveryFee === 0
-                    ? "text-success"
-                    : undefined
-                }
-              >
-                {updatedDeliveryFee === 0
-                  ? "FREE"
-                  : `₹${updatedDeliveryFee.toFixed(2)}`}
-              </span>
-            </div>
+                                <span
+                                  className={
+                                    updatedDeliveryFee ===
+                                    0
+                                      ? "text-success"
+                                      : undefined
+                                  }
+                                >
+                                  {updatedDeliveryFee === 0
+                                    ? "FREE"
+                                    : `₹${updatedDeliveryFee.toFixed(
+                                        2,
+                                      )}`}
+                                </span>
+                              </div>
 
-            <div className="flex justify-between font-bold">
-              <span>Total</span>
+                              <div className="flex justify-between font-bold">
+                                <span>Total</span>
 
-              <span>
-                ₹{updatedTotal.toFixed(2)}
-              </span>
-            </div>
-          </div>
-        );
-      })()}
-    </div>
-  </div>
-) : null}
+                                <span>
+                                  ₹
+                                  {updatedTotal.toFixed(
+                                    2,
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="space-y-3 rounded-2xl bg-surface-2 p-5 text-sm">
                     <div className="flex justify-between gap-4">
                       <span className="text-muted">
@@ -1105,12 +1182,12 @@ export default function CheckoutPage() {
                     onClick={placeOrder}
                   >
                     {loading
-  ? addToOrderId
-    ? "Adding to existing order..."
-    : "Placing order..."
-  : addToOrderId
-    ? "Add to existing order"
-    : "Place order"}
+                      ? addToOrderId
+                        ? "Adding to existing order..."
+                        : "Placing order..."
+                      : addToOrderId
+                        ? "Add to existing order"
+                        : "Place order"}
                   </Button>
                 )}
               </div>
@@ -1128,7 +1205,8 @@ export default function CheckoutPage() {
                     <span className="text-muted">
                       Items (
                       {cart.reduce(
-                        (sum, item) => sum + item.qty,
+                        (sum, item) =>
+                          sum + item.qty,
                         0,
                       )}
                       )
