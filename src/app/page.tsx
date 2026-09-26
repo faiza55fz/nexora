@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { categories, products as defaultProducts } from "@/lib/data";
 import { ProductCard } from "@/components/product-card";
+import RecommendedProducts from "@/components/recommended-products";
 import { Badge, Button } from "@/components/ui";
 import { useStore } from "@/components/providers";
 import { useEffect, useState } from "react";
@@ -50,7 +51,7 @@ export default function HomePage() {
                 (image: any) => image.is_primary,
               )?.image_url ||
               product.product_images?.[0]?.image_url ||
-               "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1000&q=80";
+              "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1000&q=80";
 
             return {
               ...defaultProducts[0],
@@ -161,10 +162,6 @@ export default function HomePage() {
         b.sold - a.sold,
     )
     .slice(0, 4);
-
-  const recs = activeProducts
-    .filter((p) => p.aiReason)
-    .slice(0, 3);
 
   // -------------------------
   // LANDING PAGE
@@ -419,35 +416,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Smart picks */}
+      {/* Personalized recommendations */}
       <section className="mx-auto max-w-7xl px-4 pt-12">
-        <div className="rounded-3xl border border-line bg-surface p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-xl">
-              ✨
-            </div>
-
-            <div>
-              <h2 className="text-xl font-bold">
-                Smart picks for you
-              </h2>
-
-              <p className="mt-1 text-sm leading-6 text-muted">
-                Nexora can help you find good-value products based on
-                price, availability and delivery time.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {recs.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-              />
-            ))}
-          </div>
-        </div>
+        <RecommendedProducts />
       </section>
 
       {/* Fresh picks */}

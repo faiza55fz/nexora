@@ -81,6 +81,16 @@ export default function CheckoutPage() {
 
   const [allProducts, setAllProducts] =
     useState(staticProducts);
+    const [paymentMethod, setPaymentMethod] = useState<
+  "cod" | "card" | "upi" | "wallet"
+>("cod");
+
+const [cardNumber, setCardNumber] = useState("");
+const [cardName, setCardName] = useState("");
+const [cardExpiry, setCardExpiry] = useState("");
+const [cardCvv, setCardCvv] = useState("");
+const [upiId, setUpiId] = useState("");
+const [wallet, setWallet] = useState("paytm");
 
   useEffect(() => {
     async function loadAddresses() {
@@ -517,7 +527,7 @@ export default function CheckoutPage() {
 
           total,
 
-          paymentMethod: "cod",
+          paymentMethod,
 
           latitude: selectedLatitude,
 
@@ -888,62 +898,296 @@ export default function CheckoutPage() {
                 </div>
               ) : null}
 
-              {/* PAYMENT */}
-              {step === 2 ? (
-                <div className="space-y-4">
-                  <div className="mb-6 flex items-center gap-3">
-                    <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-soft text-brand">
-                      <Banknote size={20} />
-                    </div>
+              
+            {/* PAYMENT */}
+{step === 2 ? (
+  <div className="space-y-4">
+    <div className="mb-6 flex items-center gap-3">
+      <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-soft text-brand">
+        <Banknote size={20} />
+      </div>
 
-                    <div>
-                      <h2 className="text-lg font-semibold">
-                        Payment method
-                      </h2>
+      <div>
+        <h2 className="text-lg font-semibold">
+          Payment method
+        </h2>
 
-                      <p className="text-sm text-muted">
-                        Simple and secure payment.
-                      </p>
-                    </div>
-                  </div>
+        <p className="text-sm text-muted">
+          Choose how you'd like to pay for your groceries.
+        </p>
+      </div>
+    </div>
+     {/* Cash on Delivery */}
+    <button
+      type="button"
+      onClick={() => setPaymentMethod("cod")}
+      className={`w-full rounded-2xl border-2 p-5 text-left transition ${
+        paymentMethod === "cod"
+          ? "border-brand bg-brand-soft"
+          : "border-line hover:border-brand/50"
+      }`}
+    >
+      <div className="flex items-center gap-4">
+        <input
+          type="radio"
+          name="payment"
+          checked={paymentMethod === "cod"}
+          onChange={() => setPaymentMethod("cod")}
+          className="h-4 w-4 accent-brand"
+        />
 
-                  <label className="flex cursor-pointer items-center gap-4 rounded-2xl border-2 border-brand bg-brand-soft p-5">
-                    <input
-                      type="radio"
-                      name="payment"
-                      defaultChecked
-                    />
+        <div className="flex-1">
+          <div className="flex items-center justify-between gap-3">
+            <strong>Cash on Delivery</strong>
+            <span className="text-xl">💵</span>
+          </div>
 
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <strong>Cash on delivery</strong>
+          <p className="mt-1 text-sm text-muted">
+            Pay when your groceries arrive at your doorstep.
+          </p>
+        </div>
+      </div>
+    </button>
 
-                        <span className="text-xl">
-                          💵
-                        </span>
-                      </div>
+    {/* Credit / Debit Card */}
+    <button
+      type="button"
+      onClick={() => setPaymentMethod("card")}
+      className={`w-full rounded-2xl border-2 p-5 text-left transition ${
+        paymentMethod === "card"
+          ? "border-brand bg-brand-soft"
+          : "border-line hover:border-brand/50"
+      }`}
+    >
+      <div className="flex items-center gap-4">
+        <input
+          type="radio"
+          name="payment"
+          checked={paymentMethod === "card"}
+          onChange={() => setPaymentMethod("card")}
+          className="h-4 w-4 accent-brand"
+        />
 
-                      <p className="mt-1 text-sm text-muted">
-                        Pay when your groceries arrive at your
-                        doorstep.
-                      </p>
-                    </div>
-                  </label>
+        <div className="flex-1">
+          <div className="flex items-center justify-between gap-3">
+            <strong>Credit / Debit Card</strong>
+            <span className="text-xl">💳</span>
+          </div>
 
-                  <div className="flex gap-3 rounded-xl bg-surface-2 p-4">
-                    <ShieldCheck
-                      size={20}
-                      className="shrink-0 text-success"
-                    />
+          <p className="mt-1 text-sm text-muted">
+            Pay securely using your credit or debit card.
+          </p>
+        </div>
+      </div>
+    </button>
 
-                    <p className="text-sm text-muted">
-                      No card or online payment details are
-                      required for this order.
-                    </p>
-                  </div>
-                </div>
-              ) : null}
+    {paymentMethod === "card" ? (
+      <div className="rounded-2xl border border-line p-5">
+        <div className="grid gap-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">
+              Card Number
+            </label>
 
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={19}
+              placeholder="1234 5678 9012 3456"
+              value={cardNumber}
+              onChange={(e) =>
+                setCardNumber(e.target.value)
+              }
+              className="w-full rounded-xl border border-line bg-surface px-4 py-3 outline-none focus:border-brand"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">
+              Cardholder Name
+            </label>
+
+            <input
+              type="text"
+              placeholder="Name on card"
+              value={cardName}
+              onChange={(e) =>
+                setCardName(e.target.value)
+              }
+              className="w-full rounded-xl border border-line bg-surface px-4 py-3 outline-none focus:border-brand"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">
+                Expiry Date
+              </label>
+
+              <input
+                type="text"
+                placeholder="MM/YY"
+                maxLength={5}
+                value={cardExpiry}
+                onChange={(e) =>
+                  setCardExpiry(e.target.value)
+                }
+                className="w-full rounded-xl border border-line bg-surface px-4 py-3 outline-none focus:border-brand"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">
+                CVV
+              </label>
+
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="•••"
+                value={cardCvv}
+                onChange={(e) =>
+                  setCardCvv(e.target.value)
+                }
+                className="w-full rounded-xl border border-line bg-surface px-4 py-3 outline-none focus:border-brand"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    ) : null}
+
+    {/* UPI / Net Banking */}
+    <button
+      type="button"
+      onClick={() => setPaymentMethod("upi")}
+      className={`w-full rounded-2xl border-2 p-5 text-left transition ${
+        paymentMethod === "upi"
+          ? "border-brand bg-brand-soft"
+          : "border-line hover:border-brand/50"
+      }`}
+    >
+      <div className="flex items-center gap-4">
+        <input
+          type="radio"
+          name="payment"
+          checked={paymentMethod === "upi"}
+          onChange={() => setPaymentMethod("upi")}
+          className="h-4 w-4 accent-brand"
+        />
+
+        <div className="flex-1">
+          <div className="flex items-center justify-between gap-3">
+            <strong>UPI / Net Banking</strong>
+            <span className="text-xl">📱</span>
+          </div>
+
+          <p className="mt-1 text-sm text-muted">
+            Pay using UPI or your bank account.
+          </p>
+        </div>
+      </div>
+    </button>
+
+    {paymentMethod === "upi" ? (
+      <div className="rounded-2xl border border-line p-5">
+        <label className="mb-1.5 block text-sm font-medium">
+          UPI ID
+        </label>
+
+        <input
+          type="text"
+          placeholder="yourname@upi"
+          value={upiId}
+          onChange={(e) => setUpiId(e.target.value)}
+          className="w-full rounded-xl border border-line bg-surface px-4 py-3 outline-none focus:border-brand"
+        />
+
+        <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
+          <span className="rounded-full bg-surface-2 px-3 py-1">
+            Google Pay
+          </span>
+
+          <span className="rounded-full bg-surface-2 px-3 py-1">
+            PhonePe
+          </span>
+
+          <span className="rounded-full bg-surface-2 px-3 py-1">
+            Paytm
+          </span>
+
+          <span className="rounded-full bg-surface-2 px-3 py-1">
+            Net Banking
+          </span>
+        </div>
+      </div>
+    ) : null}
+
+    {/* Digital Wallet */}
+    <button
+      type="button"
+      onClick={() => setPaymentMethod("wallet")}
+      className={`w-full rounded-2xl border-2 p-5 text-left transition ${
+        paymentMethod === "wallet"
+          ? "border-brand bg-brand-soft"
+          : "border-line hover:border-brand/50"
+      }`}
+    >
+      <div className="flex items-center gap-4">
+        <input
+          type="radio"
+          name="payment"
+          checked={paymentMethod === "wallet"}
+          onChange={() => setPaymentMethod("wallet")}
+          className="h-4 w-4 accent-brand"
+        />
+
+        <div className="flex-1">
+          <div className="flex items-center justify-between gap-3">
+            <strong>Digital Wallets</strong>
+            <span className="text-xl">👛</span>
+          </div>
+
+          <p className="mt-1 text-sm text-muted">
+            Pay using your preferred digital wallet.
+          </p>
+        </div>
+      </div>
+    </button>
+
+    {paymentMethod === "wallet" ? (
+      <div className="rounded-2xl border border-line p-5">
+        <label className="mb-1.5 block text-sm font-medium">
+          Select Wallet
+        </label>
+
+        <select
+          value={wallet}
+          onChange={(e) => setWallet(e.target.value)}
+          className="w-full rounded-xl border border-line bg-surface px-4 py-3 outline-none focus:border-brand"
+        >
+          <option value="paytm">Paytm Wallet</option>
+          <option value="amazon_pay">Amazon Pay</option>
+          <option value="mobikwik">MobiKwik</option>
+        </select>
+      </div>
+    ) : null}
+
+    {/* Security message */}
+    <div className="flex gap-3 rounded-xl bg-surface-2 p-4">
+      <ShieldCheck
+        size={20}
+        className="shrink-0 text-success"
+      />
+
+      <p className="text-sm text-muted">
+        Your payment information is protected. We never store
+        your complete card details.
+      </p>
+    </div>
+  </div>
+) : null}
               {/* REVIEW */}
               {step === 3 ? (
                 <div className="space-y-5">
@@ -1115,7 +1359,13 @@ export default function CheckoutPage() {
                       </span>
 
                       <strong>
-                        Cash on delivery
+                       {paymentMethod === "cod"
+    ? "Cash on delivery"
+    : paymentMethod === "card"
+      ? "Credit / Debit Card"
+      : paymentMethod === "upi"
+        ? "UPI / Net Banking"
+        : "Digital Wallet"}
                       </strong>
                     </div>
                   </div>
@@ -1350,7 +1600,13 @@ export default function CheckoutPage() {
                   <span>Payment</span>
 
                   <strong>
-                    Cash on delivery
+                    {paymentMethod === "cod"
+    ?   "Cash on delivery"
+    : paymentMethod === "card"
+      ? "Credit / Debit Card"
+      : paymentMethod === "upi"
+        ? "UPI / Net Banking"
+        : "Digital Wallet"}
                   </strong>
                 </div>
               </div>

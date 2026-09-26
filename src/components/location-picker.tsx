@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 type LocationPickerProps = {
@@ -16,142 +15,100 @@ export default function LocationPicker({
   onLocationChange,
 }: LocationPickerProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.CircleMarker | null>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) {
-      return;
-    }
+    let cancelled = false;
 
-    const defaultCenter: [number, number] = [
-      latitude ?? 13.9299,
-      longitude ?? 75.5681,
-    ];
-
-    const map = L.map(mapRef.current).setView(
-      defaultCenter,
-      latitude !== null && longitude !== null ? 16 : 13,
-    );
-
-    L.tileLayer(
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      },
-    ).addTo(map);
-
-    mapInstanceRef.current = map;
-
-    const setMarker = (lat: number, lng: number) => {
-      if (markerRef.current) {
-        markerRef.current.setLatLng([lat, lng]);
-      } else {
-        markerRef.current = L.circleMarker(
-          [lat, lng],
-          {
-            radius: 9,
-            weight: 3,
-            fillOpacity: 1,
-          },
-        ).addTo(map);
+    async function loadMap() {
+      if (!mapRef.current || mapInstanceRef.current) {
+        return;
       }
 
-      onLocationChange(lat, lng);
-    };
+      // Leaflet is loaded only in the browser
+      const L = await import("leaflet");
 
-    if (latitude !== null && longitude !== null) {
-      setMarker(latitude, longitude);
+      if (cancelled || !mapRef.current) return;
+
+      const defaultLat = latitude ?? 15.3647;
+      const defaultLng = longitude ?? 75.1240;
+
+      const map = L.map(mapRef.current).setView(
+        [defaultLat, defaultLng],
+        15,
+      );
+
+      mapInstanceRef.current = map;
+
+      L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          attribution:
+            '&copy; OpenStreetMap contributors',
+        },
+      ).addTo(map);
+
+      const marker = L.marker([
+        defaultLat,
+        defaultLng,
+      ]).addTo(map);
+
+      markerRef.current = marker;
+
+      map.on("click", (event: any) => {
+        const { lat, lng } = event.latlng;
+
+        marker.setLatLng([lat, lng]);
+
+        onLocationChange(lat, lng);
+      });
     }
 
-    map.on("click", (event) => {
-      setMarker(event.latlng.lat, event.latlng.lng);
-    });
+    loadMap();
 
     return () => {
-      map.remove();
-      mapInstanceRef.current = null;
-      markerRef.current = null;
+      cancelled = true;
+
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
     };
   }, []);
 
-  const useCurrentLocation = () => {
-    if (!navigator.geolocation) {
+  useEffect(() => {
+    if (
+      !mapInstanceRef.current ||
+      latitude === null ||
+      longitude === null
+    ) {
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-
-        const map = mapInstanceRef.current;
-
-        if (!map) {
-          return;
-        }
-
-        map.setView([lat, lng], 17);
-
-        if (markerRef.current) {
-          markerRef.current.setLatLng([lat, lng]);
-        } else {
-          markerRef.current = L.circleMarker(
-            [lat, lng],
-            {
-              radius: 9,
-              weight: 3,
-              fillOpacity: 1,
-            },
-          ).addTo(map);
-        }
-
-        onLocationChange(lat, lng);
-      },
-      () => {
-        alert(
-          "Unable to access your location. Please select your location manually on the map.",
-        );
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-      },
+    mapInstanceRef.current.setView(
+      [latitude, longitude],
+      15,
     );
-  };
+
+    if (markerRef.current) {
+      markerRef.current.setLatLng([
+        latitude,
+        longitude,
+      ]);
+    }
+  }, [latitude, longitude]);
 
   return (
-    <div className="mt-5 overflow-hidden rounded-2xl border border-line">
+    <div className="overflow-hidden rounded-2xl border border-line">
       <div
         ref={mapRef}
-        className="h-[320px] w-full"
+        className="h-[300px] w-full"
       />
 
-      <div className="flex flex-col gap-3 bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold">
-            Choose your exact delivery location
-          </p>
-
-          <p className="mt-1 text-xs text-muted">
-            Click anywhere on the map to place the delivery pin.
-          </p>
-
-          {latitude !== null && longitude !== null ? (
-            <p className="mt-1 text-[11px] text-muted">
-              Location selected
-            </p>
-          ) : null}
-        </div>
-
-        <button
-          type="button"
-          onClick={useCurrentLocation}
-          className="rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold"
-        >
-          Use my current location
-        </button>
+      <div className="border-t border-line bg-surface-2 px-4 py-3 text-sm text-muted">
+        📍 Click on the map to select your exact delivery
+        location.
       </div>
     </div>
   );
