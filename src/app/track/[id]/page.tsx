@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Card } from "@/components/ui";
 import { inr } from "@/lib/format";
 
@@ -218,6 +219,16 @@ export default async function TrackPage({
         <p className="mt-3 font-semibold">
           Total {inr(Number(order.total))}
         </p>
+        {order.status === "delivered" ? (
+  <div className="mt-5">
+    <Link
+      href={`/reviews?orderId=${encodeURIComponent(order.id)}`}
+      className="inline-flex items-center rounded-md border border-line px-4 py-2 text-sm font-medium hover:bg-muted"
+    >
+      Rate & Review
+    </Link>
+  </div>
+) : null}
       </Card>
     </div>
   );

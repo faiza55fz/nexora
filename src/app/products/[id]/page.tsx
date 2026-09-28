@@ -3,7 +3,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { products, reviews } from "@/lib/data";
+import { products } from "@/lib/data";
 type Product = (typeof products)[number] & {
   active?: boolean;
 };
@@ -32,6 +32,7 @@ export default function ProductPage({
 
 const [product, setProduct] = useState<Product | null>(null);
 const [loading, setLoading] = useState(true);
+const [productReviews, setProductReviews] = useState<any[]>([]);
 
 const { addToCart, toggleWishlist, wishlist } = useStore();
 
@@ -144,6 +145,50 @@ useEffect(() => {
 
   loadProduct();
 }, [id]);
+useEffect(() => {
+  if (!product?.id) return;
+
+  const loadReviews = async () => {
+    try {
+      const response = await fetch(
+        `/api/reviews?productId=${encodeURIComponent(product.id)}`,
+        {
+          cache: "no-store",
+        },
+      );
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+
+const mappedReviews = (data.reviews ?? []).map(
+  (review: any) => ({
+    id: review.id,
+    rating: review.rating,
+    title: review.title || "Customer review",
+    author: review.customer_name,
+    city: "",
+    date: new Date(review.created_at).toLocaleDateString(
+      "en-IN",
+      {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      },
+    ),
+    body: review.body,
+    verified: review.verified,
+  }),
+);
+
+setProductReviews(mappedReviews);
+    } catch {
+      setProductReviews([]);
+    }
+  };
+
+  loadReviews();
+}, [product?.id]);
 if (loading) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-16 text-center">
@@ -204,9 +249,6 @@ if (product.active === false) {
 }
   const off = discountPct(product.mrp, product.price);
 
-  const productReviews = reviews.filter(
-    (review) => review.productId === product.id,
-  );
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 pb-16">
@@ -624,8 +666,8 @@ if (product.active === false) {
               ))
             ) : (
               <p className="text-sm text-muted">
-                No reviews yet for this product.
-              </p>
+  No reviews yet for this product. Be the first one to write a review.
+</p>
             )}
 
           </div>
