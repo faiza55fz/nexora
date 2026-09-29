@@ -48,6 +48,24 @@ const DELIVERY_STAGES_KEY =
 const DELIVERY_UPDATED_EVENT =
   "nexora-delivery-updated";
 
+function normalizePhoneForMatch(
+  value: string,
+) {
+  const digits = value.replace(
+    /\D/g,
+    "",
+  );
+
+  if (
+    digits.startsWith("91") &&
+    digits.length === 12
+  ) {
+    return digits.slice(2);
+  }
+
+  return digits;
+}
+
 function normalizeStatus(
   status: unknown,
 ): DeliveryStatus {
@@ -180,6 +198,9 @@ export default function DeliveryPage() {
   const [members, setMembers] =
     useState<DeliveryMember[]>([]);
 
+  const [partnersLoading, setPartnersLoading] =
+    useState(true);
+
   const [assignments, setAssignments] =
     useState<
       Record<
@@ -206,111 +227,217 @@ export default function DeliveryPage() {
 
   function loadDeliveryData() {
     try {
-      const rawMembers =
-        localStorage.getItem(
-          MEMBERS_KEY,
-        );
+      setPartnersLoading(true);
 
-      const rawAssignments =
-        localStorage.getItem(
-          ASSIGNMENTS_KEY,
-        );
+      fetch(
+        "/api/admin/delivery-partners",
+        {
+          cache: "no-store",
+        },
+      )
+        .then(async (response) => {
+          const data =
+            await response.json();
 
-      const rawStages =
-        localStorage.getItem(
-          DELIVERY_STAGES_KEY,
-        );
+          if (
+            !response.ok ||
+            !data.success
+          ) {
+            throw new Error(
+              data.message ||
+                "Unable to load delivery partners.",
+            );
+          }
 
-      const parsedMembers =
-        rawMembers
-          ? normalizeMembers(
-              JSON.parse(
-                rawMembers,
-              ),
-            )
-          : [];
+          const supabaseMembers: DeliveryMember[] =
+            (data.partners ?? []).map(
+              (partner: any) => ({
+                id: String(
+                  partner.id,
+                ),
+                name: String(
+                  partner.name ??
+                    "Delivery member",
+                ),
+                phone: String(
+                  partner.phone ??
+                    "",
+                ),
+                status:
+                  normalizeStatus(
+                    partner.status,
+                  ),
+                area: String(
+                  partner.area ??
+                    "",
+                ),
+              }),
+            );
 
-      const parsedAssignments =
-        rawAssignments
-          ? JSON.parse(
-              rawAssignments,
-            )
-          : {};
+          const rawAssignments =
+            localStorage.getItem(
+              ASSIGNMENTS_KEY,
+            );
 
-      const parsedStages =
-        rawStages
-          ? JSON.parse(
-              rawStages,
-            )
-          : {};
+          const rawStages =
+            localStorage.getItem(
+              DELIVERY_STAGES_KEY,
+            );
 
-      setMembers(parsedMembers);
+          const rawLocalMembers =
+            localStorage.getItem(
+              MEMBERS_KEY,
+            );
 
-      setAssignments(
-        parsedAssignments &&
-          typeof parsedAssignments ===
-            "object"
-          ? parsedAssignments
-          : {},
-      );
+          const parsedAssignments =
+            rawAssignments
+              ? JSON.parse(
+                  rawAssignments,
+                )
+              : {};
 
-      const normalizedStages: Record<
-        string,
-        DeliveryStage
-      > = {};
+          const parsedStages =
+            rawStages
+              ? JSON.parse(
+                  rawStages,
+                )
+              : {};
 
-      if (
-        parsedStages &&
-        typeof parsedStages ===
-          "object"
-      ) {
-        Object.entries(
-          parsedStages,
-        ).forEach(
-          ([orderId, stage]) => {
-            normalizedStages[
-              orderId
-            ] =
-              normalizeStage(
-                stage,
+          const parsedLocalMembers =
+            rawLocalMembers
+              ? normalizeMembers(
+                  JSON.parse(
+                    rawLocalMembers,
+                  ),
+                )
+              : [];
+
+          const mergedMembers =
+            supabaseMembers.map(
+              (partner) => {
+                const localMember =
+                  parsedLocalMembers.find(
+                    (member) =>
+                      member.id ===
+                        partner.id ||
+                      normalizePhoneForMatch(
+                        member.phone,
+                      ) ===
+                        normalizePhoneForMatch(
+                          partner.phone,
+                        ),
+                  );
+
+                const assignedOrder =
+                  localMember?.assignedOrder;
+
+                const assignment =
+                  Object.entries(
+                    parsedAssignments ??
+                      {},
+                  ).find(
+                    ([, value]) =>
+                      (
+                        value as DeliveryAssignment
+                      )?.memberId ===
+                      partner.id,
+                  );
+
+                return {
+                  ...partner,
+                  assignedOrder:
+                    assignedOrder ??
+                    (assignment?.[0] ||
+                      undefined),
+                };
+              },
+            );
+
+          setMembers(
+            mergedMembers,
+          );
+
+          setAssignments(
+            parsedAssignments &&
+              typeof parsedAssignments ===
+                "object"
+              ? parsedAssignments
+              : {},
+          );
+
+          const normalizedStages: Record<
+            string,
+            DeliveryStage
+          > = {};
+
+          if (
+            parsedStages &&
+            typeof parsedStages ===
+              "object"
+          ) {
+            Object.entries(
+              parsedStages,
+            ).forEach(
+              ([orderId, stage]) => {
+                normalizedStages[
+                  orderId
+                ] =
+                  normalizeStage(
+                    stage,
+                  );
+              },
+            );
+          }
+
+          setStages(
+            normalizedStages,
+          );
+
+          if (
+            mergedMembers.length > 0
+          ) {
+            const stillExists =
+              mergedMembers.some(
+                (member) =>
+                  member.id ===
+                  selectedMemberId,
               );
-          },
-        );
-      }
 
-      setStages(
-        normalizedStages,
+            if (!stillExists) {
+              setSelectedMemberId(
+                mergedMembers[0].id,
+              );
+            }
+          } else {
+            setSelectedMemberId("");
+          }
+        })
+        .catch((error) => {
+          console.error(
+            "Admin delivery loading error:",
+            error,
+          );
+
+          setMembers([]);
+          setAssignments({});
+          setStages({});
+          setSelectedMemberId("");
+        })
+        .finally(() => {
+          setPartnersLoading(false);
+        });
+    } catch (error) {
+      console.error(
+        "Admin delivery loading error:",
+        error,
       );
 
-      /*
-       * Keep the currently selected partner
-       * if they still exist.
-       *
-       * Otherwise select the first partner.
-       */
-      if (
-        parsedMembers.length > 0
-      ) {
-        const stillExists =
-          parsedMembers.some(
-            (member) =>
-              member.id ===
-              selectedMemberId,
-          );
-
-        if (!stillExists) {
-          setSelectedMemberId(
-            parsedMembers[0].id,
-          );
-        }
-      } else {
-        setSelectedMemberId("");
-      }
-    } catch {
       setMembers([]);
       setAssignments({});
       setStages({});
       setSelectedMemberId("");
+
+      setPartnersLoading(false);
     }
   }
 

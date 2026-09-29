@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter,useSearchParams } from "next/navigation";
 import {useEffect, useState } from "react";
+import NotificationBell from "@/components/notification-bell";
 import {
   Bell,
   ChevronDown,
@@ -285,44 +286,13 @@ const cartHref = addToOrderId
             </Link>
 
             {/* Notifications */}
-            <div className="relative">
-              <button
-                aria-label="Notifications"
-                className="relative grid h-10 w-10 place-items-center rounded-xl transition hover:bg-surface-2"
-                onClick={() => setNotes((v) => !v)}
-              >
-                <Bell size={19} />
-
-                {notifications.length > 0 && (
-                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-cta" />
-                )}
-              </button>
-
-              {notes && (
-  <div className="fixed left-2 right-2 top-[136px] z-50 overflow-hidden rounded-2xl border border-line bg-surface shadow-[var(--shadow)] sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80">
-    <div className="border-b border-line px-4 py-3">
-      <p className="font-semibold">Notifications</p>
-    </div>
-
-    <div className="max-h-80 overflow-y-auto p-2">
-      {notifications.map((n) => (
-        <div
-          key={n.id}
-          className="rounded-xl px-3 py-3 transition hover:bg-surface-2"
-        >
-          <p className="text-sm font-semibold">{n.title}</p>
-          <p className="mt-0.5 text-xs leading-5 text-muted">
-            {n.body}
-          </p>
-          <p className="mt-1 text-[11px] text-muted">
-            {n.time}
-          </p>
-        </div>
-      ))}
-    </div>
-  </div>
+           {/* Notifications */}
+{user && (
+  <NotificationBell
+    recipientId={user.id}
+    recipientType="customer"
+  />
 )}
-            </div>
 
             {/* Cart */}
             <Link

@@ -32,6 +32,55 @@ const allowedStatuses = [
   "cancelled",
   "return-requested",
 ];
+const customerNotificationMessages: Record<
+  string,
+  {
+    title: string;
+    message: (orderNumber: string) => string;
+  }
+> = {
+  confirmed: {
+    title: "Order confirmed",
+    message: (orderNumber) =>
+      `Your order ${orderNumber} has been confirmed and is being prepared.`,
+  },
+
+  packed: {
+    title: "Order packed",
+    message: (orderNumber) =>
+      `Your order ${orderNumber} has been packed and is ready for delivery.`,
+  },
+
+  shipped: {
+    title: "Order shipped",
+    message: (orderNumber) =>
+      `Your order ${orderNumber} has been shipped.`,
+  },
+
+  "out-for-delivery": {
+    title: "Out for delivery",
+    message: (orderNumber) =>
+      `Your order ${orderNumber} is out for delivery.`,
+  },
+
+  delivered: {
+    title: "Order delivered",
+    message: (orderNumber) =>
+      `Your order ${orderNumber} has been delivered successfully.`,
+  },
+
+  cancelled: {
+    title: "Order cancelled",
+    message: (orderNumber) =>
+      `Your order ${orderNumber} has been cancelled.`,
+  },
+
+  "return-requested": {
+    title: "Return requested",
+    message: (orderNumber) =>
+      `Your return request for order ${orderNumber} has been received.`,
+  },
+};
 
 function generateOrderNumber() {
   const date = new Date();
@@ -191,6 +240,64 @@ export async function PATCH(
           { status: 400 },
         );
       }
+      
+   /* Customer cancellation notification.
+   *
+   * The cancellation RPC has already completed
+   * successfully, so notification failure must
+   * never undo the cancellation.
+   */
+  try {
+    const { data: cancelledOrder } =
+      await supabaseAdmin
+        .from("orders")
+        .select(
+          "id, order_number, customer_email",
+        )
+        .eq("id", orderId)
+        .maybeSingle();
+
+    if (
+      cancelledOrder?.customer_email
+    ) {
+      const { data: customer } =
+        await supabaseAdmin
+          .from("customers")
+          .select("id")
+          .eq(
+            "email",
+            cancelledOrder.customer_email,
+          )
+          .maybeSingle();
+
+      if (customer?.id) {
+        const {
+          error: notificationError,
+        } = await supabaseAdmin
+          .from("notifications")
+          .insert({
+            recipient_id: customer.id,
+            recipient_type: "customer",
+            type: "order-cancelled",
+            title: "Order cancelled",
+            message: `Your order ${cancelledOrder.order_number} has been cancelled.`,
+            order_id: cancelledOrder.id,
+          });
+
+        if (notificationError) {
+          console.error(
+            "Cancellation notification failed:",
+            notificationError,
+          );
+        }
+      }
+    }
+  } catch (notificationError) {
+    console.error(
+      "Cancellation notification error:",
+      notificationError,
+    );
+  }
 
       return NextResponse.json({
         success: true,
@@ -210,7 +317,7 @@ export async function PATCH(
         })
         .eq("id", orderId)
         .select(
-          "id, order_number, status",
+          "id, order_number, status, customer_email",
         )
         .single();
 
@@ -229,11 +336,67 @@ export async function PATCH(
         { status: 500 },
       );
     }
+/*
+ * Customer notification for order status changes.
+ *
+ * Notification failures must never prevent the
+ * order status update from succeeding.
+ */
+const notificationConfig =
+  customerNotificationMessages[status];
+
+if (
+  notificationConfig &&
+  data.customer_email
+) {
+  try {
+    const { data: customer } =
+      await supabaseAdmin
+        .from("customers")
+        .select("id")
+        .eq(
+          "email",
+          data.customer_email,
+        )
+        .maybeSingle();
+
+    if (customer?.id) {
+      const { error: notificationError } =
+        await supabaseAdmin
+          .from("notifications")
+          .insert({
+            recipient_id: customer.id,
+            recipient_type: "customer",
+            type: `order-${status}`,
+            title:
+              notificationConfig.title,
+            message:
+              notificationConfig.message(
+                data.order_number,
+              ),
+            order_id: data.id,
+          });
+
+      if (notificationError) {
+        console.error(
+          "Order status notification failed:",
+          notificationError,
+        );
+      }
+    }
+  } catch (notificationError) {
+    console.error(
+      "Order status notification error:",
+      notificationError,
+    );
+  }
+}
 
     return NextResponse.json({
       success: true,
       order: data,
     });
+
   } catch (error) {
     console.error(
       "Update order status API error:",
@@ -365,6 +528,55 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+
+    /*
+ * Customer notification: order placed
+ *
+ * Notification failure must NOT cause the order
+ * itself to fail.
+ */
+try {
+  const { data: customer } =
+    await supabaseAdmin
+      .from("customers")
+      .select("id")
+      .eq(
+        "email",
+        body.customerEmail.trim(),
+      )
+      .maybeSingle();
+
+  if (customer?.id) {
+    const { error: notificationError } =
+      await supabaseAdmin
+        .from("notifications")
+        .insert({
+          recipient_id: customer.id,
+          recipient_type: "customer",
+          type: "order-placed",
+          title: "Order placed successfully",
+          message: `Your order ${data.orderNumber} has been placed successfully.`,
+          order_id: data.id,
+        });
+
+    if (notificationError) {
+      console.error(
+        "Order notification creation failed:",
+        notificationError,
+      );
+    }
+  } else {
+    console.warn(
+      "Customer not found for order notification:",
+      body.customerEmail,
+    );
+  }
+} catch (notificationError) {
+  console.error(
+    "Order notification error:",
+    notificationError,
+  );
+}
 
     return NextResponse.json(
       {

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import NotificationBell from "@/components/notification-bell";
 import {
   ArrowLeft,
   CalendarDays,
@@ -479,10 +481,29 @@ export default function DeliveryPage() {
 
   const [blockSearch, setBlockSearch] = useState("");
 
-  const [loginId, setLoginId] = useState("");
-  const [loginPhone, setLoginPhone] = useState("");
+  const [loginName, setLoginName] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [isSignup, setIsSignup] = useState(false);
+  const [signupName, setSignupName] = useState("");
+  const [signupPhone, setSignupPhone] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupArea, setSignupArea] = useState("");
+  const [signupVehicleType, setSignupVehicleType] = useState("");
+  const [signupVehicleNumber, setSignupVehicleNumber] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
+
+  function normalizePhoneForMatch(value: string) {
+    const digits = value.replace(/\D/g, "");
+    if (digits.startsWith("91") && digits.length === 12) {
+      return digits.slice(2);
+    }
+    return digits;
+  }
 
   async function loadOrders() {
     try {
@@ -590,89 +611,265 @@ export default function DeliveryPage() {
     );
   }, [members, selectedMemberId]);
 
- async function handlePartnerLogin() {
-  setLoginError("");
+  async function handlePartnerLogin() {
+    setLoginError("");
+    setAuthMessage("");
 
-  const normalizedId = loginId.trim();
-  const normalizedPhone = loginPhone.trim();
+    const name = loginName.trim();
+    const password = loginPassword;
 
-  if (!normalizedId || !normalizedPhone) {
-    setLoginError("Enter your Partner ID and registered phone number.");
-    return;
-  }
-
-  try {
-    const response = await fetch("/delivery/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        partnerId: normalizedId,
-        phone: normalizedPhone,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
+    if (!name || !password) {
       setLoginError(
-        data.message || "Unable to sign in. Please check your details.",
+        "Enter your registered name and password.",
       );
       return;
     }
 
-    // Convert the DB partner into the format
-    // already used by your existing delivery UI.
-    const partner: DeliveryMember = {
-      id: data.partner.id,
-      name: data.partner.name,
-      phone: data.partner.phone,
-      status: normalizeStatus(data.partner.status),
-      area: data.partner.area ?? "",
-    };
+    setAuthLoading(true);
 
-    // Add/update the logged-in partner in state
-    setMembers((current) => {
-      const exists = current.some(
-        (member) => member.id === partner.id,
-      );
+    try {
+      const response = await fetch("/api/delivery/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          password,
+        }),
+      });
 
-      if (exists) {
-        return current.map((member) =>
-          member.id === partner.id ? partner : member,
+      const responseText = await response.text();
+
+      let data: any;
+
+      try {
+        data = responseText ? JSON.parse(responseText) : null;
+      } catch {
+        throw new Error(
+          `Delivery login API returned an invalid response (${response.status}).`,
         );
       }
 
-      return [...current, partner];
-    });
+      if (!response.ok || !data?.success) {
+        throw new Error(
+          data?.message ||
+            "Unable to sign in. Please check your details.",
+        );
+      }
 
-    setSelectedMemberId(partner.id);
+      if (data.session) {
+        const { error: sessionError } =
+          await supabase.auth.setSession(data.session);
 
-    sessionStorage.setItem(
-      DELIVERY_LOGIN_KEY,
-      JSON.stringify({
-        memberId: partner.id,
-        name: partner.name,
-        loggedInAt: new Date().toISOString(),
-      }),
-    );
+        if (sessionError) {
+          throw sessionError;
+        }
+      }
 
-    setIsLoggedIn(true);
-    setLoginError("");
-  } catch (error) {
-    console.error("Partner login error:", error);
+      const savedMembers = getSavedMembers();
+      const localMember = savedMembers.find(
+        (member) =>
+          member.id === data.partner.id ||
+          member.name.trim().toLowerCase() ===
+            String(data.partner.name ?? "").trim().toLowerCase(),
+      );
 
-    setLoginError(
-      "Unable to connect to the server. Please try again.",
-    );
+      const partner: DeliveryMember = {
+        id: localMember?.id ?? data.partner.id,
+        name: data.partner.name,
+        phone: data.partner.phone,
+        status: normalizeStatus(data.partner.status),
+        area: data.partner.area ?? "",
+        assignedOrder: localMember?.assignedOrder,
+      };
+
+      setMembers((current) => {
+        const exists = current.some(
+          (member) => member.id === partner.id,
+        );
+
+        const updated = exists
+          ? current.map((member) =>
+              member.id === partner.id ? partner : member,
+            )
+          : [...current, partner];
+
+        localStorage.setItem(
+          MEMBERS_KEY,
+          JSON.stringify(updated),
+        );
+
+        return updated;
+      });
+
+      setSelectedMemberId(partner.id);
+
+      localStorage.setItem(
+        DELIVERY_LOGIN_KEY,
+        JSON.stringify({
+          memberId: partner.id,
+          name: partner.name,
+          loggedInAt: new Date().toISOString(),
+        }),
+      );
+
+      setIsLoggedIn(true);
+      setLoginError("");
+      setLoginPassword("");
+    } catch (error) {
+      console.error("Partner login error:", error);
+
+      setLoginError(
+        error instanceof Error
+          ? error.message
+          : "Unable to sign in. Please try again.",
+      );
+    } finally {
+      setAuthLoading(false);
+    }
   }
-}
 
-  function handleLogout() {
+  async function handlePartnerSignup() {
+    setLoginError("");
+    setAuthMessage("");
+
+    const name = signupName.trim();
+    const phone = signupPhone.trim();
+    const email = signupEmail.trim();
+    const area = signupArea.trim();
+    const vehicleType = signupVehicleType.trim();
+    const vehicleNumber = signupVehicleNumber.trim();
+
+    if (!name || !phone) {
+      setLoginError(
+        "Name and registered phone number are required.",
+      );
+      return;
+    }
+
+    if (!signupPassword) {
+      setLoginError("Please create a password.");
+      return;
+    }
+
+    if (signupPassword.length < 6) {
+      setLoginError(
+        "Password must be at least 6 characters long.",
+      );
+      return;
+    }
+
+    if (signupPassword !== signupConfirmPassword) {
+      setLoginError("Passwords do not match.");
+      return;
+    }
+
+    setAuthLoading(true);
+
+    try {
+      const response = await fetch("/api/delivery/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          phone,
+          email,
+          area,
+          vehicleType,
+          vehicleNumber,
+          password: signupPassword,
+          confirmPassword: signupConfirmPassword,
+        }),
+      });
+
+      const responseText = await response.text();
+
+      let data: any;
+
+      try {
+        data = responseText ? JSON.parse(responseText) : null;
+      } catch {
+        throw new Error(
+          `Delivery signup API returned an invalid response (${response.status}).`,
+        );
+      }
+
+      if (!response.ok || !data?.success) {
+        throw new Error(
+          data?.message ||
+            "Unable to create the delivery partner account.",
+        );
+      }
+
+      const newPartner: DeliveryMember = {
+        id: data.partner.id,
+        name: data.partner.name,
+        phone: data.partner.phone,
+        status: normalizeStatus(data.partner.status),
+        area: data.partner.area ?? "",
+      };
+
+      setMembers((current) => {
+        const exists = current.some(
+          (member) => member.id === newPartner.id,
+        );
+
+        if (exists) {
+          return current;
+        }
+
+        const updated = [...current, newPartner];
+
+        localStorage.setItem(
+          MEMBERS_KEY,
+          JSON.stringify(updated),
+        );
+
+        return updated;
+      });
+
+      setLoginName(name);
+      setLoginPassword("");
+      setAuthMessage(
+        "Account created successfully. Please sign in with your phone number and password.",
+      );
+
+      setSignupName("");
+      setSignupPhone("");
+      setSignupEmail("");
+      setSignupArea("");
+      setSignupVehicleType("");
+      setSignupVehicleNumber("");
+      setSignupPassword("");
+      setSignupConfirmPassword("");
+      setIsSignup(false);
+    } catch (error) {
+      console.error("Partner signup error:", error);
+
+      setLoginError(
+        error instanceof Error
+          ? error.message
+          : "Unable to create the account.",
+      );
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Delivery logout error:", error);
+    }
+
     localStorage.removeItem(DELIVERY_LOGIN_KEY);
     setIsLoggedIn(false);
     setActiveTab("home");
+    setLoginPassword("");
   }
 
   const assignedOrderId = useMemo(() => {
@@ -1137,70 +1334,230 @@ export default function DeliveryPage() {
               </p>
             </div>
 
-            {members.length === 0 ? (
-              <div className="mt-7 rounded-2xl bg-slate-50 p-5 text-center">
-                <p className="font-medium text-ink">
-                  No delivery partner account found
-                </p>
+            <div className="mt-7 space-y-4">
+              {!isSignup ? (
+                <>
+                  <div>
+                    <label className="text-sm font-medium text-ink">
+                      Name
+                    </label>
 
-                <p className="mt-1 text-sm leading-5 text-muted">
-                  Add a delivery partner from the
-                  Admin Delivery page before signing
-                  in.
-                </p>
-              </div>
-            ) : (
-              <div className="mt-7 space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-ink">
-                    Partner ID
-                  </label>
-
-                  <input
-                    value={loginId}
-                    onChange={(event) =>
-                      setLoginId(
-                        event.target.value,
-                      )
-                    }
-                    placeholder="Enter partner ID"
-                    className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none focus:border-teal-700"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-ink">
-                    Registered phone
-                  </label>
-
-                  <input
-                    value={loginPhone}
-                    onChange={(event) =>
-                      setLoginPhone(
-                        event.target.value,
-                      )
-                    }
-                    placeholder="Enter phone number"
-                    inputMode="tel"
-                    className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none focus:border-teal-700"
-                  />
-                </div>
-
-                {loginError && (
-                  <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {loginError}
+                    <input
+                      value={loginName}
+                      onChange={(event) =>
+                        setLoginName(event.target.value)
+                      }
+                      placeholder="Enter your name"
+                      className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none focus:border-teal-700"
+                    />
                   </div>
-                )}
 
-                <button
-                  type="button"
-                  onClick={handlePartnerLogin}
-                  className="w-full rounded-2xl bg-teal-700 px-5 py-4 text-sm font-semibold text-white transition hover:bg-teal-800"
-                >
-                  Sign in
-                </button>
-              </div>
-            )}
+                  <div>
+                    <label className="text-sm font-medium text-ink">
+                      Password
+                    </label>
+
+                    <input
+                      type="password"
+                      value={loginPassword}
+                      onChange={(event) =>
+                        setLoginPassword(event.target.value)
+                      }
+                      placeholder="Enter password"
+                      className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none focus:border-teal-700"
+                    />
+                  </div>
+
+                  {authMessage && (
+                    <div className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
+                      {authMessage}
+                    </div>
+                  )}
+
+                  {loginError && (
+                    <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                      {loginError}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handlePartnerLogin}
+                    disabled={authLoading}
+                    className="w-full rounded-2xl bg-teal-700 px-5 py-4 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {authLoading ? "Signing in..." : "Sign in"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSignup(true);
+                      setLoginError("");
+                      setAuthMessage("");
+                    }}
+                    className="w-full text-sm font-medium text-teal-700 hover:underline"
+                  >
+                    First time? Create an account
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-sm font-medium text-ink">
+                      Name
+                    </label>
+
+                    <input
+                      value={signupName}
+                      onChange={(event) =>
+                        setSignupName(event.target.value)
+                      }
+                      placeholder="Enter your name"
+                      className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none focus:border-teal-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-ink">
+                      Registered phone
+                    </label>
+
+                    <input
+                      value={signupPhone}
+                      onChange={(event) =>
+                        setSignupPhone(event.target.value)
+                      }
+                      placeholder="Enter phone number"
+                      inputMode="tel"
+                      className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none focus:border-teal-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-ink">
+                      Email
+                    </label>
+
+                    <input
+                      type="email"
+                      value={signupEmail}
+                      onChange={(event) =>
+                        setSignupEmail(event.target.value)
+                      }
+                      placeholder="Enter email"
+                      className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none focus:border-teal-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-ink">
+                      Area
+                    </label>
+
+                    <input
+                      value={signupArea}
+                      onChange={(event) =>
+                        setSignupArea(event.target.value)
+                      }
+                      placeholder="Enter delivery area"
+                      className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none focus:border-teal-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-ink">
+                      Vehicle type
+                    </label>
+
+                    <input
+                      value={signupVehicleType}
+                      onChange={(event) =>
+                        setSignupVehicleType(event.target.value)
+                      }
+                      placeholder="Bike / Scooter / Car"
+                      className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none focus:border-teal-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-ink">
+                      Vehicle number
+                    </label>
+
+                    <input
+                      value={signupVehicleNumber}
+                      onChange={(event) =>
+                        setSignupVehicleNumber(event.target.value)
+                      }
+                      placeholder="Enter vehicle number"
+                      className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none focus:border-teal-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-ink">
+                      Create password
+                    </label>
+
+                    <input
+                      type="password"
+                      value={signupPassword}
+                      onChange={(event) =>
+                        setSignupPassword(event.target.value)
+                      }
+                      placeholder="Create password"
+                      className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none focus:border-teal-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-ink">
+                      Confirm password
+                    </label>
+
+                    <input
+                      type="password"
+                      value={signupConfirmPassword}
+                      onChange={(event) =>
+                        setSignupConfirmPassword(event.target.value)
+                      }
+                      placeholder="Confirm password"
+                      className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none focus:border-teal-700"
+                    />
+                  </div>
+
+                  {loginError && (
+                    <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                      {loginError}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handlePartnerSignup}
+                    disabled={authLoading}
+                    className="w-full rounded-2xl bg-teal-700 px-5 py-4 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {authLoading
+                      ? "Creating account..."
+                      : "Create account"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSignup(false);
+                      setLoginError("");
+                      setAuthMessage("");
+                    }}
+                    className="w-full text-sm font-medium text-teal-700 hover:underline"
+                  >
+                    Already have an account? Sign in
+                  </button>
+                </>
+              )}
+            </div>
           </section>
         </main>
       </div>
@@ -1249,6 +1606,10 @@ export default function DeliveryPage() {
                 ))}
               </select>
             )}
+            <NotificationBell
+  recipientId={currentMember?.id ?? ""}
+  recipientType="delivery_partner"
+/>
 
             <button
               type="button"
@@ -2353,7 +2714,7 @@ export default function DeliveryPage() {
                   </p>
 
                   <p className="mt-1 text-sm text-muted">
-                    Partner ID: {currentMember.id}
+                    Delivery Partner
                   </p>
                 </div>
               </div>
@@ -2424,6 +2785,7 @@ export default function DeliveryPage() {
                 Sign out of this delivery partner
                 session on this device.
               </p>
+              
 
               <button
                 type="button"

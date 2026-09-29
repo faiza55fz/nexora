@@ -444,20 +444,102 @@ export async function PATCH(request: Request) {
         }
       }
 
-      if (stock !== undefined) {
-        const { error: inventoryError } =
-          await supabaseAdmin
-            .from("inventory")
-            .update({
-              stock_quantity: Number(stock),
-              updated_at: new Date().toISOString(),
-            })
-            .eq("variant_id", variant.id);
+     if (stock !== undefined) {
+  const newStock = Number(stock);
 
-        if (inventoryError) {
-          throw new Error(inventoryError.message);
+  /*
+   * Read the current inventory before updating it.
+   * We need this to detect a transition from
+   * out of stock (0) to available (> 0).
+   */
+  const { data: currentInventory, error: currentInventoryError, } =
+    await supabaseAdmin
+      .from("inventory")
+      .select("stock_quantity")
+      .eq("variant_id", variant.id)
+      .maybeSingle();
+
+  if (currentInventoryError) {
+    throw new Error(currentInventoryError.message);
+  }
+
+  const previousStock =
+    Number(currentInventory?.stock_quantity ?? 0);
+
+  const { error: inventoryError } =
+    await supabaseAdmin
+      .from("inventory")
+      .update({
+        stock_quantity: newStock,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("variant_id", variant.id);
+
+  if (inventoryError) {
+    throw new Error(inventoryError.message);
+  }
+
+  /*
+   * If the product was out of stock and is now
+   * available, notify customers who requested
+   * a back-in-stock notification.
+   */
+  if (previousStock <= 0 && newStock > 0) {
+    const { data: requests, error: requestsError, } =
+      await supabaseAdmin
+        .from("back_in_stock_requests")
+        .select("id, customer_id")
+        .eq("product_id", id)
+        .is("notified_at", null);
+
+    if (requestsError) {
+      console.error(
+        "Finding back-in-stock requests failed:",
+        requestsError,
+      );
+    } else if (requests?.length) {
+      const notifications = requests.map((request) => ({
+        recipient_id: request.customer_id,
+        recipient_type: "customer",
+        type: "back-in-stock",
+        title: "Product is back in stock",
+        message: `${name || "A product you requested"} is back in stock. You can order it now.`,
+        order_id: null,
+      }),);
+
+      const { error: notificationError, } =
+        await supabaseAdmin
+          .from("notifications")
+          .insert(notifications);
+
+      if (notificationError) {
+        console.error(
+          "Creating back-in-stock notifications failed:",
+          notificationError,
+        );
+      } else {
+        const requestIds = requests.map(
+          (request) => request.id,
+        );
+
+        const { error: markNotifiedError } =
+          await supabaseAdmin
+            .from("back_in_stock_requests")
+            .update({
+              notified_at: new Date().toISOString(),
+            })
+            .in("id", requestIds);
+
+        if (markNotifiedError) {
+          console.error(
+            "Marking back-in-stock requests as notified failed:",
+            markNotifiedError,
+          );
         }
       }
+    }
+  }
+}
     }
 
     const products = await getProducts();

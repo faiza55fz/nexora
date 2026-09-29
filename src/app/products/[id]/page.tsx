@@ -34,9 +34,75 @@ const [product, setProduct] = useState<Product | null>(null);
 const [loading, setLoading] = useState(true);
 const [productReviews, setProductReviews] = useState<any[]>([]);
 
-const { addToCart, toggleWishlist, wishlist } = useStore();
+const { addToCart, toggleWishlist, wishlist,user } = useStore();
+const handleNotifyMe = async () => {
+  if (!product?.id || notifyLoading) return;
 
+  if (!user) {
+    alert("Please log in to use Notify Me.");
+    return;
+  }
+
+  setNotifyLoading(true);
+  setNotifySuccess(false);
+
+  try {
+    const { data: sessionData } =
+      await import("@/lib/supabase").then(
+        ({ supabase }) =>
+          supabase.auth.getSession(),
+      );
+
+    const accessToken =
+      sessionData.session?.access_token;
+
+    if (!accessToken) {
+      alert("Please log in again to use Notify Me.");
+      return;
+    }
+
+    const response = await fetch(
+      "/api/notifications/back-in-stock",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          productId: product.id,
+        }),
+      },
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.error ||
+          "Unable to save notification request.",
+      );
+    }
+
+    setNotifySuccess(true);
+  } catch (error) {
+    console.error(
+      "Notify Me error:",
+      error,
+    );
+
+    alert(
+      error instanceof Error
+        ? error.message
+        : "Unable to request a notification.",
+    );
+  } finally {
+    setNotifyLoading(false);
+  }
+};
 const [qty, setQty] = useState(1);
+const [notifyLoading, setNotifyLoading] = useState(false);
+const [notifySuccess, setNotifySuccess] = useState(false);
 const [img, setImg] = useState(0);
 
 useEffect(() => {
@@ -457,64 +523,96 @@ if (product.active === false) {
 
           </div>
 
-          {/* Quantity + Add to cart */}
-          <div className="mt-6">
+         {/* Quantity + Add to cart / Notify Me */}
+<div className="mt-6">
+  {product.stock > 0 ? (
+    <>
+      <label className="mb-1.5 block text-sm font-medium">
+        Quantity
+      </label>
 
-            <label className="mb-1.5 block text-sm font-medium">
-              Quantity
-            </label>
+      <div className="flex flex-wrap gap-3">
+        <div className="flex h-12 items-center overflow-hidden rounded-xl border border-line bg-surface">
+          <button
+            onClick={() =>
+              setQty(
+                Math.max(
+                  product.moq ?? 1,
+                  qty - 1,
+                ),
+              )
+            }
+            className="h-full w-11 text-lg hover:bg-surface-2"
+          >
+            −
+          </button>
 
-            <div className="flex flex-wrap gap-3">
+          <input
+            type="number"
+            min={product.moq ?? 1}
+            value={qty}
+            onChange={(event) => {
+              const value = Number(
+                event.target.value,
+              );
 
-              <div className="flex h-12 items-center overflow-hidden rounded-xl border border-line bg-surface">
+              setQty(
+                Math.max(
+                  product.moq ?? 1,
+                  Number.isNaN(value)
+                    ? 1
+                    : value,
+                ),
+              );
+            }}
+            className="h-full w-14 border-x border-line bg-transparent text-center text-sm outline-none"
+          />
 
-                <button
-                  onClick={() =>
-                    setQty(Math.max(product.moq ?? 1, qty - 1))
-                  }
-                  className="h-full w-11 text-lg hover:bg-surface-2"
-                >
-                  −
-                </button>
+          <button
+            onClick={() => setQty(qty + 1)}
+            className="h-full w-11 text-lg hover:bg-surface-2"
+          >
+            +
+          </button>
+        </div>
 
-                <input
-                  type="number"
-                  min={product.moq ?? 1}
-                  value={qty}
-                  onChange={(event) => {
-                    const value = Number(event.target.value);
+        <Button
+          variant="cta"
+          onClick={() =>
+            addToCart(product.id, qty)
+          }
+          className="h-12 flex-1 sm:flex-none sm:px-10"
+        >
+          <ShoppingCart size={17} />
+          Add to cart
+        </Button>
+      </div>
+    </>
+  ) : (
+    <div className="rounded-2xl border border-line bg-surface-2 p-5">
+      <p className="text-sm font-semibold">
+        Currently out of stock
+      </p>
 
-                    setQty(
-                      Math.max(
-                        product.moq ?? 1,
-                        Number.isNaN(value) ? 1 : value,
-                      ),
-                    );
-                  }}
-                  className="h-full w-14 border-x border-line bg-transparent text-center text-sm outline-none"
-                />
+      <p className="mt-1 text-sm text-muted">
+        Get notified when this product is available again.
+      </p>
 
-                <button
-                  onClick={() => setQty(qty + 1)}
-                  className="h-full w-11 text-lg hover:bg-surface-2"
-                >
-                  +
-                </button>
-
-              </div>
-
-              <Button
-                variant="cta"
-                onClick={() => addToCart(product.id, qty)}
-                className="h-12 flex-1 sm:flex-none sm:px-10"
-              >
-                <ShoppingCart size={17} />
-                Add to cart
-              </Button>
-
-            </div>
-
-          </div>
+      <Button
+        variant="cta"
+        onClick={handleNotifyMe}
+        disabled={notifyLoading || notifySuccess}
+        className="mt-4 h-12 w-full sm:w-auto sm:px-10"
+      >
+        {notifyLoading
+          ? "Saving..."
+          : notifySuccess
+            ? "✓ You'll be notified"
+            : "Notify Me"}
+      </Button>
+    </div>
+  )}
+</div> 
 
           {/* Delivery information */}
           <div className="mt-6 space-y-3">
