@@ -14,7 +14,37 @@ if (!supabasePublishableKey) {
   );
 }
 
+/**
+ * Customer / storefront Supabase client
+ */
 export const supabase = createClient(
   supabaseUrl,
   supabasePublishableKey,
+  {
+    auth: {
+      storageKey: "nexora-customer-auth",
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  },
+);
+
+/**
+ * Delivery partner Supabase client
+ *
+ * Uses a completely separate browser storage key,
+ * so logging out delivery does not log out customers.
+ */
+export const deliverySupabase = createClient(
+  supabaseUrl,
+  supabasePublishableKey,
+  {
+    auth: {
+      storageKey: "nexora-delivery-auth",
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  },
 );

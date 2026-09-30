@@ -17,7 +17,7 @@ export type AppUser = {
   name: string;
   email: string;
   phone: string;
-  role: "customer" | "vendor" | "admin";
+  role: "customer" | "vendor" | "admin"  | "delivery_partner";
   businessName?: string;
   city?: string;
   vendorStatus?: "not-registered" | "pending" | "approved";
@@ -175,6 +175,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           user_metadata?: {
             name?: string;
             phone?: string;
+            role?: string;
           };
         };
       } | null,
@@ -186,6 +187,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       const authUser = session.user;
+      const authRole =
+        authUser.user_metadata?.role;
+
+      if (authRole === "delivery_partner") {
+        setUser(null);
+        localStorage.removeItem("nexora-user");
+        return;
+      }
 
       const { data: customer } = await supabase
         .from("customers")
@@ -267,11 +276,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         // getSession() above is responsible for the first restore.
         if (!initialized) return;
 
-        if (!session) {
-          setUser(null);
-          localStorage.removeItem("nexora-user");
-          return;
-        }
+       
 
         void loadUserFromSession(session);
       },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
+
 import NotificationBell from "@/components/notification-bell";
 import {
   ArrowLeft,
@@ -658,14 +658,7 @@ export default function DeliveryPage() {
         );
       }
 
-      if (data.session) {
-        const { error: sessionError } =
-          await supabase.auth.setSession(data.session);
-
-        if (sessionError) {
-          throw sessionError;
-        }
-      }
+     
 
       const savedMembers = getSavedMembers();
       const localMember = savedMembers.find(
@@ -859,18 +852,12 @@ export default function DeliveryPage() {
     }
   }
 
-  async function handleLogout() {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error("Delivery logout error:", error);
-    }
-
-    localStorage.removeItem(DELIVERY_LOGIN_KEY);
-    setIsLoggedIn(false);
-    setActiveTab("home");
-    setLoginPassword("");
-  }
+ async function handleLogout() {
+  localStorage.removeItem(DELIVERY_LOGIN_KEY);
+  setIsLoggedIn(false);
+  setActiveTab("home");
+  setLoginPassword("");
+}
 
   const assignedOrderId = useMemo(() => {
     if (!currentMember) {
