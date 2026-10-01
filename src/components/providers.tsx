@@ -276,7 +276,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         // getSession() above is responsible for the first restore.
         if (!initialized) return;
 
-       
+        if (!session) {
+          setUser(null);
+          localStorage.removeItem("nexora-user");
+          return;
+        }
 
         void loadUserFromSession(session);
       },
@@ -378,31 +382,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addToCart = useCallback(
-    (productId: string, qty = 1) => {
-      setCart((prev) => {
-        const found = prev.find(
-          (i) => i.productId === productId,
+  (productId: string, qty = 1) => {
+    setCart((prev) => {
+      const found = prev.find(
+        (i) => i.productId === productId,
+      );
+
+      if (found) {
+        return prev.map((i) =>
+          i.productId === productId
+            ? { ...i, qty: i.qty + qty }
+            : i,
         );
+      }
 
-        if (found) {
-          return prev.map((i) =>
-            i.productId === productId
-              ? { ...i, qty: i.qty + qty }
-              : i,
-          );
-        }
+      return [
+        ...prev,
+        {
+          productId,
+          qty,
+        },
+      ];
+    });
 
-        return [
-          ...prev,
-          {
-            productId,
-            qty,
-          },
-        ];
+    if (user?.id) {
+      fetch("/api/customer/activity", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customerId: user.id,
+          productId,
+          activityType: "cart",
+        }),
+      }).catch((error) => {
+        console.error(
+          "Failed to record cart activity:",
+          error,
+        );
       });
-    },
-    [],
-  );
+    }
+  },
+  [user?.id],
+);
 
   const setQty = useCallback(
     (productId: string, qty: number) => {
@@ -436,17 +459,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const toggleWishlist = useCallback(
-    (productId: string) => {
-      setWishlist((prev) =>
-        prev.includes(productId)
-          ? prev.filter(
-              (id) => id !== productId,
-            )
-          : [...prev, productId],
-      );
-    },
-    [],
-  );
+  (productId: string) => {
+    setWishlist((prev) => {
+      const alreadySaved = prev.includes(productId);
+
+      const nextWishlist = alreadySaved
+        ? prev.filter(
+            (id) => id !== productId,
+          )
+        : [...prev, productId];
+
+      if (!alreadySaved && user?.id) {
+        fetch("/api/customer/activity", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            customerId: user.id,
+            productId,
+            activityType: "wishlist",
+          }),
+        }).catch((error) => {
+          console.error(
+            "Failed to record wishlist activity:",
+            error,
+          );
+        });
+      }
+
+      return nextWishlist;
+    });
+  },
+  [user?.id],
+);
 
   const toggleCompare = useCallback(
     (productId: string) => {

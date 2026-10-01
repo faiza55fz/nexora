@@ -21,6 +21,7 @@ import {
   PackageCheck,
   Leaf,
   ShoppingCart,
+  Share2
 } from "lucide-react";
 
 export default function ProductPage({
@@ -33,7 +34,9 @@ export default function ProductPage({
 const [product, setProduct] = useState<Product | null>(null);
 const [loading, setLoading] = useState(true);
 const [productReviews, setProductReviews] = useState<any[]>([]);
-
+const [similarProducts, setSimilarProducts] = useState<any[]>([]);
+const [frequentlyBoughtTogether, setFrequentlyBoughtTogether] =
+  useState<any[]>([]);
 const { addToCart, toggleWishlist, wishlist,user } = useStore();
 const handleNotifyMe = async () => {
   if (!product?.id || notifyLoading) return;
@@ -98,6 +101,34 @@ const handleNotifyMe = async () => {
     );
   } finally {
     setNotifyLoading(false);
+  }
+};
+const handleBuyNow = () => {
+  if (!product || product.stock <= 0) return;
+
+  addToCart(product.id, qty);
+
+  window.location.href = "/checkout";
+};
+const handleShare = async () => {
+  if (!product) return;
+
+  const shareData = {
+    title: product.name,
+    text: `Check out ${product.name} on Nexora.`,
+    url: window.location.href,
+  };
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+      return;
+    }
+
+    await navigator.clipboard.writeText(window.location.href);
+    alert("Product link copied to clipboard.");
+  } catch (error) {
+    console.error("Share failed:", error);
   }
 };
 const [qty, setQty] = useState(1);
@@ -254,6 +285,103 @@ setProductReviews(mappedReviews);
   };
 
   loadReviews();
+}, [product?.id]);
+useEffect(() => {
+  if (!user?.id || !product?.id) {
+    return;
+  }
+
+  fetch("/api/customer/activity", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      customerId: user.id,
+      productId: product.id,
+      activityType: "view",
+    }),
+  }).catch((error) => {
+    console.error(
+      "Failed to record product view:",
+      error,
+    );
+  });
+}, [user?.id, product?.id]);
+useEffect(() => {
+  if (!product?.id) {
+    return;
+  }
+
+  const loadSimilarProducts = async () => {
+    try {
+      const response = await fetch(
+        `/api/recommendations/similar?productId=${encodeURIComponent(
+          product.id,
+        )}`,
+        {
+          cache: "no-store",
+        },
+      );
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+
+      setSimilarProducts(
+        Array.isArray(data) ? data : [],
+      );
+    } catch (error) {
+      console.error(
+        "Failed to load similar products:",
+        error,
+      );
+
+      setSimilarProducts([]);
+    }
+  };
+
+  loadSimilarProducts();
+}, [product?.id]);
+useEffect(() => {
+  if (!product?.id) {
+    return;
+  }
+
+  const loadFrequentlyBoughtTogether = async () => {
+    try {
+      const response = await fetch(
+        `/api/recommendations/frequently-bought-together?productId=${encodeURIComponent(
+          product.id,
+        )}`,
+        {
+          cache: "no-store",
+        },
+      );
+
+      if (!response.ok) {
+        setFrequentlyBoughtTogether([]);
+        return;
+      }
+
+      const data = await response.json();
+
+      setFrequentlyBoughtTogether(
+        Array.isArray(data) ? data : [],
+      );
+    } catch (error) {
+      console.error(
+        "Failed to load frequently bought together products:",
+        error,
+      );
+
+      setFrequentlyBoughtTogether([]);
+    }
+  };
+
+  loadFrequentlyBoughtTogether();
 }, [product?.id]);
 if (loading) {
   return (
@@ -421,39 +549,52 @@ if (product.active === false) {
         {/* Product information */}
         <div>
 
-          {/* Category + wishlist */}
-          <div className="flex items-start justify-between gap-4">
+         {/* Category + wishlist/share */}
+<div className="flex items-start justify-between gap-4">
+  <div>
+    <p className="text-sm font-medium capitalize text-brand">
+      {product.category}
+    </p>
 
-            <div>
-              <p className="text-sm font-medium capitalize text-brand">
-                {product.category}
-              </p>
+    <p className="mt-1 text-sm text-muted">
+      {product.brand} · {product.subcategory}
+    </p>
 
-              <p className="mt-1 text-sm text-muted">
-                {product.brand} · {product.subcategory}
-              </p>
+    <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+      {product.name}
+    </h1>
+  </div>
 
-              <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-                {product.name}
-              </h1>
-            </div>
+  <div className="flex shrink-0 items-center gap-3">
+    <button
+      onClick={() => toggleWishlist(product.id)}
+      aria-label={
+        wishlist.includes(product.id)
+          ? "Remove from wishlist"
+          : "Add to wishlist"
+      }
+      className="flex h-11 w-11 items-center justify-center rounded-xl border border-line bg-surface transition hover:border-cta hover:bg-cta-soft"
+    >
+      <Heart
+        size={20}
+        className={
+          wishlist.includes(product.id)
+            ? "fill-cta text-cta"
+            : "text-muted"
+        }
+      />
+    </button>
 
-            <button
-              onClick={() => toggleWishlist(product.id)}
-              aria-label="Add to wishlist"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-surface transition hover:border-cta hover:bg-cta-soft"
-            >
-              <Heart
-                size={20}
-                className={
-                  wishlist.includes(product.id)
-                    ? "fill-cta text-cta"
-                    : "text-muted"
-                }
-              />
-            </button>
-
-          </div>
+    <Button
+      variant="outline"
+      onClick={handleShare}
+      className="h-11"
+    >
+      <Share2 size={16} />
+      Share
+    </Button>
+  </div>
+</div> 
 
           {/* Rating */}
           <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -569,13 +710,20 @@ if (product.active === false) {
           />
 
           <button
-            onClick={() => setQty(qty + 1)}
+            onClick={() => setQty(Math.min(5, qty + 1))}
             className="h-full w-11 text-lg hover:bg-surface-2"
           >
             +
           </button>
         </div>
-
+<div className="flex flex-1 flex-col gap-3 sm:flex-row">
+    <Button
+      variant="outline"
+     onClick={handleBuyNow}
+     className="h-12 flex-1 sm:px-8"
+  >
+    Buy Now
+     </Button>
         <Button
           variant="cta"
           onClick={() =>
@@ -586,6 +734,7 @@ if (product.active === false) {
           <ShoppingCart size={17} />
           Add to cart
         </Button>
+      </div>
       </div>
     </>
   ) : (
@@ -770,8 +919,144 @@ if (product.active === false) {
 
           </div>
         </Card>
-
       </div>
+
+      {similarProducts.length > 0 && (
+        <section className="mt-12">
+          <div className="mb-5">
+            <h2 className="text-2xl font-semibold">
+              You May Also Like
+            </h2>
+
+            <p className="mt-1 text-sm text-muted">
+              Similar products you might be interested in.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {similarProducts.map((item) => (
+              <Link
+                key={item.id}
+                href={`/products/${item.id}`}
+                className="group"
+              >
+                <Card className="overflow-hidden transition hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="aspect-square overflow-hidden bg-surface-2">
+                    {item.image ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-sm text-muted">
+                        No image
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-4">
+                    <p className="text-xs font-medium capitalize text-brand">
+                      {item.category}
+                    </p>
+
+                    <h3 className="mt-1 line-clamp-2 text-sm font-semibold">
+                      {item.name}
+                    </h3>
+
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="font-bold">
+                        {inr(item.price)}
+                      </span>
+
+                      {item.mrp > item.price && (
+                        <span className="text-xs text-muted line-through">
+                          {inr(item.mrp)}
+                        </span>
+                      )}
+                    </div>
+
+                    {item.mrp > item.price && (
+                      <p className="mt-1 text-xs font-medium text-cta">
+                        Save {inr(item.mrp - item.price)}
+                      </p>
+                    )}
+                  </div>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+      {frequentlyBoughtTogether.length > 0 && (
+  <section className="mt-12">
+    <div className="mb-5">
+      <h2 className="text-2xl font-semibold">
+        Frequently Bought Together
+      </h2>
+      <p className="mt-1 text-sm text-muted">
+        Products customers often buy with this item.
+      </p>
+    </div>
+
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      {frequentlyBoughtTogether.map((item) => (
+        <Link
+          key={item.id}
+          href={`/products/${item.id}`}
+          className="group"
+        >
+          <Card className="overflow-hidden transition hover:-translate-y-0.5 hover:shadow-md">
+            <div className="aspect-square overflow-hidden bg-surface-2">
+              {item.image ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted">
+                  No image
+                </div>
+              )}
+            </div>
+
+            <div className="p-4">
+              <p className="text-xs font-medium capitalize text-brand">
+                {item.category}
+              </p>
+
+              <h3 className="mt-1 line-clamp-2 text-sm font-semibold">
+                {item.name}
+              </h3>
+
+              <div className="mt-3 flex items-center gap-2">
+                <span className="font-bold">
+                  {inr(item.price)}
+                </span>
+
+                {item.mrp > item.price && (
+                  <span className="text-xs text-muted line-through">
+                    {inr(item.mrp)}
+                  </span>
+                )}
+              </div>
+
+              {item.mrp > item.price && (
+                <p className="mt-1 text-xs font-medium text-cta">
+                  Save {inr(item.mrp - item.price)}
+                </p>
+              )}
+            </div>
+          </Card>
+        </Link>
+      ))}
+    </div>
+  </section>
+)}
     </div>
   );
 }
+      

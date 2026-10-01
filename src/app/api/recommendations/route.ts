@@ -12,29 +12,30 @@ export async function GET(request: Request) {
     );
 
     // Get products using the same structure as the working products API
-    const { data: products, error: productsError } = await supabase
-      .from("products")
-      .select(`
-        *,
-        categories (
-          name
-        ),
-        product_images (
-          image_url,
-          is_primary
-        ),
-        product_variants (
-          id,
-          variant_name,
-          mrp,
-          selling_price,
-          active,
-          gst_rate,
-          inventory (
-            stock_quantity
+    const { data: products, error: productsError } =
+      await supabase
+        .from("products")
+        .select(`
+          *,
+          categories (
+            name
+          ),
+          product_images (
+            image_url,
+            is_primary
+          ),
+          product_variants (
+            id,
+            variant_name,
+            mrp,
+            selling_price,
+            active,
+            gst_rate,
+            inventory (
+              stock_quantity
+            )
           )
-        )
-      `);
+        `);
 
     if (productsError) {
       throw productsError;
@@ -46,34 +47,49 @@ export async function GET(request: Request) {
 
     // Convert products into the format used by the recommendation component
     const activeProducts = products
-      .filter((product: any) => product.active !== false)
+      .filter(
+        (product: any) =>
+          product.active !== false,
+      )
       .map((product: any) => {
         const variant =
           product.product_variants?.find(
-            (item: any) => item.active !== false,
-          ) || product.product_variants?.[0];
+            (item: any) =>
+              item.active !== false,
+          ) ||
+          product.product_variants?.[0];
 
         const inventory = variant?.inventory;
 
         const primaryImage =
           product.product_images?.find(
-            (image: any) => image.is_primary,
+            (image: any) =>
+              image.is_primary,
           )?.image_url ||
-          product.product_images?.[0]?.image_url ||
+          product.product_images?.[0]
+            ?.image_url ||
           null;
 
         return {
           id: product.id,
           name: product.name,
           image: primaryImage,
-          price: Number(variant?.selling_price || 0),
-          mrp: Number(variant?.mrp || 0),
+          price: Number(
+            variant?.selling_price || 0,
+          ),
+          mrp: Number(
+            variant?.mrp || 0,
+          ),
           category:
             product.categories?.name ||
             product.category ||
             null,
-          rating: Number(product.rating || 0),
-          stock: Number(inventory?.stock_quantity || 0),
+          rating: Number(
+            product.rating || 0,
+          ),
+          stock: Number(
+            inventory?.stock_quantity || 0,
+          ),
         };
       });
 
@@ -81,97 +97,143 @@ export async function GET(request: Request) {
       return NextResponse.json([]);
     }
 
-    // Guest users: show available products
+    // ---------------------------------------------------------
+    // Guest users
+    // ---------------------------------------------------------
+
     if (!userId) {
-      return NextResponse.json(activeProducts.slice(0, 12));
-    }
-
-    // ---------------------------------------------------------
-    // Find the logged-in user's email
-    // ---------------------------------------------------------
-
-    const { data: authUserData, error: authUserError } =
-      await supabase.auth.admin.getUserById(userId);
-
-    if (authUserError) {
-      throw authUserError;
-    }
-
-    const userEmail = authUserData.user?.email;
-
-    if (!userEmail) {
-      return NextResponse.json(
-        activeProducts.slice(0, 12),
-      );
-    }
-
-    // ---------------------------------------------------------
-    // Find this customer's orders using customer_email
-    // ---------------------------------------------------------
-
-    const { data: orders, error: ordersError } = await supabase
-      .from("orders")
-      .select("id")
-      .eq("customer_email", userEmail);
-
-    if (ordersError) {
-      throw ordersError;
-    }
-
-    const orderIds =
-      orders?.map((order: any) => order.id) || [];
-
-    // User has no previous orders
-    if (orderIds.length === 0) {
       return NextResponse.json(
         activeProducts
-          .filter((product: any) => product.stock > 0)
-          .sort(
-            (a: any, b: any) =>
-              Number(b.rating || 0) -
-              Number(a.rating || 0),
+          .filter(
+            (product: any) =>
+              product.stock > 0,
           )
           .slice(0, 12),
       );
     }
 
     // ---------------------------------------------------------
-    // Find products purchased by this customer
+    // Get customer activity
     // ---------------------------------------------------------
 
-    const { data: orderItems, error: itemsError } =
-      await supabase
-        .from("order_items")
-        .select("product_id, quantity")
-        .in("order_id", orderIds);
+    const {
+      data: activities,
+      error: activitiesError,
+    } = await supabase
+      .from("customer_product_activity")
+      .select(`
+        product_id,
+        activity_type,
+        activity_count,
+        last_activity_at
+      `)
+      .eq("customer_id", userId);
 
-    if (itemsError) {
-      throw itemsError;
-    }
-
-    const purchasedProductIds = new Set<string>();
-    const productFrequency = new Map<string, number>();
-
-    for (const item of orderItems || []) {
-      if (!item.product_id) continue;
-
-      purchasedProductIds.add(item.product_id);
-
-      productFrequency.set(
-        item.product_id,
-        (productFrequency.get(item.product_id) || 0) +
-          Number(item.quantity || 1),
+    if (activitiesError) {
+      console.error(
+        "Customer activity lookup failed:",
+        activitiesError,
       );
     }
 
     // ---------------------------------------------------------
-    // Find categories of products the customer bought
+    // Build personalization scores
     // ---------------------------------------------------------
 
-    const purchasedCategories = new Map<string, number>();
+    const productScores = new Map<
+      string,
+      number
+    >();
+
+    const productActivity = new Map<
+      string,
+      {
+        search: number;
+        view: number;
+        cart: number;
+        wishlist: number;
+        purchase: number;
+      }
+    >();
+
+    for (const activity of activities || []) {
+      const productId =
+        activity.product_id;
+
+      if (!productId) {
+        continue;
+      }
+
+      const current =
+        productActivity.get(
+          productId,
+        ) || {
+          search: 0,
+          view: 0,
+          cart: 0,
+          wishlist: 0,
+          purchase: 0,
+        };
+
+      const count = Number(
+        activity.activity_count || 0,
+      );
+
+      if (
+        activity.activity_type ===
+        "search"
+      ) {
+        current.search += count;
+      }
+
+      if (
+        activity.activity_type ===
+        "view"
+      ) {
+        current.view += count;
+      }
+
+      if (
+        activity.activity_type ===
+        "cart"
+      ) {
+        current.cart += count;
+      }
+
+      if (
+        activity.activity_type ===
+        "wishlist"
+      ) {
+        current.wishlist += count;
+      }
+
+      if (
+        activity.activity_type ===
+        "purchase"
+      ) {
+        current.purchase += count;
+      }
+
+      productActivity.set(
+        productId,
+        current,
+      );
+    }
+
+    // ---------------------------------------------------------
+    // Find customer's preferred categories
+    // ---------------------------------------------------------
+
+    const categoryScores =
+      new Map<string, number>();
 
     for (const product of activeProducts) {
-      if (!purchasedProductIds.has(product.id)) {
+      const activity =
+        productActivity.get(
+          product.id,
+        );
+
+      if (!activity) {
         continue;
       }
 
@@ -179,60 +241,101 @@ export async function GET(request: Request) {
         continue;
       }
 
-      purchasedCategories.set(
+      const activityScore =
+        activity.search * 3 +
+        activity.view * 2 +
+        activity.cart * 5 +
+        activity.wishlist * 6 +
+        activity.purchase * 10;
+
+      categoryScores.set(
         product.category,
-        (purchasedCategories.get(product.category) || 0) + 1,
+        (categoryScores.get(
+          product.category,
+        ) || 0) + activityScore,
       );
     }
 
     // ---------------------------------------------------------
-    // Score products
+    // Score every product
     // ---------------------------------------------------------
 
-    const recommendations = activeProducts
-      .filter((product: any) => {
-        
-        let score = 0;
+    const recommendations =
+      activeProducts
+        .filter(
+          (product: any) =>
+            product.stock > 0,
+        )
+        .map((product: any) => {
+          let score = 0;
 
-        // Same category as previous purchases
-        if (product.category) {
-          const categoryFrequency =
-            purchasedCategories.get(product.category) || 0;
+          const activity =
+            productActivity.get(
+              product.id,
+            ) || {
+              search: 0,
+              view: 0,
+              cart: 0,
+              wishlist: 0,
+              purchase: 0,
+            };
 
-          score += categoryFrequency * 20;
-        }
-         // Same category as previous purchases
-  if (product.category) {
-    const categoryFrequency =
-      purchasedCategories.get(product.category) || 0;
+          // Direct customer behaviour
+          score +=
+            activity.search * 3;
 
-    score += categoryFrequency * 10;
-  }
-        // In stock
-        if (product.stock > 0) {
-          score += 5;
-        }
+          score +=
+            activity.view * 2;
 
-        // Rating
-        if (product.rating > 0) {
-          score += Number(product.rating);
-        }
+          score +=
+            activity.cart * 5;
 
-        // Discount
-        if (
-          product.mrp > 0 &&
-          product.mrp > product.price
-        ) {
-          score += 3;
-        }
+          score +=
+            activity.wishlist * 6;
 
-        return {
-          ...product,
-          recommendation_score: score,
-        };
-      });
+          score +=
+            activity.purchase * 10;
 
-    // Highest score first
+          // Preferred category
+          if (product.category) {
+            score +=
+              (categoryScores.get(
+                product.category,
+              ) || 0) * 0.5;
+          }
+
+          // In stock
+          if (product.stock > 0) {
+            score += 5;
+          }
+
+          // Rating
+          if (product.rating > 0) {
+            score += Number(
+              product.rating,
+            );
+          }
+
+          // Discount
+          if (
+            product.mrp > 0 &&
+            product.mrp >
+              product.price
+          ) {
+            score += 3;
+          }
+
+          return {
+            ...product,
+            recommendation_score:
+              score,
+          };
+        });
+
+    // ---------------------------------------------------------
+    // Sort by personalization score
+    // ---------------------------------------------------------
+
     recommendations.sort(
       (a: any, b: any) =>
         b.recommendation_score -
@@ -240,15 +343,35 @@ export async function GET(request: Request) {
     );
 
     // ---------------------------------------------------------
-    // Always return up to 12 products
+    // If there is not enough activity yet,
+    // fall back to generally useful products.
     // ---------------------------------------------------------
 
-    
+    if (
+      recommendations.length === 0
+    ) {
+      return NextResponse.json(
+        activeProducts
+          .filter(
+            (product: any) =>
+              product.stock > 0,
+          )
+          .sort(
+            (a: any, b: any) =>
+              Number(
+                b.rating || 0,
+              ) -
+              Number(
+                a.rating || 0,
+              ),
+          )
+          .slice(0, 12),
+      );
+    }
 
-  return NextResponse.json(
-  recommendations.slice(0, 12),
-);
-    
+    return NextResponse.json(
+      recommendations.slice(0, 12),
+    );
   } catch (error) {
     console.error(
       "Recommendation API error:",

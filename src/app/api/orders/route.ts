@@ -32,6 +32,7 @@ const allowedStatuses = [
   "cancelled",
   "return-requested",
 ];
+
 const customerNotificationMessages: Record<
   string,
   {
@@ -240,64 +241,65 @@ export async function PATCH(
           { status: 400 },
         );
       }
-      
-   /* Customer cancellation notification.
-   *
-   * The cancellation RPC has already completed
-   * successfully, so notification failure must
-   * never undo the cancellation.
-   */
-  try {
-    const { data: cancelledOrder } =
-      await supabaseAdmin
-        .from("orders")
-        .select(
-          "id, order_number, customer_email",
-        )
-        .eq("id", orderId)
-        .maybeSingle();
 
-    if (
-      cancelledOrder?.customer_email
-    ) {
-      const { data: customer } =
-        await supabaseAdmin
-          .from("customers")
-          .select("id")
-          .eq(
-            "email",
-            cancelledOrder.customer_email,
-          )
-          .maybeSingle();
+      /*
+       * Customer cancellation notification.
+       *
+       * The cancellation RPC has already completed
+       * successfully, so notification failure must
+       * never undo the cancellation.
+       */
+      try {
+        const { data: cancelledOrder } =
+          await supabaseAdmin
+            .from("orders")
+            .select(
+              "id, order_number, customer_email",
+            )
+            .eq("id", orderId)
+            .maybeSingle();
 
-      if (customer?.id) {
-        const {
-          error: notificationError,
-        } = await supabaseAdmin
-          .from("notifications")
-          .insert({
-            recipient_id: customer.id,
-            recipient_type: "customer",
-            type: "order-cancelled",
-            title: "Order cancelled",
-            message: `Your order ${cancelledOrder.order_number} has been cancelled.`,
-            order_id: cancelledOrder.id,
-          });
+        if (
+          cancelledOrder?.customer_email
+        ) {
+          const { data: customer } =
+            await supabaseAdmin
+              .from("customers")
+              .select("id")
+              .eq(
+                "email",
+                cancelledOrder.customer_email,
+              )
+              .maybeSingle();
 
-        if (notificationError) {
-          console.error(
-            "Cancellation notification failed:",
-            notificationError,
-          );
+          if (customer?.id) {
+            const {
+              error: notificationError,
+            } = await supabaseAdmin
+              .from("notifications")
+              .insert({
+                recipient_id: customer.id,
+                recipient_type: "customer",
+                type: "order-cancelled",
+                title: "Order cancelled",
+                message: `Your order ${cancelledOrder.order_number} has been cancelled.`,
+                order_id: cancelledOrder.id,
+              });
+
+            if (notificationError) {
+              console.error(
+                "Cancellation notification failed:",
+                notificationError,
+              );
+            }
+          }
         }
+      } catch (notificationError) {
+        console.error(
+          "Cancellation notification error:",
+          notificationError,
+        );
       }
-    }
-  } catch (notificationError) {
-    console.error(
-      "Cancellation notification error:",
-      notificationError,
-    );
-  }
 
       return NextResponse.json({
         success: true,
@@ -336,79 +338,80 @@ export async function PATCH(
         { status: 500 },
       );
     }
-/*
- * Customer notification for order status changes.
- *
- * Notification failures must never prevent the
- * order status update from succeeding.
- */
-const notificationConfig =
-  customerNotificationMessages[status];
 
-if (
-  notificationConfig &&
-  data.customer_email
-) {
-  try {
-    const { data: customer } =
-      await supabaseAdmin
-        .from("customers")
-        .select("id")
-        .eq(
-          "email",
-          data.customer_email,
-        )
-        .maybeSingle();
+    /*
+     * Customer notification for order status changes.
+     *
+     * Notification failures must never prevent the
+     * order status update from succeeding.
+     */
+    const notificationConfig =
+      customerNotificationMessages[status];
 
-    if (customer?.id) {
-      const { error: notificationError } =
-        await supabaseAdmin
-          .from("notifications")
-          .insert({
-            recipient_id: customer.id,
-            recipient_type: "customer",
-            type: `order-${status}`,
-            title:
-              notificationConfig.title,
-            message:
-              notificationConfig.message(
-                data.order_number,
-              ),
-            order_id: data.id,
-          });
+    if (
+      notificationConfig &&
+      data.customer_email
+    ) {
+      try {
+        const { data: customer } =
+          await supabaseAdmin
+            .from("customers")
+            .select("id")
+            .eq(
+              "email",
+              data.customer_email,
+            )
+            .maybeSingle();
 
-      if (notificationError) {
+        if (customer?.id) {
+          const {
+            error: notificationError,
+          } = await supabaseAdmin
+            .from("notifications")
+            .insert({
+              recipient_id: customer.id,
+              recipient_type: "customer",
+              type: `order-${status}`,
+              title:
+                notificationConfig.title,
+              message:
+                notificationConfig.message(
+                  data.order_number,
+                ),
+              order_id: data.id,
+            });
+
+          if (notificationError) {
+            console.error(
+              "Order status notification failed:",
+              notificationError,
+            );
+          }
+        }
+      } catch (notificationError) {
         console.error(
-          "Order status notification failed:",
+          "Order status notification error:",
           notificationError,
         );
       }
     }
-  } catch (notificationError) {
-    console.error(
-      "Order status notification error:",
-      notificationError,
-    );
-  }
-}
 
     return NextResponse.json({
       success: true,
       order: data,
     });
-
   } catch (error) {
     console.error(
-      "Update order status API error:",
+      "PATCH /api/orders error:",
       error,
     );
 
     return NextResponse.json(
       {
         error:
-          "Invalid status update request.",
+          "Unable to update the order.",
       },
-      { status: 400 },
+      { status: 500 },
     );
   }
 }
@@ -530,54 +533,282 @@ export async function POST(request: Request) {
     }
 
     /*
- * Customer notification: order placed
- *
- * Notification failure must NOT cause the order
- * itself to fail.
- */
-try {
-  const { data: customer } =
-    await supabaseAdmin
-      .from("customers")
-      .select("id")
-      .eq(
-        "email",
-        body.customerEmail.trim(),
-      )
-      .maybeSingle();
+     * Customer notification: order placed
+     *
+     * Notification failure must NOT cause the order
+     * itself to fail.
+     */
+    try {
+      const { data: customer } =
+        await supabaseAdmin
+          .from("customers")
+          .select("id")
+          .eq(
+            "email",
+            body.customerEmail.trim(),
+          )
+          .maybeSingle();
 
-  if (customer?.id) {
-    const { error: notificationError } =
-      await supabaseAdmin
-        .from("notifications")
-        .insert({
-          recipient_id: customer.id,
-          recipient_type: "customer",
-          type: "order-placed",
-          title: "Order placed successfully",
-          message: `Your order ${data.orderNumber} has been placed successfully.`,
-          order_id: data.id,
-        });
+      if (customer?.id) {
+        const {
+          error: notificationError,
+        } = await supabaseAdmin
+          .from("notifications")
+          .insert({
+            recipient_id: customer.id,
+            recipient_type: "customer",
+            type: "order-placed",
+            title: "Order placed successfully",
+            message: `Your order ${data.orderNumber} has been placed successfully.`,
+            order_id: data.id,
+          });
 
-    if (notificationError) {
+        if (notificationError) {
+          console.error(
+            "Order notification creation failed:",
+            notificationError,
+          );
+        }
+      } else {
+        console.warn(
+          "Customer not found for order notification:",
+          body.customerEmail,
+        );
+      }
+    } catch (notificationError) {
       console.error(
-        "Order notification creation failed:",
+        "Order notification error:",
         notificationError,
       );
     }
-  } else {
-    console.warn(
-      "Customer not found for order notification:",
-      body.customerEmail,
-    );
-  }
-} catch (notificationError) {
-  console.error(
-    "Order notification error:",
-    notificationError,
-  );
-}
 
+    /*
+     * Record purchased products for personalization.
+     *
+     * This belongs in POST because `items` is available
+     * here after the order has been created.
+     */
+    try {
+      const { data: customer } =
+        await supabaseAdmin
+          .from("customers")
+          .select("id")
+          .eq(
+            "email",
+            body.customerEmail.trim(),
+          )
+          .maybeSingle();
+
+      if (customer?.id) {
+        for (const item of items) {
+          const {
+            data: existingActivity,
+          } = await supabaseAdmin
+            .from("customer_product_activity")
+            .select(
+              "id, activity_count",
+            )
+            .eq(
+              "customer_id",
+              customer.id,
+            )
+            .eq(
+              "product_id",
+              item.productId,
+            )
+            .eq(
+              "activity_type",
+              "purchase",
+            )
+            .maybeSingle();
+
+          if (existingActivity) {
+            const {
+              error: updateError,
+            } = await supabaseAdmin
+              .from(
+                "customer_product_activity",
+              )
+              .update({
+                activity_count:
+                  Number(
+                    existingActivity.activity_count ??
+                      0,
+                  ) + item.quantity,
+                last_activity_at:
+                  new Date().toISOString(),
+              })
+              .eq(
+                "id",
+                existingActivity.id,
+              );
+
+            if (updateError) {
+              console.error(
+                "Purchase activity update failed:",
+                updateError,
+              );
+            }
+          } else {
+            const {
+              error: insertError,
+            } = await supabaseAdmin
+              .from(
+                "customer_product_activity",
+              )
+              .insert({
+                customer_id:
+                  customer.id,
+                product_id:
+                  item.productId,
+                activity_type:
+                  "purchase",
+                activity_count:
+                  item.quantity,
+              });
+
+            if (insertError) {
+              console.error(
+                "Purchase activity insert failed:",
+                insertError,
+              );
+            }
+          }
+        }
+      }
+    } catch (activityError) {
+      console.error(
+        "Purchase activity tracking failed:",
+        activityError,
+      );
+    }
+    /*
+     * Record products purchased together.
+     *
+     * Example:
+     * Tomatoes + Bananas + Milk
+     *
+     * This creates/increments:
+     * Tomatoes -> Bananas
+     * Tomatoes -> Milk
+     * Bananas -> Tomatoes
+     * Bananas -> Milk
+     * Milk -> Tomatoes
+     * Milk -> Bananas
+     *
+     * Failures here must never fail the order itself.
+     */
+    try {
+      const uniqueProductIds = [
+        ...new Set(
+          items.map(
+            (item) => item.productId,
+          ),
+        ),
+      ];
+
+      if (uniqueProductIds.length >= 2) {
+        for (
+          const productId of uniqueProductIds
+        ) {
+          for (
+            const pairedProductId of uniqueProductIds
+          ) {
+            if (
+              productId ===
+              pairedProductId
+            ) {
+              continue;
+            }
+
+            const {
+              data: existingPair,
+              error: pairLookupError,
+            } = await supabaseAdmin
+              .from(
+                "product_purchase_pairs",
+              )
+              .select(
+                "id, purchase_count",
+              )
+              .eq(
+                "product_id",
+                productId,
+              )
+              .eq(
+                "paired_product_id",
+                pairedProductId,
+              )
+              .maybeSingle();
+
+            if (pairLookupError) {
+              console.error(
+                "Purchase pair lookup failed:",
+                pairLookupError,
+              );
+              continue;
+            }
+
+            if (existingPair) {
+              const {
+                error: updatePairError,
+              } = await supabaseAdmin
+                .from(
+                  "product_purchase_pairs",
+                )
+                .update({
+                  purchase_count:
+                    Number(
+                      existingPair.purchase_count ??
+                        0,
+                    ) + 1,
+                  last_purchased_at:
+                    new Date().toISOString(),
+                })
+                .eq(
+                  "id",
+                  existingPair.id,
+                );
+
+              if (updatePairError) {
+                console.error(
+                  "Purchase pair update failed:",
+                  updatePairError,
+                );
+              }
+            } else {
+              const {
+                error: insertPairError,
+              } = await supabaseAdmin
+                .from(
+                  "product_purchase_pairs",
+                )
+                .insert({
+                  product_id:
+                    productId,
+                  paired_product_id:
+                    pairedProductId,
+                  purchase_count: 1,
+                  last_purchased_at:
+                    new Date().toISOString(),
+                });
+
+              if (insertPairError) {
+                console.error(
+                  "Purchase pair insert failed:",
+                  insertPairError,
+                );
+              }
+            }
+          }
+        }
+      }
+    } catch (pairTrackingError) {
+      console.error(
+        "Purchase pair tracking failed:",
+        pairTrackingError,
+      );
+    }
     return NextResponse.json(
       {
         success: true,
