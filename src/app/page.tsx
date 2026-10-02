@@ -43,8 +43,7 @@ export default function HomePage() {
                 (item: any) => item.active !== false,
               ) || product.product_variants?.[0];
 
-            const inventory =
-              variant?.inventory;
+            const inventory = variant?.inventory;
 
             const primaryImage =
               product.product_images?.find(
@@ -59,9 +58,11 @@ export default function HomePage() {
               id: product.id,
               name: product.name,
               brand: product.brand || "",
+
               category:
                 product.categories?.name?.toLowerCase() ||
                 "fruits",
+
               subcategory:
                 product.subcategory || "",
 
@@ -113,7 +114,7 @@ export default function HomePage() {
                 ) || [],
 
               sold: 0,
-              sellerId: "nexora",
+              sellerId: "SundayShop",
               location: "",
               tags: [],
               highlights: [],
@@ -122,9 +123,7 @@ export default function HomePage() {
             };
           });
 
-        setCatalogProducts(
-          mappedProducts,
-        );
+        setCatalogProducts(mappedProducts);
       } catch (error) {
         console.error(
           "Failed to load products:",
@@ -150,18 +149,19 @@ export default function HomePage() {
     .filter(
       (p) =>
         p.mrp > p.price &&
-        ((p.mrp - p.price) / p.mrp) *
-          100 >=
-          10,
+        ((p.mrp - p.price) / p.mrp) * 100 >= 10,
     )
-    .slice(0, 4);
+    .slice(0, 8);
 
   const best = [...activeProducts]
     .sort(
       (a, b) =>
         b.sold - a.sold,
     )
-    .slice(0, 4);
+    .slice(0, 8);
+
+  const featured =
+    activeProducts.slice(0, 8);
 
   // -------------------------
   // LANDING PAGE
@@ -170,46 +170,59 @@ export default function HomePage() {
     return (
       <main className="min-h-screen bg-bg">
         {/* Hero */}
-        <section className="mx-auto max-w-7xl px-4 pt-10 sm:pt-16">
-          <div className="overflow-hidden rounded-[2rem] bg-brand px-6 py-12 text-white shadow-[var(--shadow)] sm:px-10 sm:py-16 lg:px-14">
-            <div className="max-w-3xl">
+        <section className="mx-auto max-w-7xl px-4 pt-6 sm:pt-10 lg:pt-14">
+          <div className="relative overflow-hidden rounded-[2rem] bg-brand px-6 py-10 text-white shadow-[var(--shadow)] sm:px-10 sm:py-14 lg:px-14 lg:py-16">
+            {/* Decorative circles */}
+            <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
+            <div className="pointer-events-none absolute -bottom-24 right-20 h-52 w-52 rounded-full bg-white/10 blur-3xl" />
+
+            <div className="relative max-w-3xl">
               <Badge tone="ai">
                 Fresh groceries • Better prices
               </Badge>
 
-              <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-6xl">
+              <h1 className="mt-5 text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
                 Fresh groceries.
                 <br />
                 Low prices.
                 <br />
-                Delivered in a day.
+                Delivered fast.
               </h1>
 
               <p className="mt-5 max-w-xl text-base leading-7 text-white/80 sm:text-lg">
-                Shop fruits, vegetables and everyday essentials at
-                prices made for everyday shopping.
+                Shop fresh fruits, vegetables and everyday
+                essentials at prices made for everyday shopping.
               </p>
 
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link href="/login">
-                  <Button size="lg">
+                  <Button
+                    size="lg"
+                    className="w-full sm:w-auto"
+                  >
                     Start shopping
                   </Button>
                 </Link>
 
                 <Link
                   href="/products"
-                  className="inline-flex items-center rounded-xl border border-white/30 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10"
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 active:scale-[0.98]"
                 >
                   Explore groceries
                 </Link>
+              </div>
+
+              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-white/75">
+                <span>✓ Fresh products</span>
+                <span>✓ Everyday prices</span>
+                <span>✓ Fast delivery</span>
               </div>
             </div>
           </div>
         </section>
 
         {/* USP */}
-        <section className="mx-auto max-w-7xl px-4 pt-8">
+        <section className="mx-auto max-w-7xl px-4 pt-6 sm:pt-8">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
@@ -224,8 +237,8 @@ export default function HomePage() {
               },
               {
                 icon: "🚚",
-                title: "1-day delivery",
-                text: "Get your order delivered within a day.",
+                title: "Fast delivery",
+                text: "Get your everyday groceries without the long wait.",
               },
               {
                 icon: "💵",
@@ -235,13 +248,13 @@ export default function HomePage() {
             ].map((item) => (
               <div
                 key={item.title}
-                className="rounded-2xl border border-line bg-surface p-5"
+                className="group rounded-2xl border border-line bg-surface p-5 transition duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow)]"
               >
-                <div className="text-2xl">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-surface-2 text-2xl transition-transform duration-300 group-hover:scale-110">
                   {item.icon}
                 </div>
 
-                <h3 className="mt-3 font-semibold">
+                <h3 className="mt-4 font-semibold">
                   {item.title}
                 </h3>
 
@@ -253,48 +266,93 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Preview products */}
+        {/* Featured products */}
         <section className="mx-auto max-w-7xl px-4 py-14">
-          <div className="flex items-end justify-between">
+          <div className="flex items-end justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-brand">
                 Shop smarter
               </p>
 
-              <h2 className="mt-1 text-2xl font-bold">
-                See what's available
+              <h2 className="mt-1 text-2xl font-bold sm:text-3xl">
+                Popular picks
               </h2>
+
+              <p className="mt-1 text-sm text-muted">
+                Some of the groceries shoppers love.
+              </p>
             </div>
 
             <Link
-              href="/login"
-              className="text-sm font-semibold text-brand"
+              href="/products"
+              className="shrink-0 text-sm font-semibold text-brand transition hover:underline"
             >
-              Shop now →
+              View all →
             </Link>
           </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {activeProducts
-              .slice(0, 4)
-              .map((product) => (
+          <div className="mt-6 flex snap-x gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 lg:grid-cols-4">
+            {featured.map((product) => (
+              <div
+                key={product.id}
+                className="min-w-[76%] snap-start sm:min-w-0"
+              >
                 <ProductCard
-                  key={product.id}
                   product={product}
                 />
-              ))}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Seasonal offer */}
+        <section className="mx-auto max-w-7xl px-4 pb-14">
+          <div className="relative overflow-hidden rounded-3xl border border-line bg-surface p-6 sm:p-8 lg:p-10">
+            <div className="relative z-10 max-w-2xl">
+              <Badge tone="ai">
+                🛒 Fresh savings
+              </Badge>
+
+              <h2 className="mt-4 text-2xl font-bold sm:text-3xl">
+                Stock up on everyday essentials
+              </h2>
+
+              <p className="mt-2 max-w-xl text-sm leading-6 text-muted sm:text-base">
+                Discover fresh produce and grocery essentials
+                at prices made for everyday shopping.
+              </p>
+
+              <Link
+                href="/deals"
+                className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 active:scale-[0.98]"
+              >
+                Explore today's deals →
+              </Link>
+            </div>
+
+            <div className="pointer-events-none absolute -right-10 -top-10 text-[9rem] opacity-10 sm:text-[12rem]">
+              🥬
+            </div>
+
+            <div className="pointer-events-none absolute -bottom-12 right-24 text-[6rem] opacity-10">
+              🍎
+            </div>
           </div>
         </section>
 
         {/* Final CTA */}
         <section className="mx-auto max-w-7xl px-4 pb-16">
-          <div className="rounded-3xl border border-line bg-surface px-6 py-10 text-center sm:px-10">
-            <h2 className="text-2xl font-bold">
+          <div className="rounded-3xl border border-line bg-surface px-6 py-10 text-center sm:px-10 sm:py-14">
+            <p className="text-sm font-semibold text-brand">
+              SundayShop
+            </p>
+
+            <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
               Ready to shop smarter?
             </h2>
 
             <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted">
-              Create your Nexora account and start shopping fresh
+              Create your account and start shopping fresh
               groceries at great prices.
             </p>
 
@@ -316,80 +374,88 @@ export default function HomePage() {
   // -------------------------
   return (
     <main className="pb-12">
-      {/* Welcome */}
-      <section className="mx-auto max-w-7xl px-4 pt-7">
-        <div className="rounded-3xl bg-brand px-6 py-8 text-white sm:px-8">
-          <p className="text-sm text-white/70">
-            Welcome back
-            {user.name ? `, ${user.name}` : ""}
-          </p>
+      {/* Welcome hero */}
+      <section className="mx-auto max-w-7xl px-4 pt-5 sm:pt-7">
+        <div className="relative overflow-hidden rounded-[2rem] bg-brand px-6 py-8 text-white sm:px-8 sm:py-10">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-white/10 blur-2xl" />
 
-          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-            What are you shopping for today?
-          </h1>
+          <div className="relative max-w-3xl">
+            <p className="text-sm text-white/70">
+              Welcome back
+              {user.name ? `, ${user.name}` : ""}
+            </p>
 
-          <p className="mt-3 max-w-xl text-sm leading-6 text-white/75">
-            Fresh groceries, low prices and convenient delivery.
-          </p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+              What are you shopping for today?
+            </h1>
 
-          <Link
-            href="/products"
-            className="mt-6 inline-flex rounded-xl bg-white px-5 py-3 text-sm font-semibold text-brand"
-          >
-            Shop groceries →
-          </Link>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-white/75 sm:text-base">
+              Fresh groceries, low prices and convenient delivery.
+            </p>
+
+            <Link
+              href="/products"
+              className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-brand transition hover:bg-white/90 active:scale-[0.98]"
+            >
+              Shop groceries →
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* Categories */}
       <section className="mx-auto max-w-7xl px-4 pt-10">
-        <div className="flex items-end justify-between">
+        <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-sm text-muted">
               Browse
             </p>
 
-            <h2 className="text-2xl font-bold">
+            <h2 className="text-2xl font-bold sm:text-3xl">
               Shop by category
             </h2>
           </div>
 
           <Link
             href="/products"
-            className="text-sm font-semibold text-brand"
+            className="shrink-0 text-sm font-semibold text-brand hover:underline"
           >
             View all →
           </Link>
         </div>
 
-        <div className="mt-5 flex gap-3 overflow-x-auto pb-2">
+        <div className="mt-5 flex gap-3 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {categories.map((category) => (
             <Link
               key={category.slug}
               href={`/products?category=${category.slug}`}
-              className="min-w-[105px] rounded-2xl border border-line bg-surface p-4 text-center transition hover:-translate-y-0.5"
+              className="group min-w-[118px] snap-start rounded-2xl border border-line bg-surface p-4 text-center transition duration-300 hover:-translate-y-1 hover:border-brand/30 hover:shadow-[var(--shadow)] active:scale-[0.97]"
             >
-              <div className="text-3xl">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-2 text-3xl transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
                 {category.emoji}
               </div>
 
-              <p className="mt-2 whitespace-nowrap text-sm font-semibold">
+              <p className="mt-3 whitespace-nowrap text-sm font-semibold">
                 {category.name}
+              </p>
+
+              <p className="mt-1 text-xs text-muted">
+                Explore →
               </p>
             </Link>
           ))}
         </div>
       </section>
 
-      {/* Low prices */}
+      {/* Deals */}
       <section className="mx-auto max-w-7xl px-4 pt-12">
-        <div className="flex items-end justify-between">
+        <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-cta">
               💰 Save more
             </p>
 
-            <h2 className="mt-1 text-2xl font-bold">
+            <h2 className="mt-1 text-2xl font-bold sm:text-3xl">
               Today's low prices
             </h2>
 
@@ -400,19 +466,64 @@ export default function HomePage() {
 
           <Link
             href="/deals"
-            className="text-sm font-semibold text-brand"
+            className="shrink-0 text-sm font-semibold text-brand hover:underline"
           >
             See all →
           </Link>
         </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {deals.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-            />
-          ))}
+        {deals.length > 0 ? (
+          <div className="mt-5 flex snap-x gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 lg:grid-cols-4">
+            {deals.map((product) => (
+              <div
+                key={product.id}
+                className="min-w-[76%] snap-start sm:min-w-0"
+              >
+                <ProductCard
+                  product={product}
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-5 rounded-2xl border border-line bg-surface p-8 text-center text-sm text-muted">
+            New deals are coming soon.
+          </div>
+        )}
+      </section>
+
+      {/* Seasonal offer */}
+      <section className="mx-auto max-w-7xl px-4 pt-12">
+        <div className="relative overflow-hidden rounded-3xl bg-surface-2 p-6 sm:p-8 lg:p-10">
+          <div className="relative z-10 max-w-2xl">
+            <Badge tone="ai">
+              ✨ Fresh picks
+            </Badge>
+
+            <h2 className="mt-4 text-2xl font-bold sm:text-3xl">
+              Fresh groceries for your everyday needs
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-muted sm:text-base">
+              From fruits and vegetables to everyday essentials,
+              discover everything you need in one place.
+            </p>
+
+            <Link
+              href="/products"
+              className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 active:scale-[0.98]"
+            >
+              Explore groceries →
+            </Link>
+          </div>
+
+          <div className="pointer-events-none absolute -right-8 -top-10 text-[8rem] opacity-10 sm:text-[11rem]">
+            🍎
+          </div>
+
+          <div className="pointer-events-none absolute bottom-0 right-28 text-[5rem] opacity-10">
+            🥕
+          </div>
         </div>
       </section>
 
@@ -421,73 +532,74 @@ export default function HomePage() {
         <RecommendedProducts />
       </section>
 
-      {/* Fresh picks */}
+      {/* Popular groceries */}
       <section className="mx-auto max-w-7xl px-4 pt-12">
         <div>
           <p className="text-sm font-semibold text-brand">
             🥬 Fresh today
           </p>
 
-          <h2 className="mt-1 text-2xl font-bold">
+          <h2 className="mt-1 text-2xl font-bold sm:text-3xl">
             Popular groceries
           </h2>
+
+          <p className="mt-1 text-sm text-muted">
+            Popular choices from SundayShop.
+          </p>
         </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-5 flex snap-x gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 lg:grid-cols-4">
           {best.map((product) => (
-            <ProductCard
+            <div
               key={product.id}
-              product={product}
-            />
+              className="min-w-[76%] snap-start sm:min-w-0"
+            >
+              <ProductCard
+                product={product}
+              />
+            </div>
           ))}
         </div>
       </section>
 
       {/* Delivery promise */}
       <section className="mx-auto max-w-7xl px-4 pt-12">
-        <div className="rounded-3xl bg-surface border border-line p-6 sm:p-8">
+        <div className="rounded-3xl border border-line bg-surface p-6 sm:p-8">
           <div className="grid gap-6 sm:grid-cols-3">
-            <div>
-              <div className="text-2xl">
-                🚚
+            {[
+              {
+                icon: "🚚",
+                title: "Fast delivery",
+                text: "Get your everyday groceries without the long wait.",
+              },
+              {
+                icon: "💵",
+                title: "Cash on delivery",
+                text: "Pay when your order reaches your doorstep.",
+              },
+              {
+                icon: "📍",
+                title: "Track your order",
+                text: "Follow your delivery status from order to doorstep.",
+              },
+            ].map((item) => (
+              <div
+                key={item.title}
+                className="group"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-surface-2 text-2xl transition-transform duration-300 group-hover:scale-110">
+                  {item.icon}
+                </div>
+
+                <h3 className="mt-3 font-semibold">
+                  {item.title}
+                </h3>
+
+                <p className="mt-1 text-sm leading-6 text-muted">
+                  {item.text}
+                </p>
               </div>
-
-              <h3 className="mt-3 font-semibold">
-                Delivered within a day
-              </h3>
-
-              <p className="mt-1 text-sm text-muted">
-                Get your everyday groceries without the long wait.
-              </p>
-            </div>
-
-            <div>
-              <div className="text-2xl">
-                💵
-              </div>
-
-              <h3 className="mt-3 font-semibold">
-                Cash on delivery
-              </h3>
-
-              <p className="mt-1 text-sm text-muted">
-                Pay when your order reaches your doorstep.
-              </p>
-            </div>
-
-            <div>
-              <div className="text-2xl">
-                📍
-              </div>
-
-              <h3 className="mt-3 font-semibold">
-                Track your order
-              </h3>
-
-              <p className="mt-1 text-sm text-muted">
-                Follow your delivery status from order to doorstep.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>

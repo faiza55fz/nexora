@@ -19,6 +19,7 @@ type CreateOrderRequest = {
   deliveryFee: number;
   total: number;
   paymentMethod: "cod";
+  couponCode?: string | null;
   items: OrderItemInput[];
 };
 
@@ -120,6 +121,11 @@ export async function GET() {
           customer_name,
           customer_email,
           customer_phone,
+          delivery_partner_id,
+          delivery_partner:delivery_partners (
+          name,
+          phone
+       ),
           address,
           latitude,
           longitude,
@@ -192,7 +198,8 @@ export async function PATCH(
       typeof body.status === "string"
         ? body.status.trim()
         : "";
-
+const deliveryPartnerId =
+  body.deliveryPartnerId ?? null;
     if (!orderId) {
       return NextResponse.json(
         {
@@ -316,6 +323,12 @@ export async function PATCH(
         .from("orders")
         .update({
           status,
+           ...(deliveryPartnerId
+    ? {
+        delivery_partner_id:
+          deliveryPartnerId,
+      }
+    : {}),
         })
         .eq("id", orderId)
         .select(
@@ -513,6 +526,8 @@ export async function POST(request: Request) {
           p_latitude: latitude,
 
           p_longitude: longitude,
+          p_coupon_code:
+  body.couponCode?.trim() || null,
         },
       );
 

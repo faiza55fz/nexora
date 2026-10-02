@@ -93,6 +93,19 @@ const [appliedCoupon, setAppliedCoupon] = useState<{
   couponId: string;
 } | null>(null);
 
+const [availableCoupons, setAvailableCoupons] = useState<
+  {
+    id: string;
+    code: string;
+    discount_type: "percentage" | "fixed";
+    discount_value: number;
+    minimum_order_value: number;
+    maximum_discount: number | null;
+    expires_at: string | null;
+    first_order_only: boolean;
+  }[]
+>([]);
+
 const [cardNumber, setCardNumber] = useState("");
 const [cardName, setCardName] = useState("");
 const [cardExpiry, setCardExpiry] = useState("");
@@ -291,7 +304,7 @@ const [wallet, setWallet] = useState("paytm");
                   ? images
                   : [primaryImage],
               sold: 0,
-              sellerId: "nexora",
+              sellerId: "sundayshop",
               location: "",
               tags: [],
               highlights: [],
@@ -314,7 +327,37 @@ const [wallet, setWallet] = useState("paytm");
 
     loadProducts();
   }, []);
+useEffect(() => {
+  const loadAvailableCoupons = async () => {
+    try {
+      const response = await fetch(
+        "/api/coupons",
+        {
+          cache: "no-store",
+        },
+      );
 
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+
+      setAvailableCoupons(
+        Array.isArray(data?.coupons)
+          ? data.coupons
+          : [],
+      );
+    } catch (error) {
+      console.error(
+        "Failed to load coupons:",
+        error,
+      );
+    }
+  };
+
+  loadAvailableCoupons();
+}, []);
   const rows = cart
     .map((item) => {
       const product = allProducts.find(
@@ -345,9 +388,17 @@ const [wallet, setWallet] = useState("paytm");
   );
 
   const deliveryFee =
-    subtotal === 0 || subtotal >= 499 ? 0 : 49;
+  subtotal === 0 || subtotal >= 499 ? 0 : 49;
 
-  const total = subtotal + deliveryFee;
+const couponDiscount = Math.min(
+  appliedCoupon?.discount ?? 0,
+  subtotal,
+);
+
+const total = Math.max(
+  0,
+  subtotal + deliveryFee - couponDiscount,
+);
 
   const selectedAddress = addresses.find(
     (address) =>
@@ -390,6 +441,81 @@ const [wallet, setWallet] = useState("paytm");
     setShowAddressOptions(false);
     setError("");
   };
+  const handleApplyCoupon = async (
+     codeOverride?: string,
+  ) => {
+  const codeToApply = (
+  codeOverride ?? couponCode
+).trim();
+
+if (!codeToApply) {
+    setCouponError("Please enter a coupon code.");
+    return;
+  }
+
+  if (!user?.id) {
+    setCouponError("Please log in to apply a coupon.");
+    return;
+  }
+
+  if (addToOrderId) {
+    setCouponError(
+      "Coupons cannot be applied when adding items to an existing order.",
+    );
+    return;
+  }
+
+  setCouponLoading(true);
+  setCouponError("");
+
+  try {
+    const response = await fetch(
+      "/api/coupons/validate",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code: codeToApply,
+          customerId: user.id,
+          subtotal,
+        }),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setAppliedCoupon(null);
+      setCouponError(
+        data?.error ?? "Unable to apply coupon.",
+      );
+      return;
+    }
+
+    setAppliedCoupon({
+      code: data.code,
+      discount: Number(data.discount ?? 0),
+      couponId: data.couponId,
+    });
+
+    setCouponCode(data.code);
+    setCouponError("");
+  } catch (error) {
+    console.error(
+      "Coupon application failed:",
+      error,
+    );
+
+    setAppliedCoupon(null);
+    setCouponError(
+      "Unable to apply coupon. Please try again.",
+    );
+  } finally {
+    setCouponLoading(false);
+  }
+};
 
   const placeOrder = async () => {
     setError("");
@@ -529,11 +655,12 @@ const [wallet, setWallet] = useState("paytm");
 
           address: formattedAddress,
 
-          subtotal,
+          subtotal: subtotal-couponDiscount,
 
           deliveryFee,
 
           total,
+          couponCode: appliedCoupon?.code ?? null,
 
           paymentMethod,
 
@@ -1453,57 +1580,191 @@ const [wallet, setWallet] = useState("paytm");
 
             {/* Order summary */}
             <div className="h-fit space-y-4">
-              <Card className="p-5">
-                <h3 className="font-semibold">
-                  Order summary
-                </h3>
+            <Card className="p-5">
+  <h3 className="font-semibold">
+    Order summary
+  </h3>
 
-                <div className="mt-4 space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted">
-                      Items (
-                      {cart.reduce(
-                        (sum, item) =>
-                          sum + item.qty,
-                        0,
-                      )}
-                      )
-                    </span>
+  <div className="mt-4 space-y-3 text-sm">
+    <div className="flex justify-between">
+      <span className="text-muted">
+        Items (
+        {cart.reduce(
+          (sum, item) =>
+            sum + item.qty,
+          0,
+        )}
+        )
+      </span>
 
-                    <span>
-                      ₹{subtotal.toFixed(2)}
-                    </span>
-                  </div>
+      <span>
+        ₹{subtotal.toFixed(2)}
+      </span>
+    </div>
 
-                  <div className="flex justify-between">
-                    <span className="text-muted">
-                      Delivery
-                    </span>
+    {!addToOrderId && (
+  <div className="rounded-xl border border-line p-3">
+    <div className="flex items-center justify-between">
+      <p className="text-sm font-semibold">
+        Offers & Coupons
+      </p>
 
-                    <span
-                      className={
-                        deliveryFee === 0
-                          ? "text-success"
-                          : undefined
-                      }
-                    >
-                      {deliveryFee === 0
-                        ? "FREE"
-                        : `₹${deliveryFee.toFixed(2)}`}
-                    </span>
-                  </div>
+      {availableCoupons.length > 0 && (
+        <span className="text-xs text-muted">
+          {availableCoupons.length} available
+        </span>
+      )}
+    </div>
 
-                  <div className="border-t border-line pt-3">
-                    <div className="flex justify-between text-base font-bold">
-                      <span>Total</span>
+    <div className="mt-3 space-y-2">
+      {availableCoupons.map((coupon) => {
+        const isApplied =
+          appliedCoupon?.code === coupon.code;
 
-                      <span>
-                        ₹{total.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
+        const discountText =
+          coupon.discount_type === "fixed"
+            ? `₹${Number(
+                coupon.discount_value,
+              ).toLocaleString("en-IN")} OFF`
+            : `${Number(
+                coupon.discount_value,
+              )}% OFF`;
+
+        return (
+          <div
+            key={coupon.id}
+            className="rounded-lg border border-line p-3"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold">
+                  {discountText}
+                </p>
+
+                <p className="mt-1 text-xs text-muted">
+                  Use code{" "}
+                  <span className="font-semibold text-ink">
+                    {coupon.code}
+                  </span>
+                </p>
+
+                <p className="mt-1 text-xs text-muted">
+                  Min. order ₹
+                  {Number(
+                    coupon.minimum_order_value,
+                  ).toLocaleString("en-IN")}
+                  {coupon.first_order_only
+                    ? " • First order only"
+                    : ""}
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                onClick={() => {
+                  setCouponCode(coupon.code);
+                  setCouponError("");
+                  setTimeout(() => {
+                     handleApplyCoupon(coupon.code);
+                  }, 0);
+                }}
+                disabled={isApplied}
+              >
+                {isApplied ? "Applied" : "Use"}
+              </Button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    <div className="mt-3 border-t border-line pt-3">
+      <p className="text-xs text-muted">
+        Have another coupon code?
+      </p>
+
+      <div className="mt-2 flex gap-2">
+        <input
+          type="text"
+          value={couponCode}
+          onChange={(event) => {
+            setCouponCode(
+              event.target.value.toUpperCase(),
+            );
+            setCouponError("");
+          }}
+          placeholder="Enter coupon code"
+          className="min-w-0 flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+        />
+
+        <Button
+          type="button"
+          onClick={()=>{handleApplyCoupon()}}
+          disabled={couponLoading}
+        >
+          {couponLoading
+            ? "Applying..."
+            : "Apply"}
+        </Button>
+      </div>
+    </div>
+
+    {couponError && (
+      <p className="mt-2 text-xs text-danger">
+        {couponError}
+      </p>
+    )}
+
+    {appliedCoupon && (
+      <p className="mt-2 text-xs text-success">
+        {appliedCoupon.code} applied. You saved ₹
+        {couponDiscount.toFixed(2)}.
+      </p>
+    )}
+  </div>
+)}
+
+    {appliedCoupon && (
+      <div className="flex justify-between text-success">
+        <span>
+          Coupon ({appliedCoupon.code})
+        </span>
+
+        <span>
+          -₹{couponDiscount.toFixed(2)}
+        </span>
+      </div>
+    )}
+
+    <div className="flex justify-between">
+      <span className="text-muted">
+        Delivery
+      </span>
+
+      <span
+        className={
+          deliveryFee === 0
+            ? "text-success"
+            : undefined
+        }
+      >
+        {deliveryFee === 0
+          ? "FREE"
+          : `₹${deliveryFee.toFixed(2)}`}
+      </span>
+    </div>
+
+    <div className="border-t border-line pt-3">
+      <div className="flex justify-between text-base font-bold">
+        <span>Total</span>
+
+        <span>
+          ₹{total.toFixed(2)}
+        </span>
+      </div>
+    </div>
+  </div>
+</Card> 
 
               <Card className="p-5">
                 <div className="space-y-4 text-sm">
@@ -1555,7 +1816,7 @@ const [wallet, setWallet] = useState("paytm");
           </div>
         </div>
 
-        {/* Success modal */}
+        
         {done ? (
           <div
             className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4"
@@ -1644,5 +1905,5 @@ const [wallet, setWallet] = useState("paytm");
         ) : null}
       </div>
     </AuthGuard>
-  );
+);
 }

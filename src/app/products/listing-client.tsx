@@ -140,7 +140,7 @@ export default function ListingClient() {
                 ) || [],
 
               sold: 0,
-              sellerId: "nexora",
+              sellerId: "SundayShop",
               location: "",
               tags: [],
               highlights: [],

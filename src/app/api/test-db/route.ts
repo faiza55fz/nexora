@@ -19,7 +19,7 @@ export async function GET() {
 
   return NextResponse.json({
     success: true,
-    message: "Nexora is connected to PostgreSQL.",
+    message: "SundayShop is connected to PostgreSQL.",
     data,
   });
 }
