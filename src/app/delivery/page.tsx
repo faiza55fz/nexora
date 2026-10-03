@@ -497,6 +497,19 @@ export default function DeliveryPage() {
   const [loginError, setLoginError] = useState("");
   const [authMessage, setAuthMessage] = useState("");
 
+  const navigateToCustomer = (address: string) => {
+  if (!address?.trim()) {
+    return;
+  }
+
+  const destination = encodeURIComponent(address.trim());
+
+  window.open(
+    `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
+};
   function normalizePhoneForMatch(value: string) {
     const digits = value.replace(/\D/g, "");
     if (digits.startsWith("91") && digits.length === 12) {
@@ -2151,30 +2164,73 @@ const todayCompletedCount = earnings.filter((earning) =>
     </div>
 
     {/* Map */}
-    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-      <div className="relative flex h-[260px] items-center justify-center overflow-hidden bg-gradient-to-br from-slate-100 via-white to-teal-50">
-        <div className="absolute inset-0 opacity-40">
-          <div className="absolute left-1/4 top-1/3 h-px w-1/2 rotate-12 bg-slate-300" />
-          <div className="absolute left-1/3 top-2/3 h-px w-1/2 -rotate-12 bg-slate-300" />
-          <div className="absolute left-1/2 top-1/4 h-1/2 w-px bg-slate-300" />
-        </div>
+   {/* Navigation */}
+<div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+  <div className="relative overflow-hidden bg-gradient-to-br from-teal-50 via-white to-slate-100 p-6 sm:p-8">
+    <div className="absolute inset-0 opacity-30">
+      <div className="absolute left-0 top-1/2 h-px w-full rotate-6 bg-slate-300" />
+      <div className="absolute left-1/4 top-0 h-full w-px -rotate-12 bg-slate-300" />
+      <div className="absolute right-1/4 top-0 h-full w-px rotate-12 bg-slate-300" />
+    </div>
 
-        <div className="relative text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-teal-700 shadow-lg ring-8 ring-white/60">
-            <MapPin size={28} />
+    <div className="relative">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-700 text-white shadow-sm">
+            <MapPin size={25} />
           </div>
 
-          <p className="mt-4 font-semibold text-ink">
-            Delivery location
-          </p>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
+              Customer location
+            </p>
 
-          <p className="mt-1 max-w-sm px-5 text-sm leading-5 text-muted">
-            Live GPS navigation will be connected
-            in the next delivery update.
-          </p>
+            <h2 className="mt-1 text-lg font-bold text-ink">
+              Navigate to customer
+            </h2>
+
+            <p className="mt-1 max-w-lg text-sm leading-5 text-muted">
+              Open turn-by-turn directions to the
+              customer's delivery address.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() =>
+            navigateToCustomer(
+              assignedOrder.address,
+            )
+          }
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-700 px-5 py-4 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-teal-800 hover:shadow-md active:scale-[0.99] sm:w-auto sm:min-w-[210px]"
+        >
+          <MapPin size={18} />
+          Navigate to customer
+        </button>
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-white/90 p-4 backdrop-blur-sm">
+        <div className="flex items-start gap-3">
+          <MapPin
+            size={18}
+            className="mt-0.5 shrink-0 text-teal-700"
+          />
+
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Destination
+            </p>
+
+            <p className="mt-1 text-sm leading-6 text-ink">
+              {assignedOrder.address}
+            </p>
+          </div>
         </div>
       </div>
     </div>
+  </div>
+</div>
 
     {/* Order details */}
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">

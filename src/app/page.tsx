@@ -12,6 +12,17 @@ type CatalogProduct = (typeof defaultProducts)[number] & {
   active?: boolean;
 };
 
+type Coupon = {
+  id: string;
+  code: string;
+  discount_type: string;
+  discount_value: number;
+  minimum_order_value: number | null;
+  maximum_discount: number | null;
+  expires_at: string | null;
+  first_order_only: boolean;
+};
+
 export default function HomePage() {
   const { user } = useStore();
 
@@ -20,6 +31,10 @@ export default function HomePage() {
 
   const [loadingProducts, setLoadingProducts] =
     useState(true);
+
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [loadingCoupons, setLoadingCoupons] = useState(true);
+  const [copiedCoupon, setCopiedCoupon] = useState("");
 
   useEffect(() => {
     async function loadCatalog() {
@@ -138,6 +153,70 @@ export default function HomePage() {
 
     loadCatalog();
   }, []);
+
+  useEffect(() => {
+    async function loadCoupons() {
+      try {
+        const response = await fetch("/api/coupons", {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result.error || "Unable to load offers.",
+          );
+        }
+
+        setCoupons(result.coupons ?? []);
+      } catch (error) {
+        console.error(
+          "Failed to load coupons:",
+          error,
+        );
+
+        setCoupons([]);
+      } finally {
+        setLoadingCoupons(false);
+      }
+    }
+
+    loadCoupons();
+  }, []);
+
+  function formatCouponDiscount(coupon: Coupon) {
+    if (coupon.discount_type === "percentage") {
+      return `${coupon.discount_value}% OFF`;
+    }
+
+    return `₹${coupon.discount_value} OFF`;
+  }
+
+  function formatCouponExpiry(value: string | null) {
+    if (!value) return "No expiry";
+
+    return new Date(value).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+    });
+  }
+
+  async function copyCoupon(code: string) {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCoupon(code);
+
+      window.setTimeout(() => {
+        setCopiedCoupon("");
+      }, 1800);
+    } catch (error) {
+      console.error(
+        "Failed to copy coupon:",
+        error,
+      );
+    }
+  }
 
   const activeProducts =
     catalogProducts.filter(
@@ -303,6 +382,83 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* Offers & Promotions */}
+        <section className="mx-auto max-w-7xl px-4 pb-14">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-brand">
+                🎁 SundayShop offers
+              </p>
+
+              <h2 className="mt-1 text-2xl font-bold sm:text-3xl">
+                Save on your grocery order
+              </h2>
+
+              <p className="mt-1 text-sm text-muted">
+                Sign in and use these coupon codes at checkout.
+              </p>
+            </div>
+          </div>
+
+          {loadingCoupons ? (
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((item) => (
+                <div
+                  key={item}
+                  className="h-40 animate-pulse rounded-2xl bg-surface-2"
+                />
+              ))}
+            </div>
+          ) : coupons.length > 0 ? (
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {coupons.map((coupon) => (
+                <div
+                  key={coupon.id}
+                  className="rounded-2xl border border-line bg-surface p-5"
+                >
+                  <Badge tone="brand">
+                    {coupon.code}
+                  </Badge>
+
+                  <h3 className="mt-3 text-2xl font-bold text-brand">
+                    {formatCouponDiscount(coupon)}
+                  </h3>
+
+                  <p className="mt-2 text-sm text-muted">
+                    {coupon.minimum_order_value
+                      ? `On orders above ₹${coupon.minimum_order_value}`
+                      : "No minimum order"}
+                  </p>
+
+                  {coupon.maximum_discount ? (
+                    <p className="mt-1 text-xs text-muted">
+                      Maximum discount ₹
+                      {coupon.maximum_discount}
+                    </p>
+                  ) : null}
+
+                  <Link
+                    href="/login"
+                    className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-brand px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90"
+                  >
+                    Sign in to use
+                  </Link>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-5 rounded-2xl border border-line bg-surface p-8 text-center">
+              <p className="font-semibold">
+                New offers coming soon
+              </p>
+
+              <p className="mt-1 text-sm text-muted">
+                Check back soon for SundayShop promotions.
+              </p>
+            </div>
+          )}
         </section>
 
         {/* Seasonal offer */}
@@ -488,6 +644,131 @@ export default function HomePage() {
         ) : (
           <div className="mt-5 rounded-2xl border border-line bg-surface p-8 text-center text-sm text-muted">
             New deals are coming soon.
+          </div>
+        )}
+      </section>
+
+      {/* Offers & Promotions */}
+      <section className="mx-auto max-w-7xl px-4 pt-12">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-brand">
+              🎁 Save more
+            </p>
+
+            <h2 className="mt-1 text-2xl font-bold sm:text-3xl">
+              Offers & promotions
+            </h2>
+
+            <p className="mt-1 text-sm text-muted">
+              Use these coupon codes at checkout.
+            </p>
+          </div>
+        </div>
+
+        {loadingCoupons ? (
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((item) => (
+              <div
+                key={item}
+                className="h-40 animate-pulse rounded-2xl bg-surface-2"
+              />
+            ))}
+          </div>
+        ) : coupons.length > 0 ? (
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {coupons.map((coupon) => (
+              <div
+                key={coupon.id}
+                className="relative overflow-hidden rounded-2xl border border-line bg-surface p-5 transition duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow)]"
+              >
+                <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-brand/10" />
+
+                <div className="relative">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                        Special offer
+                      </p>
+
+                      <h3 className="mt-2 text-2xl font-bold text-brand">
+                        {formatCouponDiscount(coupon)}
+                      </h3>
+                    </div>
+
+                    <Badge tone="success">
+                      Active
+                    </Badge>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-dashed border-brand/30 bg-brand/5 p-3">
+                    <p className="text-xs text-muted">
+                      Coupon code
+                    </p>
+
+                    <div className="mt-1 flex items-center justify-between gap-3">
+                      <span className="font-mono text-sm font-bold tracking-wider">
+                        {coupon.code}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyCoupon(coupon.code)
+                        }
+                        className="rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 active:scale-[0.97]"
+                      >
+                        {copiedCoupon === coupon.code
+                          ? "Copied!"
+                          : "Copy code"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-1 text-xs text-muted">
+                    {coupon.minimum_order_value ? (
+                      <p>
+                        Minimum order ₹
+                        {coupon.minimum_order_value}
+                      </p>
+                    ) : (
+                      <p>No minimum order</p>
+                    )}
+
+                    {coupon.maximum_discount ? (
+                      <p>
+                        Maximum discount ₹
+                        {coupon.maximum_discount}
+                      </p>
+                    ) : null}
+
+                    <p>
+                      {coupon.expires_at
+                        ? `Valid until ${formatCouponExpiry(
+                            coupon.expires_at,
+                          )}`
+                        : "No expiry"}
+                    </p>
+
+                    {coupon.first_order_only ? (
+                      <p className="font-medium text-brand">
+                        First order only
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-5 rounded-2xl border border-line bg-surface p-8 text-center">
+            <p className="text-lg font-semibold">
+              No active offers right now
+            </p>
+
+            <p className="mt-1 text-sm text-muted">
+              Check back soon for new SundayShop promotions.
+            </p>
           </div>
         )}
       </section>
