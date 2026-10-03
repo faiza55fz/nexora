@@ -44,6 +44,9 @@ export async function GET(request: Request) {
           payment_method,
           status,
           created_at,
+          customer_name,
+          customer_phone,
+          address,
           order_items (
             id,
             product_id,

@@ -948,11 +948,9 @@ export default function DeliveryPage() {
     );
   }
 
-<<<<<<< HEAD
+
  async function recordCompletedEarning(
-=======
-async function recordCompletedEarning(
->>>>>>> 2c9007af25ef68ab1853397cef3dfd80930ac3fd
+
   order: DeliveryOrder,
 ) {
   const partnerId = currentMember?.id;
@@ -964,8 +962,6 @@ async function recordCompletedEarning(
     return;
   }
 
-<<<<<<< HEAD
-=======
   let tipAmount = 0;
 
   try {
@@ -993,8 +989,6 @@ async function recordCompletedEarning(
       error,
     );
   }
-
->>>>>>> 2c9007af25ef68ab1853397cef3dfd80930ac3fd
   try {
     const response = await fetch(
       "/api/delivery/earnings",
@@ -1006,12 +1000,8 @@ async function recordCompletedEarning(
         body: JSON.stringify({
           partnerId,
           orderId: order.id,
-<<<<<<< HEAD
-          amount: DELIVERY_EARNING_AMOUNT,
-          baseAmount: DELIVERY_EARNING_AMOUNT,
-          incentiveAmount: 0,
-          tipAmount: 0,
-=======
+          partnerId,
+          orderId: order.id,
           amount:
             DELIVERY_EARNING_AMOUNT +
             tipAmount,
@@ -1019,7 +1009,6 @@ async function recordCompletedEarning(
             DELIVERY_EARNING_AMOUNT,
           incentiveAmount: 0,
           tipAmount,
->>>>>>> 2c9007af25ef68ab1853397cef3dfd80930ac3fd
         }),
       },
     );
@@ -1058,13 +1047,12 @@ async function recordCompletedEarning(
     partnerId,
     partnerName:
       currentMember?.name ?? "Delivery Partner",
-<<<<<<< HEAD
-    amount: DELIVERY_EARNING_AMOUNT,
-=======
+
+  
     amount:
       DELIVERY_EARNING_AMOUNT +
       tipAmount,
->>>>>>> 2c9007af25ef68ab1853397cef3dfd80930ac3fd
+
     earnedAt: new Date().toISOString(),
   };
 

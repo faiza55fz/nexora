@@ -58,11 +58,6 @@ type AdminOrder = {
   total: number;
   payment: string;
   status: string;
-  refundStatus?: string;
-  refundAmount?: number;
-  returnReason?: string;
-  exchangeStatus?: string;
-exchangeReason?: string;
   createdAt: string;
   items: {
     id: string;
@@ -282,36 +277,6 @@ export default function AdminOrdersPage() {
   const [statusError, setStatusError] =
     useState("");
 
-  const [editingOrder, setEditingOrder] =
-    useState(false);
-
-  const [editCustomerName, setEditCustomerName] =
-    useState("");
-
-  const [editCustomerPhone, setEditCustomerPhone] =
-    useState("");
-
-  const [editAddress, setEditAddress] =
-    useState("");
-
-  const [savingOrder, setSavingOrder] =
-    useState(false);
-
-  const [refundAction, setRefundAction] =
-    useState<
-      | "requested"
-      | "approved"
-      | "rejected"
-      | "refunded"
-      | null
-    >(null);
-    const [exchangeAction, setExchangeAction] =
-  useState<
-    "approved" | "rejected" | null
-  >(null);
-
-  const [refundAmountInput, setRefundAmountInput] =
-    useState("");
 
   const dropdownRef =
     useRef<HTMLDivElement | null>(null);
@@ -340,8 +305,59 @@ export default function AdminOrdersPage() {
               "Unable to fetch orders.",
           );
         }
-
         const mappedOrders: AdminOrder[] =
+  (data.orders ?? []).map(
+    (order: any) => ({
+      id: order.id,
+      orderNumber:
+        order.order_number,
+      customerName:
+        order.customer_name,
+      customerEmail:
+        order.customer_email,
+      customerPhone:
+        order.customer_phone ?? "",
+      address:
+        order.address,
+      subtotal:
+        Number(order.subtotal),
+      deliveryFee:
+        Number(order.delivery_fee),
+      total:
+        Number(order.total),
+      payment:
+        String(
+          order.payment_method ??
+            "COD",
+        ).toUpperCase(),
+      status:
+        order.status ?? "placed",
+
+      createdAt:
+        order.created_at,
+
+      items:
+        Array.isArray(
+          order.order_items,
+        )
+          ? order.order_items.map(
+              (item: any) => ({
+                id: item.id,
+                productId:
+                  item.product_id,
+                productName:
+                  item.product_name,
+                quantity:
+                  Number(item.quantity),
+                price:
+                  Number(item.price),
+              }),
+            )
+          : [],
+    }),
+  );
+
+        
           (data.orders ?? []).map(
             (order: any) => ({
               id: order.id,
@@ -370,23 +386,6 @@ export default function AdminOrdersPage() {
                 ).toUpperCase(),
               status:
                 order.status ?? "placed",
-
-              refundStatus:
-                order.refund_status ??
-                "not_requested",
-
-              refundAmount:
-                Number(
-                  order.refund_amount ?? 0,
-                ),
-
-              returnReason:
-                order.return_reason ?? "",
-                exchangeStatus:
-  order.exchange_status ?? "not_requested",
-
-exchangeReason:
-  order.exchange_reason ?? "",
 
               createdAt:
                 order.created_at,
@@ -748,267 +747,7 @@ exchangeReason:
       setUpdatingStatus(false);
     }
   }
-  async function updateExchangeStatus(
-  exchangeStatus: "approved" | "rejected",
-) {
-  if (!selectedOrder) {
-    return;
-  }
-
-  setExchangeAction(exchangeStatus);
-  setStatusError("");
-
-  try {
-    const response = await fetch("/api/orders", {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        orderId: selectedOrder.id,
-        status: selectedOrder.status,
-        exchangeStatus,
-        exchangeReason:
-          selectedOrder.exchangeReason ?? "",
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data?.error ||
-          "Unable to update exchange status.",
-      );
-    }
-
-    const updatedOrder = {
-      ...selectedOrder,
-      exchangeStatus:
-        data.order?.exchange_status ??
-        exchangeStatus,
-      exchangeReason:
-        data.order?.exchange_reason ??
-        selectedOrder.exchangeReason ??
-        "",
-    };
-
-    setOrders((currentOrders) =>
-      currentOrders.map((order) =>
-        order.id === selectedOrder.id
-          ? updatedOrder
-          : order,
-      ),
-    );
-  } catch (error) {
-    console.error(
-      "Failed to update exchange status:",
-      error,
-    );
-
-    setStatusError(
-      error instanceof Error
-        ? error.message
-        : "Unable to update exchange status.",
-    );
-  } finally {
-    setExchangeAction(null);
-  }
-}
-
-  async function saveOrderEdits() {
-    if (!selectedOrder) {
-      return;
-    }
-
-    setSavingOrder(true);
-    setStatusError("");
-
-    try {
-      const response =
-        await fetch("/api/orders", {
-          method: "PATCH",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            orderId: selectedOrder.id,
-            status: selectedOrder.status,
-            customerName:
-              editCustomerName,
-            customerPhone:
-              editCustomerPhone,
-            address:
-              editAddress,
-          }),
-        });
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.error ||
-            "Unable to save order changes.",
-        );
-      }
-
-      setOrders((currentOrders) =>
-        currentOrders.map(
-          (order) =>
-            order.id ===
-            selectedOrder.id
-              ? {
-                  ...order,
-                  customerName:
-                    data.order
-                      ?.customer_name ??
-                    editCustomerName,
-                  customerPhone:
-                    data.order
-                      ?.customer_phone ??
-                    editCustomerPhone,
-                  address:
-                    data.order?.address ??
-                    editAddress,
-                  status:
-                    data.order?.status ??
-                    order.status,
-                }
-              : order,
-        ),
-      );
-
-      setEditingOrder(false);
-    } catch (error) {
-      console.error(
-        "Failed to save order edits:",
-        error,
-      );
-
-      setStatusError(
-        error instanceof Error
-          ? error.message
-          : "Unable to save order changes.",
-      );
-    } finally {
-      setSavingOrder(false);
-    }
-  }
-
-  async function updateRefundStatus(
-    refundStatus:
-      | "requested"
-      | "approved"
-      | "rejected"
-      | "refunded",
-  ) {
-    if (!selectedOrder) {
-      return;
-    }
-
-    const amount = Number(
-      refundAmountInput ||
-        selectedOrder.refundAmount ||
-        selectedOrder.total ||
-        0,
-    );
-
-    if (
-      refundStatus === "refunded" &&
-      (!Number.isFinite(amount) ||
-        amount <= 0)
-    ) {
-      setStatusError(
-        "Enter a valid refund amount.",
-      );
-      return;
-    }
-
-    setRefundAction(
-      refundStatus,
-    );
-
-    setStatusError("");
-
-    try {
-      const response =
-        await fetch("/api/orders", {
-          method: "PATCH",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            orderId: selectedOrder.id,
-            status: selectedOrder.status,
-            refundStatus,
-            refundAmount: amount,
-          }),
-        });
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.error ||
-            "Unable to update refund status.",
-        );
-      }
-
-      const updatedOrder: AdminOrder =
-        {
-          ...selectedOrder,
-
-          refundStatus:
-            data.order
-              ?.refund_status ??
-            refundStatus,
-
-          refundAmount:
-            Number(
-              data.order
-                ?.refund_amount ??
-                amount,
-            ),
-
-          returnReason:
-            data.order
-              ?.return_reason ??
-            selectedOrder.returnReason ??
-            "",
-        };
-
-      /*
-       * selectedOrder is derived from orders,
-       * so we only need to update orders here.
-       */
-      setOrders((currentOrders) =>
-        currentOrders.map(
-          (order) =>
-            order.id ===
-            selectedOrder.id
-              ? updatedOrder
-              : order,
-        ),
-      );
-    } catch (error) {
-      console.error(
-        "Failed to update refund status:",
-        error,
-      );
-
-      setStatusError(
-        error instanceof Error
-          ? error.message
-          : "Unable to update refund status.",
-      );
-    } finally {
-      setRefundAction(null);
-    }
-  }
+  
 
   function saveDeliveryState(
     nextMembers: DeliveryMember[],
@@ -1942,47 +1681,7 @@ exchangeReason:
                   Customer details
                 </p>
 
-                <div className="mt-3 flex justify-end">
-                  {!editingOrder ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditCustomerName(
-                          selectedOrder.customerName,
-                        );
-
-                        setEditCustomerPhone(
-                          selectedOrder.customerPhone,
-                        );
-
-                        setEditAddress(
-                          selectedOrder.address,
-                        );
-
-                        setStatusError("");
-                        setEditingOrder(
-                          true,
-                        );
-                      }}
-                      className="rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:bg-slate-50"
-                    >
-                      Edit details
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingOrder(
-                          false,
-                        );
-                        setStatusError("");
-                      }}
-                      className="rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:bg-slate-50"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
+              
 
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <div>
@@ -1990,26 +1689,9 @@ exchangeReason:
                       Name
                     </p>
 
-                    {editingOrder ? (
-                      <input
-                        type="text"
-                        value={
-                          editCustomerName
-                        }
-                        onChange={(event) =>
-                          setEditCustomerName(
-                            event.target.value,
-                          )
-                        }
-                        className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/20"
-                      />
-                    ) : (
-                      <p className="mt-1 text-sm font-medium text-ink">
-                        {
-                          selectedOrder.customerName
-                        }
-                      </p>
-                    )}
+                    <p className="mt-1 text-sm font-medium text-ink">
+  {selectedOrder.customerName}
+</p>
                   </div>
 
                   <div>
@@ -2017,26 +1699,9 @@ exchangeReason:
                       Phone
                     </p>
 
-                    {editingOrder ? (
-                      <input
-                        type="text"
-                        value={
-                          editCustomerPhone
-                        }
-                        onChange={(event) =>
-                          setEditCustomerPhone(
-                            event.target.value,
-                          )
-                        }
-                        className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/20"
-                      />
-                    ) : (
-                      <p className="mt-1 text-sm font-medium text-ink">
-                        {
-                          selectedOrder.customerPhone
-                        }
-                      </p>
-                    )}
+                    <p className="mt-1 text-sm font-medium text-ink">
+  {selectedOrder.customerPhone}
+</p>
                   </div>
 
                   <div>
@@ -2069,284 +1734,13 @@ exchangeReason:
                     Delivery address
                   </p>
 
-                  {editingOrder ? (
-                    <textarea
-                      value={
-                        editAddress
-                      }
-                      onChange={(event) =>
-                        setEditAddress(
-                          event.target.value,
-                        )
-                      }
-                      rows={3}
-                      className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm font-medium text-ink">
-                      {
-                        selectedOrder.address
-                      }
-                    </p>
-                  )}
+                 <p className="mt-1 text-sm font-medium text-ink">
+  {selectedOrder.address}
+</p>
                 </div>
 
-                {editingOrder && (
-                  <div className="mt-5 flex justify-end border-t border-border pt-4">
-                    <button
-                      type="button"
-                      onClick={
-                        saveOrderEdits
-                      }
-                      disabled={
-                        savingOrder
-                      }
-                      className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {savingOrder
-                        ? "Saving..."
-                        : "Save changes"}
-                    </button>
-                  </div>
-                )}
+               
               </div>
-
-              {/* Return & Refund */}
-              <div className="mt-6 rounded-2xl border border-border bg-white p-5">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-base font-semibold text-foreground">
-                      Return & Refund
-                    </h3>
-
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Review return requests and manage the refund status.
-                    </p>
-                  </div>
-
-                  <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold capitalize text-gray-700">
-                    {(
-                      selectedOrder.refundStatus ??
-                      "not_requested"
-                    ).replace(
-                      /_/g,
-                      " ",
-                    )}
-                  </span>
-                </div>
-
-                {selectedOrder.returnReason && (
-                  <div className="mt-4 rounded-xl bg-gray-50 p-4">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      Return reason
-                    </p>
-
-                    <p className="mt-1 text-sm text-foreground">
-                      {
-                        selectedOrder.returnReason
-                      }
-                    </p>
-                  </div>
-                )}
-
-                <div className="mt-4">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    Refund amount
-                  </label>
-
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-sm font-semibold text-foreground">
-                      ₹
-                    </span>
-
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={
-                        refundAmountInput
-                      }
-                      onChange={(event) =>
-                        setRefundAmountInput(
-                          event.target.value,
-                        )
-                      }
-                      placeholder={String(
-                        Number(
-                          selectedOrder.total ??
-                            0,
-                        ).toFixed(2),
-                      )}
-                      className="w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
-                    />
-                  </div>
-                </div>
-
-                {/* Refund buttons */}
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateRefundStatus(
-                        "requested",
-                      )
-                    }
-                    disabled={
-                      refundAction !==
-                      null
-                    }
-                    className="rounded-xl border border-border px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    Request Review
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateRefundStatus(
-                        "approved",
-                      )
-                    }
-                    disabled={
-                      refundAction !==
-                      null
-                    }
-                    className="rounded-xl bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
-                  >
-                    Approve Refund
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateRefundStatus(
-                        "rejected",
-                      )
-                    }
-                    disabled={
-                      refundAction !==
-                      null
-                    }
-                    className="rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    Reject Refund
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateRefundStatus(
-                        "refunded",
-                      )
-                    }
-                    disabled={
-                      refundAction !==
-                      null
-                    }
-                    className="rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
-                  >
-                    Mark as Refunded
-                  </button>
-                </div>
-              </div>
-              <div className="mt-6 border-t border-border pt-5">
-  <h3 className="font-semibold">
-    Exchange Request
-  </h3>
-
-  {selectedOrder.exchangeStatus &&
-  selectedOrder.exchangeStatus !== "not_requested" ? (
-    <>
-      <div className="mt-3 rounded-xl bg-muted p-4">
-  <p className="text-sm font-medium">
-    Product to exchange
-  </p>
-
-  <div className="mt-2 space-y-2">
-    {selectedOrder.items.map((item) => (
-      <div
-        key={item.id}
-        className="flex items-center justify-between gap-4"
-      >
-        <div>
-          <p className="text-sm font-medium">
-            {item.productName}
-          </p>
-
-          <p className="text-xs text-muted">
-            Quantity: {item.quantity}
-          </p>
-        </div>
-
-        <p className="text-sm font-semibold">
-          ₹{item.price.toLocaleString("en-IN")}
-        </p>
-      </div>
-    ))}
-  </div>
-
-  <div className="mt-4 border-t border-border pt-3">
-    <p className="text-sm">
-      <span className="font-medium">
-        Reason:
-      </span>{" "}
-      {selectedOrder.exchangeReason ||
-        "No reason provided"}
-    </p>
-  </div>
-
-  <div className="mt-2">
-    <p className="text-sm">
-      <span className="font-medium">
-        Status:
-      </span>{" "}
-      {selectedOrder.exchangeStatus ===
-      "requested"
-        ? "Requested"
-        : selectedOrder.exchangeStatus ===
-            "approved"
-          ? "Approved"
-          : selectedOrder.exchangeStatus ===
-              "rejected"
-            ? "Rejected"
-            : selectedOrder.exchangeStatus}
-    </p>
-  </div>
-</div>
-
-      {selectedOrder.exchangeStatus ===
-      "requested" ? (
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              updateExchangeStatus("approved")
-            }
-            disabled={exchangeAction !== null}
-            className="rounded-xl bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
-          >
-            Approve Exchange
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              updateExchangeStatus("rejected")
-            }
-            disabled={exchangeAction !== null}
-            className="rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-          >
-            Reject Exchange
-          </button>
-        </div>
-      ) : null}
-    </>
-  ) : (
-    <p className="mt-2 text-sm text-muted">
-      No exchange request for this order.
-    </p>
-  )}
-</div>
 
               {/* Items */}
               <div>

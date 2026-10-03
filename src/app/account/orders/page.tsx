@@ -24,6 +24,9 @@ type Order = {
   status: string;
   created_at: string;
   order_items: OrderItem[];
+  customer_name?: string;
+  customer_phone?: string;
+  address?: string;
 };
 
 const issueTypes = [
@@ -40,6 +43,24 @@ export default function OrdersPage() {
   const [addingItemsOrderId, setAddingItemsOrderId] =
   useState<string | null>(null);
 
+  const [editingOrder, setEditingOrder] =
+  useState<Order | null>(null);
+
+const [editCustomerName, setEditCustomerName] =
+  useState("");
+
+const [editCustomerPhone, setEditCustomerPhone] =
+  useState("");
+
+const [editAddress, setEditAddress] =
+  useState("");
+
+const [savingOrder, setSavingOrder] =
+  useState(false);
+
+const [editError, setEditError] =
+  useState("");
+
   const [cancellingId, setCancellingId] =
     useState<string | null>(null);
 
@@ -48,6 +69,24 @@ export default function OrdersPage() {
 
   const [issueOrder, setIssueOrder] =
     useState<Order | null>(null);
+
+    const [refundOrder, setRefundOrder] =
+  useState<Order | null>(null);
+
+const [refundItemId, setRefundItemId] =
+  useState("");
+
+const [refundReason, setRefundReason] =
+  useState("");
+
+const [submittingRefund, setSubmittingRefund] =
+  useState(false);
+
+const [refundSuccess, setRefundSuccess] =
+  useState("");
+
+const [refundError, setRefundError] =
+  useState("");
 
   const [issueItemId, setIssueItemId] =
     useState("");
@@ -166,6 +205,188 @@ export default function OrdersPage() {
       setCancellingId(null);
     }
   }
+  function openEditOrder(order: Order) {
+    setEditingOrder(order);
+    setEditCustomerName(order.customer_name ?? "");
+    setEditCustomerPhone(order.customer_phone ?? "");
+    setEditAddress(order.address ?? "");
+    setEditError("");
+  }
+
+  function closeEditOrder() {
+    if (savingOrder) return;
+
+    setEditingOrder(null);
+    setEditCustomerName("");
+    setEditCustomerPhone("");
+    setEditAddress("");
+    setEditError("");
+  }
+
+  async function handleSaveOrder() {
+    if (!editingOrder) return;
+
+    if (
+      !editCustomerName.trim() ||
+      !editCustomerPhone.trim() ||
+      !editAddress.trim()
+    ) {
+      setEditError(
+        "Please fill in your name, phone number and delivery address.",
+      );
+      return;
+    }
+
+    try {
+      setSavingOrder(true);
+      setEditError("");
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        setEditError("Please log in to edit your order.");
+        return;
+      }
+
+      const response = await fetch(
+        "/api/orders/edit",
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            orderId: editingOrder.id,
+            customerName: editCustomerName.trim(),
+            customerPhone: editCustomerPhone.trim(),
+            address: editAddress.trim(),
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Unable to update order details.",
+        );
+      }
+
+      setEditingOrder(null);
+      setEditCustomerName("");
+      setEditCustomerPhone("");
+      setEditAddress("");
+      setEditError("");
+
+      await loadOrders();
+    } catch (error) {
+      console.error(
+        "Updating order details failed:",
+        error,
+      );
+
+      setEditError(
+        error instanceof Error
+          ? error.message
+          : "Unable to update order details.",
+      );
+    } finally {
+      setSavingOrder(false);
+    }
+  }
+
+function openRefundModal(order: Order) {
+  setRefundOrder(order);
+  setRefundItemId("");
+  setRefundReason("");
+  setRefundError("");
+  setRefundSuccess("");
+}
+
+function closeRefundModal() {
+  if (submittingRefund) return;
+
+  setRefundOrder(null);
+  setRefundItemId("");
+  setRefundReason("");
+  setRefundError("");
+  setRefundSuccess("");
+}
+
+async function handleSubmitRefund() {
+  if (!refundOrder) return;
+
+  if (!refundItemId || !refundReason.trim()) {
+    setRefundError(
+      "Please select a product and enter a refund reason.",
+    );
+    return;
+  }
+
+  try {
+    setSubmittingRefund(true);
+    setRefundError("");
+    setRefundSuccess("");
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      setRefundError(
+        "Please log in to request a refund.",
+      );
+      return;
+    }
+
+    const response = await fetch(
+      "/api/orders/issues",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          orderId: refundOrder.id,
+          orderItemId: refundItemId,
+          requestType: "refund",
+          description: refundReason.trim(),
+        }),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error ||
+          "Unable to submit the refund request.",
+      );
+    }
+
+    setRefundSuccess(
+      "Your refund request has been submitted successfully.",
+    );
+  } catch (error) {
+    console.error(
+      "Submitting refund request failed:",
+      error,
+    );
+
+    setRefundError(
+      error instanceof Error
+        ? error.message
+        : "Unable to submit the refund request.",
+    );
+  } finally {
+    setSubmittingRefund(false);
+  }
+}
+
 
   function openIssueModal(order: Order) {
     setIssueOrder(order);
@@ -608,8 +829,19 @@ export default function OrdersPage() {
                     </Link>
 
                     {canCancel && (
+  <button
+    type="button"
+    onClick={() => openEditOrder(order)}
+    className="inline-flex items-center rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-semibold text-ink transition-all duration-200 hover:-translate-y-0.5 hover:bg-surface-2 active:scale-[0.97]"
+  >
+    Edit order details
+  </button>
+)}
+
+                    {canCancel && (
                       <Link
                         href={`/products?addToOrder=${order.id}`}
+
                         className="inline-flex items-center rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-semibold text-ink transition-all duration-200 hover:-translate-y-0.5 hover:bg-surface-2 active:scale-[0.97]"
                       >
                         Add more items
@@ -627,6 +859,13 @@ export default function OrdersPage() {
                         Report an issue
                       </button>
                     )}
+                    <button
+  type="button"
+  onClick={() => openRefundModal(order)}
+  className="inline-flex items-center rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700 transition-all duration-200 hover:-translate-y-0.5 hover:bg-amber-100 active:scale-[0.97]"
+>
+  Request refund
+</button>
 
                     {canCancel && (
                       <button
@@ -695,6 +934,143 @@ export default function OrdersPage() {
         </div>
       </div>
     )}
+
+    {/* Refund modal */}
+{refundOrder && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm">
+    <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-brand">
+            Refund request
+          </p>
+
+          <h2 className="mt-1 text-lg font-bold text-ink">
+            Request a refund
+          </h2>
+
+          <p className="mt-1 text-sm text-muted">
+            Order {refundOrder.order_number}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={closeRefundModal}
+          disabled={submittingRefund}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-xl text-muted transition hover:bg-slate-100 disabled:opacity-50"
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+
+      {refundSuccess ? (
+        <div className="mt-6 rounded-2xl border border-green-200 bg-green-50 p-5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-700">
+            ✓
+          </div>
+
+          <p className="mt-3 text-sm font-semibold text-green-700">
+            {refundSuccess}
+          </p>
+
+          <p className="mt-1 text-sm text-green-700/80">
+            Our team will review your request and process the refund if approved.
+          </p>
+
+          <button
+            type="button"
+            onClick={closeRefundModal}
+            className="mt-5 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white"
+          >
+            Done
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="mt-6">
+            <label className="text-sm font-semibold text-ink">
+              Select product
+            </label>
+
+            <select
+              value={refundItemId}
+              onChange={(event) =>
+                setRefundItemId(event.target.value)
+              }
+              className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/10"
+            >
+              <option value="">
+                Select a product
+              </option>
+
+              {refundOrder.order_items?.map((item) => (
+                <option
+                  key={item.id}
+                  value={item.id}
+                >
+                  {item.product_name} × {item.quantity}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mt-5">
+            <label className="text-sm font-semibold text-ink">
+              Why are you requesting a refund?
+            </label>
+
+            <textarea
+              value={refundReason}
+              onChange={(event) =>
+                setRefundReason(event.target.value)
+              }
+              maxLength={1000}
+              rows={4}
+              placeholder="Tell us what happened..."
+              className="mt-2 w-full resize-none rounded-xl border border-border bg-white px-3 py-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/10"
+            />
+
+            <p className="mt-1 text-right text-xs text-muted">
+              {refundReason.length}/1000
+            </p>
+          </div>
+
+          {refundError && (
+            <div className="mt-4 rounded-xl bg-red-50 p-3">
+              <p className="text-sm text-red-600">
+                {refundError}
+              </p>
+            </div>
+          )}
+
+          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={closeRefundModal}
+              disabled={submittingRefund}
+              className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-ink hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSubmitRefund}
+              disabled={submittingRefund}
+              className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:shadow-md disabled:opacity-50"
+            >
+              {submittingRefund
+                ? "Submitting..."
+                : "Submit refund request"}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  </div>
+)}
 
     {/* Issue modal */}
     {issueOrder && (
@@ -943,6 +1319,118 @@ export default function OrdersPage() {
               </div>
             </>
           )}
+        </div>
+      </div>
+    )}
+        {/* Edit order modal */}
+    {editingOrder && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm">
+        <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-brand">
+                Order details
+              </p>
+
+              <h2 className="mt-1 text-lg font-bold text-ink">
+                Edit order details
+              </h2>
+
+              <p className="mt-1 text-sm text-muted">
+                Order {editingOrder.order_number}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={closeEditOrder}
+              disabled={savingOrder}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-xl text-muted transition hover:bg-slate-100 hover:text-foreground disabled:opacity-50"
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="mt-6 space-y-5">
+            <div>
+              <label className="text-sm font-semibold text-ink">
+                Customer name
+              </label>
+
+              <input
+                type="text"
+                value={editCustomerName}
+                onChange={(event) =>
+                  setEditCustomerName(event.target.value)
+                }
+                placeholder="Enter your name"
+                className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-3 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/10"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-semibold text-ink">
+                Phone number
+              </label>
+
+              <input
+                type="tel"
+                value={editCustomerPhone}
+                onChange={(event) =>
+                  setEditCustomerPhone(event.target.value)
+                }
+                placeholder="Enter your phone number"
+                className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-3 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/10"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-semibold text-ink">
+                Delivery address
+              </label>
+
+              <textarea
+                value={editAddress}
+                onChange={(event) =>
+                  setEditAddress(event.target.value)
+                }
+                rows={4}
+                placeholder="Enter your delivery address"
+                className="mt-2 w-full resize-none rounded-xl border border-border bg-white px-3 py-3 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/10"
+              />
+            </div>
+          </div>
+
+          {editError && (
+            <div className="mt-4 rounded-xl bg-red-50 p-3">
+              <p className="text-sm text-red-600">
+                {editError}
+              </p>
+            </div>
+          )}
+
+          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={closeEditOrder}
+              disabled={savingOrder}
+              className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSaveOrder}
+              disabled={savingOrder}
+              className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md disabled:opacity-50"
+            >
+              {savingOrder
+                ? "Saving..."
+                : "Save changes"}
+            </button>
+          </div>
         </div>
       </div>
     )}

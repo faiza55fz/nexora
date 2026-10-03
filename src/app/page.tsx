@@ -4,6 +4,7 @@ import Link from "next/link";
 import { categories, products as defaultProducts } from "@/lib/data";
 import { ProductCard } from "@/components/product-card";
 import RecommendedProducts from "@/components/recommended-products";
+import FamilyGroceryPackage from "@/components/family-grocery-package";
 import { Badge, Button } from "@/components/ui";
 import { useStore } from "@/components/providers";
 import { useEffect, useState } from "react";
@@ -812,6 +813,13 @@ export default function HomePage() {
       <section className="mx-auto max-w-7xl px-4 pt-12">
         <RecommendedProducts />
       </section>
+
+      {/* Personalized Family Grocery Package */}
+<section className="mx-auto max-w-7xl px-4 pt-12">
+  <FamilyGroceryPackage
+    products={activeProducts}
+  />
+</section>
 
       {/* Popular groceries */}
       <section className="mx-auto max-w-7xl px-4 pt-12">

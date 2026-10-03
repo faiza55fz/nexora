@@ -153,23 +153,73 @@ export async function GET() {
         });
 
     if (error) {
-      console.error(
-        "Fetching orders failed:",
-        error,
-      );
+  console.error(
+    "Fetching orders failed:",
+    error,
+  );
 
-      return NextResponse.json(
-        {
-          error: error.message,
-        },
-        { status: 500 },
-      );
-    }
+  return NextResponse.json(
+    {
+      error: error.message,
+    },
+    { status: 500 },
+  );
+}
 
-    return NextResponse.json({
-      success: true,
-      orders: data ?? [],
+const { data: refundRequests, error: refundError } =
+  await supabaseAdmin
+    .from("order_issues")
+    .select(`
+      id,
+      order_id,
+      order_item_id,
+      issue_type,
+      description,
+      status,
+      created_at,
+      orders (
+        id,
+        order_number,
+        customer_name,
+        customer_email,
+        customer_phone,
+        total
+      ),
+      order_items (
+        id,
+        product_name,
+        quantity,
+        price
+      )
+    `)
+    .like("description", "REFUND REQUEST:%")
+    .order("created_at", {
+      ascending: false,
     });
+
+if (refundError) {
+  console.error(
+    "Fetching refund requests failed:",
+    refundError,
+  );
+
+  return NextResponse.json(
+    {
+      error: refundError.message,
+    },
+    { status: 500 },
+  );
+}
+
+return NextResponse.json({
+  success: true,
+  orders: data ?? [],
+  refundRequests: refundRequests ?? [],
+});
+
+
+
+
   } catch (error) {
     console.error(
       "Get orders API error:",

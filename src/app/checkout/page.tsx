@@ -92,8 +92,7 @@ const [appliedCoupon, setAppliedCoupon] = useState<{
   discount: number;
   couponId: string;
 } | null>(null);
-<<<<<<< HEAD
-=======
+
 
 const [availableCoupons, setAvailableCoupons] = useState<
   {
@@ -107,7 +106,7 @@ const [availableCoupons, setAvailableCoupons] = useState<
     first_order_only: boolean;
   }[]
 >([]);
->>>>>>> 2c9007af25ef68ab1853397cef3dfd80930ac3fd
+
 
 const [cardNumber, setCardNumber] = useState("");
 const [cardName, setCardName] = useState("");
