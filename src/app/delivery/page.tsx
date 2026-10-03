@@ -1000,8 +1000,6 @@ export default function DeliveryPage() {
         body: JSON.stringify({
           partnerId,
           orderId: order.id,
-          partnerId,
-          orderId: order.id,
           amount:
             DELIVERY_EARNING_AMOUNT +
             tipAmount,
