@@ -84,6 +84,14 @@ export default function CheckoutPage() {
     const [paymentMethod, setPaymentMethod] = useState<
   "cod" | "card" | "upi" | "wallet"
 >("cod");
+const [couponCode, setCouponCode] = useState("");
+const [couponLoading, setCouponLoading] = useState(false);
+const [couponError, setCouponError] = useState("");
+const [appliedCoupon, setAppliedCoupon] = useState<{
+  code: string;
+  discount: number;
+  couponId: string;
+} | null>(null);
 
 const [cardNumber, setCardNumber] = useState("");
 const [cardName, setCardName] = useState("");

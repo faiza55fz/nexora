@@ -128,7 +128,12 @@ export async function GET() {
           total,
           payment_method,
           status,
-          created_at,
+refund_status,
+refund_amount,
+return_reason,
+exchange_status,
+exchange_reason,
+created_at,
           order_items (
             id,
             product_id,
@@ -192,6 +197,43 @@ export async function PATCH(
       typeof body.status === "string"
         ? body.status.trim()
         : "";
+        const refundStatus =
+  typeof body.refundStatus === "string"
+    ? body.refundStatus.trim()
+    : undefined;
+
+const refundAmount =
+  typeof body.refundAmount === "number"
+    ? body.refundAmount
+    : undefined;
+
+const returnReason =
+  typeof body.returnReason === "string"
+    ? body.returnReason.trim()
+    : undefined;
+    const exchangeStatus =
+  typeof body.exchangeStatus === "string"
+    ? body.exchangeStatus.trim()
+    : undefined;
+
+const exchangeReason =
+  typeof body.exchangeReason === "string"
+    ? body.exchangeReason.trim()
+    : undefined;
+        const customerName =
+  typeof body.customerName === "string"
+    ? body.customerName.trim()
+    : undefined;
+
+const customerPhone =
+  typeof body.customerPhone === "string"
+    ? body.customerPhone.trim()
+    : undefined;
+
+const address =
+  typeof body.address === "string"
+    ? body.address.trim()
+    : undefined;
 
     if (!orderId) {
       return NextResponse.json(
@@ -202,14 +244,37 @@ export async function PATCH(
       );
     }
 
-    if (!allowedStatuses.includes(status)) {
-      return NextResponse.json(
-        {
-          error: "Invalid order status.",
-        },
-        { status: 400 },
-      );
-    }
+    const allowedRefundStatuses = [
+  "not_requested",
+  "requested",
+  "approved",
+  "rejected",
+  "refunded",
+];
+const allowedExchangeStatuses = [
+  "not_requested",
+  "requested",
+  "approved",
+  "rejected",
+  "completed",
+];
+
+if (
+  !allowedStatuses.includes(status) &&
+  !(
+    (refundStatus &&
+      allowedRefundStatuses.includes(refundStatus)) ||
+    (exchangeStatus &&
+      allowedExchangeStatuses.includes(exchangeStatus))
+  )
+) {
+  return NextResponse.json(
+    {
+      error: "Invalid order status or refund status.",
+    },
+    { status: 400 },
+  );
+}
 
     /*
      * Customer cancellation
@@ -312,16 +377,40 @@ export async function PATCH(
      * These are currently used by admin/order management.
      */
     const { data, error } =
-      await supabaseAdmin
-        .from("orders")
-        .update({
-          status,
-        })
-        .eq("id", orderId)
-        .select(
-          "id, order_number, status, customer_email",
-        )
-        .single();
+  await supabaseAdmin
+    .from("orders")
+    .update({
+  status,
+  ...(customerName !== undefined && {
+    customer_name: customerName,
+  }),
+  ...(customerPhone !== undefined && {
+    customer_phone: customerPhone,
+  }),
+  ...(address !== undefined && {
+    address,
+  }),
+  ...(refundStatus !== undefined && {
+    refund_status: refundStatus,
+  }),
+  ...(refundAmount !== undefined && {
+    refund_amount: refundAmount,
+  }),
+  ...(returnReason !== undefined && {
+    return_reason: returnReason,
+  }),
+    ...(exchangeStatus !== undefined && {
+    exchange_status: exchangeStatus,
+  }),
+  ...(exchangeReason !== undefined && {
+    exchange_reason: exchangeReason,
+  }),
+})
+    .eq("id", orderId)
+    .select(
+  "id, order_number, status, customer_email, customer_name, customer_phone, address, refund_status, refund_amount, return_reason, exchange_status, exchange_reason",
+)
+    .single();
 
     if (error || !data) {
       console.error(

@@ -41,6 +41,7 @@ async function getProducts() {
       review_count,
       created_at,
       updated_at,
+moderation_status,
       categories (
         id,
         name
@@ -79,14 +80,25 @@ async function getProducts() {
   return data ?? [];
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const adminView = searchParams.get("admin") === "true";
+
     const products = await getProducts();
 
-    return NextResponse.json({
-      success: true,
-      products,
-    });
+    const visibleProducts = adminView
+      ? products
+      : products.filter(
+          (product: any) =>
+            product.active !== false &&
+            product.moderation_status === "approved",
+        );
+
+   return NextResponse.json({
+  success: true,
+  products: visibleProducts,
+});
   } catch (error) {
     console.error("GET /api/products error:", error);
 
@@ -117,7 +129,9 @@ export async function POST(request: Request) {
       unit,
       image,
       active = true,
+      moderation_status,
     } = body;
+    
 
     if (!name?.trim()) {
       return NextResponse.json(
@@ -188,13 +202,14 @@ export async function POST(request: Request) {
       await supabaseAdmin
         .from("products")
         .insert({
-          id: productId,
-          category_id: categoryId,
-          name: name.trim(),
-          brand: brand.trim(),
-          description: description?.trim() || null,
-          active: Boolean(active),
-        })
+  id: productId,
+  category_id: categoryId,
+  name: name.trim(),
+  brand: brand.trim(),
+  description: description?.trim() || null,
+  active: Boolean(active),
+  moderation_status: "pending",
+})
         .select()
         .single();
 
@@ -314,6 +329,7 @@ export async function PATCH(request: Request) {
       stock,
       unit,
       active,
+      moderation_status,
     } = body;
 
     if (!id) {
@@ -383,6 +399,9 @@ export async function PATCH(request: Request) {
               ? undefined
               : Boolean(active),
           updated_at: new Date().toISOString(),
+          ...(moderation_status !== undefined && {
+    moderation_status,
+  }),
         })
         .eq("id", id);
 

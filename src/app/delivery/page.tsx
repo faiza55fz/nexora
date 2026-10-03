@@ -935,39 +935,83 @@ export default function DeliveryPage() {
     );
   }
 
-  function recordCompletedEarning(
-    order: DeliveryOrder,
-  ) {
-    const existing = getSavedEarnings();
+ async function recordCompletedEarning(
+  order: DeliveryOrder,
+) {
+  const partnerId = currentMember?.id;
 
-    if (
-      existing.some(
-        (earning) => earning.orderId === order.id,
-      )
-    ) {
-      setEarnings(existing);
-      return;
-    }
-
-    const earning: DeliveryEarning = {
-      id: `${order.id}-${Date.now()}`,
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      partnerId: currentMember?.id ?? "",
-      partnerName:
-        currentMember?.name ?? "Delivery Partner",
-      amount: DELIVERY_EARNING_AMOUNT,
-      earnedAt: new Date().toISOString(),
-    };
-
-    const nextEarnings = [
-      earning,
-      ...existing,
-    ];
-
-    saveEarnings(nextEarnings);
-    setEarnings(nextEarnings);
+  if (!partnerId) {
+    console.error(
+      "Unable to record earning: delivery partner not found.",
+    );
+    return;
   }
+
+  try {
+    const response = await fetch(
+      "/api/delivery/earnings",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          partnerId,
+          orderId: order.id,
+          amount: DELIVERY_EARNING_AMOUNT,
+          baseAmount: DELIVERY_EARNING_AMOUNT,
+          incentiveAmount: 0,
+          tipAmount: 0,
+        }),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error(
+        "Failed to save earning to database:",
+        data?.error,
+      );
+    }
+  } catch (error) {
+    console.error(
+      "Failed to save earning to database:",
+      error,
+    );
+  }
+
+  // Keep the existing local earnings dashboard working.
+  const existing = getSavedEarnings();
+
+  if (
+    existing.some(
+      (earning) => earning.orderId === order.id,
+    )
+  ) {
+    setEarnings(existing);
+    return;
+  }
+
+  const earning: DeliveryEarning = {
+    id: `${order.id}-${Date.now()}`,
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    partnerId,
+    partnerName:
+      currentMember?.name ?? "Delivery Partner",
+    amount: DELIVERY_EARNING_AMOUNT,
+    earnedAt: new Date().toISOString(),
+  };
+
+  const nextEarnings = [
+    earning,
+    ...existing,
+  ];
+
+  saveEarnings(nextEarnings);
+  setEarnings(nextEarnings);
+}
 
   async function updateDeliveryStage(
     nextStage: DeliveryStage,
@@ -1051,7 +1095,7 @@ export default function DeliveryPage() {
       }
 
       if (nextStage === "delivered") {
-        recordCompletedEarning(assignedOrder);
+       await recordCompletedEarning(assignedOrder);
 
         delete nextAssignments[orderId];
 
@@ -2609,6 +2653,17 @@ export default function DeliveryPage() {
                     Your latest completed deliveries.
                   </p>
                 </div>
+                   <button
+      type="button"
+      onClick={() => {
+        window.location.href =
+          "/delivery/earnings";
+      }}
+      className="flex items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-teal-800"
+    >
+      Earnings & Settlement
+      <ChevronRight size={16} />
+    </button>
               </div>
 
               {earnings.length === 0 ? (

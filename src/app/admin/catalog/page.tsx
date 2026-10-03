@@ -13,6 +13,7 @@ import { inr } from "@/lib/format";
 
 type Product = (typeof products)[number] & {
   active?: boolean;
+  moderation_status?: "pending" | "approved" | "rejected";
 };
 
 const emptyProduct: Product = {
@@ -41,6 +42,7 @@ const emptyProduct: Product = {
   moq: 1,
   tiers: [],
   active: true,
+  moderation_status: "pending",
 };
 
 export default function AdminCatalog() {
@@ -53,256 +55,341 @@ export default function AdminCatalog() {
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
 
-useEffect(() => {
-  async function loadProducts() {
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const response = await fetch("/api/products?admin=true", {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(
+            result.error || "Failed to load products",
+          );
+        }
+
+        const mappedProducts: Product[] = result.products.map(
+          (product: any) => {
+            const variant = product.product_variants?.[0];
+            const inventory = variant?.inventory;
+
+            return {
+              ...emptyProduct,
+              id: product.id,
+              name: product.name,
+              brand: product.brand || "",
+              category:
+                product.categories?.name?.toLowerCase() ||
+                "fruits",
+              subcategory: product.subcategory || "",
+              description: product.description || "",
+              active: product.active !== false,
+              moderation_status:
+                product.moderation_status || "approved",
+              rating: Number(product.rating || 0),
+              reviewCount: Number(
+                product.review_count || 0,
+              ),
+
+              mrp: Number(variant?.mrp || 0),
+              price: Number(
+                variant?.selling_price || 0,
+              ),
+              gstRate: Number(
+                variant?.gst_rate || 0,
+              ),
+
+              stock: Number(
+                inventory?.stock_quantity || 0,
+              ),
+
+              specs: {
+                Unit: variant?.variant_name || "",
+              },
+
+              image:
+                product.product_images?.find(
+                  (image: any) => image.is_primary,
+                )?.image_url || "",
+
+              images:
+                product.product_images?.map(
+                  (image: any) => image.image_url,
+                ) || [],
+            };
+          },
+        );
+
+        setCatalogProducts(mappedProducts);
+      } catch (error) {
+        console.error(
+          "Failed to load products:",
+          error,
+        );
+      }
+    }
+
+    loadProducts();
+  }, []);
+
+  async function saveProduct(updatedProduct: Product) {
     try {
       const response = await fetch("/api/products", {
-        cache: "no-store",
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: updatedProduct.id,
+          name: updatedProduct.name,
+          brand: updatedProduct.brand,
+          category: updatedProduct.category,
+          subcategory: updatedProduct.subcategory,
+          description: updatedProduct.description,
+          price: updatedProduct.price,
+          mrp: updatedProduct.mrp,
+          gstRate: updatedProduct.gstRate,
+          stock: updatedProduct.stock,
+          unit: updatedProduct.specs?.Unit || "",
+          active: updatedProduct.active !== false,
+        }),
       });
 
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to load products");
+        throw new Error(
+          result.message ||
+            result.error ||
+            "Failed to update product",
+        );
       }
 
-      const mappedProducts: Product[] = result.products.map(
-        (product: any) => {
-          const variant = product.product_variants?.[0];
-          const inventory = variant?.inventory;
+      setCatalogProducts((current) =>
+        current.map((product) =>
+          product.id === updatedProduct.id
+            ? updatedProduct
+            : product,
+        ),
+      );
 
-          return {
-            ...emptyProduct,
+      const savedProducts = catalogProducts.map(
+        (product) =>
+          product.id === updatedProduct.id
+            ? updatedProduct
+            : product,
+      );
+
+      localStorage.setItem(
+        "nexora-admin-products",
+        JSON.stringify(savedProducts),
+      );
+
+      setSelectedProduct(updatedProduct);
+      setEditing(false);
+    } catch (error) {
+      console.error(
+        "Failed to save product:",
+        error,
+      );
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to save product",
+      );
+    }
+  }
+
+  async function toggleProductStatus(
+    productId: string,
+  ) {
+    const currentProduct = catalogProducts.find(
+      (product) => product.id === productId,
+    );
+
+    if (!currentProduct) return;
+
+    const nextStatus =
+      currentProduct.active === false;
+
+    try {
+      const response = await fetch("/api/products", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: productId,
+          active: nextStatus,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message ||
+            result.error ||
+            "Failed to update product status",
+        );
+      }
+
+      const updatedProduct: Product = {
+        ...currentProduct,
+        active: nextStatus,
+      };
+
+      setCatalogProducts((current) =>
+        current.map((product) =>
+          product.id === productId
+            ? updatedProduct
+            : product,
+        ),
+      );
+
+      setSelectedProduct(updatedProduct);
+    } catch (error) {
+      console.error(
+        "Failed to update product status:",
+        error,
+      );
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to update product status",
+      );
+    }
+  }
+
+  const updateModerationStatus = async (
+    product: Product,
+    moderation_status:
+      | "approved"
+      | "rejected",
+  ) => {
+    try {
+      const response = await fetch(
+        "/api/products",
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
             id: product.id,
-            name: product.name,
-            brand: product.brand || "",
-            category:
-              product.categories?.name?.toLowerCase() || "fruits",
-            subcategory: product.subcategory || "",
-            description: product.description || "",
-            active: product.active !== false,
-            rating: Number(product.rating || 0),
-            reviewCount: Number(product.review_count || 0),
-
-            mrp: Number(variant?.mrp || 0),
-            price: Number(variant?.selling_price || 0),
-            gstRate: Number(variant?.gst_rate || 0),
-
-            stock: Number(inventory?.stock_quantity || 0),
-
-            specs: {
-              Unit: variant?.variant_name || "",
-            },
-
-            image: product.product_images?.find(
-              (image: any) => image.is_primary,
-            )?.image_url || "",
-
-            images:
-              product.product_images?.map(
-                (image: any) => image.image_url,
-              ) || [],
-          };
+            moderation_status,
+          }),
         },
       );
 
-      setCatalogProducts(mappedProducts);
-    } catch (error) {
-      console.error("Failed to load products:", error);
-    }
-  }
+      const data = await response.json();
 
-  loadProducts();
-}, []);
-
-
-async function saveProduct(updatedProduct: Product) {
-  try {
-    const response = await fetch("/api/products", {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id: updatedProduct.id,
-        name: updatedProduct.name,
-        brand: updatedProduct.brand,
-        category: updatedProduct.category,
-        subcategory: updatedProduct.subcategory,
-        description: updatedProduct.description,
-        price: updatedProduct.price,
-        mrp: updatedProduct.mrp,
-        gstRate: updatedProduct.gstRate,
-        stock: updatedProduct.stock,
-        unit: updatedProduct.specs?.Unit || "",
-        active: updatedProduct.active !== false,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok || !result.success) {
-      throw new Error(
-        result.message || result.error || "Failed to update product",
-      );
-    }
-
-    // Update Admin UI
-    setCatalogProducts((current) =>
-      current.map((product) =>
-        product.id === updatedProduct.id
-          ? updatedProduct
-          : product,
-      ),
-    );
-
-    // Keep the current customer-side localStorage data
-    // in sync until customer products are fully moved to Supabase.
-    const savedProducts = catalogProducts.map((product) =>
-      product.id === updatedProduct.id
-        ? updatedProduct
-        : product,
-    );
-
-    localStorage.setItem(
-      "nexora-admin-products",
-      JSON.stringify(savedProducts),
-    );
-
-    setSelectedProduct(updatedProduct);
-    setEditing(false);
-  } catch (error) {
-    console.error("Failed to save product:", error);
-
-    alert(
-      error instanceof Error
-        ? error.message
-        : "Failed to save product",
-    );
-  }
-}
-
-  /*
-   * Toggle active/inactive status.
-   * The catalog state is the single source of truth.
-   */
-async function toggleProductStatus(productId: string) {
-  const currentProduct = catalogProducts.find(
-    (product) => product.id === productId,
+      if (!response.ok || !data.success) {
+  console.log("Moderation API error:", data);
+  throw new Error(
+    data.error ||
+    data.message ||
+    "Failed to update moderation status",
   );
-
-  if (!currentProduct) return;
-
-  const nextStatus = currentProduct.active === false;
-
-  try {
-    const response = await fetch("/api/products", {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id: productId,
-        active: nextStatus,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok || !result.success) {
-      throw new Error(
-        result.message ||
-          result.error ||
-          "Failed to update product status",
-      );
-    }
-
-    const updatedProduct: Product = {
-      ...currentProduct,
-      active: nextStatus,
-    };
-
-    setCatalogProducts((current) =>
-      current.map((product) =>
-        product.id === productId
-          ? updatedProduct
-          : product,
-      ),
-    );
-
-    setSelectedProduct(updatedProduct);
-  } catch (error) {
-    console.error(
-      "Failed to update product status:",
-      error,
-    );
-
-    alert(
-      error instanceof Error
-        ? error.message
-        : "Failed to update product status",
-    );
-  }
 }
 
-async function addProduct(newProduct: Product) {
-  try {
-    const response = await fetch("/api/products", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id: newProduct.id,
-        name: newProduct.name,
-        brand: newProduct.brand,
-        category: newProduct.category,
-        subcategory: newProduct.subcategory,
-        description: newProduct.description,
-        price: newProduct.price,
-        mrp: newProduct.mrp,
-        gstRate: newProduct.gstRate,
-        stock: newProduct.stock,
-        unit: newProduct.specs?.Unit || "",
-        image: newProduct.image || "",
+      const updatedProduct: Product = {
+        ...product,
+        moderation_status,
+      };
+
+      setCatalogProducts((current) =>
+        current.map((item) =>
+          item.id === product.id
+            ? updatedProduct
+            : item,
+        ),
+      );
+
+      setSelectedProduct(updatedProduct);
+    } catch (error) {
+      console.error(
+        "Failed to update moderation status:",
+        error,
+      );
+
+      alert(
+        "Failed to update moderation status",
+      );
+    }
+  };
+
+  async function addProduct(
+    newProduct: Product,
+  ) {
+    try {
+      const response = await fetch(
+        "/api/products",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: newProduct.id,
+            name: newProduct.name,
+            brand: newProduct.brand,
+            category: newProduct.category,
+            subcategory:
+              newProduct.subcategory,
+            description:
+              newProduct.description,
+            price: newProduct.price,
+            mrp: newProduct.mrp,
+            gstRate: newProduct.gstRate,
+            stock: newProduct.stock,
+            unit:
+              newProduct.specs?.Unit || "",
+            image: newProduct.image || "",
+            active: true,
+          }),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message ||
+            result.error ||
+            "Failed to add product",
+        );
+      }
+
+      const addedProduct: Product = {
+        ...newProduct,
         active: true,
-      }),
-    });
+        moderation_status: "pending",
+      };
 
-    const result = await response.json();
+      setCatalogProducts((current) => [
+        ...current,
+        addedProduct,
+      ]);
 
-    if (!response.ok || !result.success) {
-      throw new Error(
-        result.message ||
-          result.error ||
-          "Failed to add product",
+      setAdding(false);
+    } catch (error) {
+      console.error(
+        "Failed to add product:",
+        error,
+      );
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to add product",
       );
     }
-
-    const addedProduct: Product = {
-      ...newProduct,
-      active: true,
-    };
-
-    setCatalogProducts((current) => [
-      ...current,
-      addedProduct,
-    ]);
-
-    setAdding(false);
-  } catch (error) {
-    console.error(
-      "Failed to add product:",
-      error,
-    );
-
-    alert(
-      error instanceof Error
-        ? error.message
-        : "Failed to add product",
-    );
   }
-}
 
   const activeCount = catalogProducts.filter(
     (product) => product.active !== false,
@@ -355,7 +442,8 @@ async function addProduct(newProduct: Product) {
             {
               new Set(
                 catalogProducts.map(
-                  (product) => product.category,
+                  (product) =>
+                    product.category,
                 ),
               ).size
             }
@@ -412,83 +500,113 @@ async function addProduct(newProduct: Product) {
                 </th>
 
                 <th className="p-4 font-semibold">
+                  Moderation
+                </th>
+
+                <th className="p-4 font-semibold">
                   Action
                 </th>
               </tr>
             </thead>
 
             <tbody>
-              {catalogProducts.map((product) => {
-                const isActive =
-                  product.active !== false;
+              {catalogProducts.map(
+                (product) => {
+                  const isActive =
+                    product.active !== false;
 
-                return (
-                  <tr
-                    key={product.id}
-                    className="border-t border-line"
-                  >
-                    <td className="p-4">
-                      <div>
-                        <p className="font-medium">
-                          {product.name}
-                        </p>
+                  return (
+                    <tr
+                      key={product.id}
+                      className="border-t border-line"
+                    >
+                      <td className="p-4">
+                        <div>
+                          <p className="font-medium">
+                            {product.name}
+                          </p>
 
-                        <p className="mt-1 text-xs text-muted">
-                          {product.brand}
-                        </p>
-                      </div>
-                    </td>
+                          <p className="mt-1 text-xs text-muted">
+                            {product.brand}
+                          </p>
+                        </div>
+                      </td>
 
-                    <td className="p-4 text-muted">
-                      {product.category}
-                    </td>
+                      <td className="p-4 text-muted">
+                        {product.category}
+                      </td>
 
-                    <td className="p-4 font-semibold">
-                      {inr(product.price)}
-                    </td>
+                      <td className="p-4 font-semibold">
+                        {inr(product.price)}
+                      </td>
 
-                    <td className="p-4">
-                      <span
-                        className={
-                          product.stock <= 10
-                            ? "font-semibold text-red-600"
-                            : "font-medium"
-                        }
-                      >
-                        {product.stock}
-                      </span>
-                    </td>
+                      <td className="p-4">
+                        <span
+                          className={
+                            product.stock <= 10
+                              ? "font-semibold text-red-600"
+                              : "font-medium"
+                          }
+                        >
+                          {product.stock}
+                        </span>
+                      </td>
 
-                    <td className="p-4">
-                      <span
-                        className={
-                          isActive
-                            ? "rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand"
-                            : "rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-muted"
-                        }
-                      >
-                        {isActive
-                          ? "Active"
-                          : "Inactive"}
-                      </span>
-                    </td>
+                      <td className="p-4">
+                        <span
+                          className={
+                            isActive
+                              ? "rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand"
+                              : "rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-muted"
+                          }
+                        >
+                          {isActive
+                            ? "Active"
+                            : "Inactive"}
+                        </span>
+                      </td>
 
-                    <td className="p-4">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedProduct(product);
-                          setEditing(false);
-                          setAdding(false);
-                        }}
-                      >
-                        Review
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
+                      <td className="p-4">
+                        <span
+                          className={
+                            product.moderation_status ===
+                            "approved"
+                              ? "rounded-full bg-success-soft px-2.5 py-1 text-xs font-semibold text-success"
+                              : product.moderation_status ===
+                                  "rejected"
+                                ? "rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600"
+                                : "rounded-full bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning"
+                          }
+                        >
+                          {product.moderation_status ===
+                          "approved"
+                            ? "Approved"
+                            : product.moderation_status ===
+                                "rejected"
+                              ? "Rejected"
+                              : "Pending"}
+                        </span>
+                      </td>
+
+                      <td className="p-4">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedProduct(
+                              product,
+                            );
+                            setEditing(false);
+                            setAdding(false);
+                          }}
+                        >
+                          Review
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                },
+              )}
             </tbody>
           </table>
         </div>
@@ -505,7 +623,12 @@ async function addProduct(newProduct: Product) {
           }}
           onEdit={() => setEditing(true)}
           onSave={saveProduct}
-          onToggleStatus={toggleProductStatus}
+          onToggleStatus={
+            toggleProductStatus
+          }
+          onUpdateModeration={
+            updateModerationStatus
+          }
         />
       )}
 
@@ -531,13 +654,22 @@ function ProductModal({
   onEdit,
   onSave,
   onToggleStatus,
+  onUpdateModeration,
 }: {
   product: Product;
   editing: boolean;
   onClose: () => void;
   onEdit: () => void;
   onSave: (product: Product) => void;
-  onToggleStatus: (productId: string) => void;
+  onToggleStatus: (
+    productId: string,
+  ) => void;
+  onUpdateModeration: (
+    product: Product,
+    moderation_status:
+      | "approved"
+      | "rejected",
+  ) => void;
 }) {
   const [form, setForm] =
     useState<Product>(product);
@@ -562,6 +694,9 @@ function ProductModal({
 
   const isActive = form.active !== false;
 
+  const moderationStatus =
+    form.moderation_status || "pending";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
       <Card className="max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6 shadow-2xl">
@@ -578,17 +713,39 @@ function ProductModal({
             </h2>
 
             {!editing && (
-              <span
-                className={
-                  isActive
-                    ? "mt-2 inline-flex rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand"
-                    : "mt-2 inline-flex rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-muted"
-                }
-              >
-                {isActive
-                  ? "Active listing"
-                  : "Inactive listing"}
-              </span>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span
+                  className={
+                    isActive
+                      ? "inline-flex rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand"
+                      : "inline-flex rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-muted"
+                  }
+                >
+                  {isActive
+                    ? "Active listing"
+                    : "Inactive listing"}
+                </span>
+
+                <span
+                  className={
+                    moderationStatus ===
+                    "approved"
+                      ? "inline-flex rounded-full bg-success-soft px-2.5 py-1 text-xs font-semibold text-success"
+                      : moderationStatus ===
+                          "rejected"
+                        ? "inline-flex rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600"
+                        : "inline-flex rounded-full bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning"
+                  }
+                >
+                  {moderationStatus ===
+                  "approved"
+                    ? "Approved"
+                    : moderationStatus ===
+                        "rejected"
+                      ? "Rejected"
+                      : "Pending"}
+                </span>
+              </div>
             )}
           </div>
 
@@ -653,6 +810,43 @@ function ProductModal({
               <p className="mt-1 text-sm">
                 {form.description}
               </p>
+            </div>
+
+            {/* Moderation controls */}
+            <div className="mt-6 rounded-xl border border-line bg-surface-2 p-4">
+              <p className="text-sm font-semibold">
+                Moderation
+              </p>
+
+              <p className="mt-1 text-xs text-muted">
+                Review this product listing and
+                approve or reject it.
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button
+                  onClick={() =>
+                    onUpdateModeration(
+                      product,
+                      "approved",
+                    )
+                  }
+                >
+                  Approve listing
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    onUpdateModeration(
+                      product,
+                      "rejected",
+                    )
+                  }
+                >
+                  Reject listing
+                </Button>
+              </div>
             </div>
 
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -877,7 +1071,9 @@ function AddProductModal({
       id,
       slug,
       active: true,
-      image: form.image || defaultImage,
+      moderation_status: "pending",
+      image:
+        form.image || defaultImage,
       images: [
         form.image || defaultImage,
       ],
