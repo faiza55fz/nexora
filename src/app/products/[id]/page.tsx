@@ -115,7 +115,7 @@ const handleShare = async () => {
 
   const shareData = {
     title: product.name,
-    text: `Check out ${product.name} on Nexora.`,
+    text: `Check out ${product.name} on SundayShop.`,
     url: window.location.href,
   };
 
@@ -184,7 +184,7 @@ useEffect(() => {
 
         id: found.id,
         name: found.name,
-        brand: found.brand || "",
+        brand: "SundayShop",
         category:
           found.categories?.name?.toLowerCase() || "fruits",
         subcategory: found.subcategory || "",
@@ -217,7 +217,7 @@ useEffect(() => {
             : [primaryImage],
 
         sold: 0,
-        sellerId: "nexora",
+        sellerId: "SundayShop",
         location: "",
         tags: [],
         highlights: [],

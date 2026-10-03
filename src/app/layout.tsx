@@ -10,7 +10,7 @@ variable: "--font-jakarta",
 });
 
 export const metadata: Metadata = {
-title: "Nexora — Shop, wholesale & sell across India",
+title: "SundayShop — Shop, wholesale & sell across India",
 description:
 "A unified Indian marketplace for customers, B2B buyers, sellers and admins. GST invoices, UPI and Net terms.",
 };

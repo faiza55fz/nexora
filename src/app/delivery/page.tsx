@@ -497,6 +497,19 @@ export default function DeliveryPage() {
   const [loginError, setLoginError] = useState("");
   const [authMessage, setAuthMessage] = useState("");
 
+  const navigateToCustomer = (address: string) => {
+  if (!address?.trim()) {
+    return;
+  }
+
+  const destination = encodeURIComponent(address.trim());
+
+  window.open(
+    `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
+};
   function normalizePhoneForMatch(value: string) {
     const digits = value.replace(/\D/g, "");
     if (digits.startsWith("91") && digits.length === 12) {
@@ -935,7 +948,11 @@ export default function DeliveryPage() {
     );
   }
 
+<<<<<<< HEAD
  async function recordCompletedEarning(
+=======
+async function recordCompletedEarning(
+>>>>>>> 2c9007af25ef68ab1853397cef3dfd80930ac3fd
   order: DeliveryOrder,
 ) {
   const partnerId = currentMember?.id;
@@ -947,6 +964,37 @@ export default function DeliveryPage() {
     return;
   }
 
+<<<<<<< HEAD
+=======
+  let tipAmount = 0;
+
+  try {
+    const tipResponse = await fetch(
+      `/api/delivery/tip?orderId=${encodeURIComponent(
+        order.id,
+      )}&partnerId=${encodeURIComponent(
+        partnerId,
+      )}`,
+      {
+        cache: "no-store",
+      },
+    );
+
+    if (tipResponse.ok) {
+      const tipData = await tipResponse.json();
+
+      tipAmount = Number(
+        tipData?.tip?.amount ?? 0,
+      );
+    }
+  } catch (error) {
+    console.error(
+      "Failed to load delivery tip:",
+      error,
+    );
+  }
+
+>>>>>>> 2c9007af25ef68ab1853397cef3dfd80930ac3fd
   try {
     const response = await fetch(
       "/api/delivery/earnings",
@@ -958,10 +1006,20 @@ export default function DeliveryPage() {
         body: JSON.stringify({
           partnerId,
           orderId: order.id,
+<<<<<<< HEAD
           amount: DELIVERY_EARNING_AMOUNT,
           baseAmount: DELIVERY_EARNING_AMOUNT,
           incentiveAmount: 0,
           tipAmount: 0,
+=======
+          amount:
+            DELIVERY_EARNING_AMOUNT +
+            tipAmount,
+          baseAmount:
+            DELIVERY_EARNING_AMOUNT,
+          incentiveAmount: 0,
+          tipAmount,
+>>>>>>> 2c9007af25ef68ab1853397cef3dfd80930ac3fd
         }),
       },
     );
@@ -1000,7 +1058,13 @@ export default function DeliveryPage() {
     partnerId,
     partnerName:
       currentMember?.name ?? "Delivery Partner",
+<<<<<<< HEAD
     amount: DELIVERY_EARNING_AMOUNT,
+=======
+    amount:
+      DELIVERY_EARNING_AMOUNT +
+      tipAmount,
+>>>>>>> 2c9007af25ef68ab1853397cef3dfd80930ac3fd
     earnedAt: new Date().toISOString(),
   };
 
@@ -1041,6 +1105,7 @@ export default function DeliveryPage() {
           body: JSON.stringify({
             orderId,
             status: supabaseStatus,
+            deliveryPartnerId: currentMember.id,
           }),
         });
 
@@ -1220,7 +1285,9 @@ export default function DeliveryPage() {
   }
 
   const now = new Date();
-
+const todayCompletedCount = earnings.filter((earning) =>
+  isSameDay(new Date(earning.earnedAt), new Date()),
+).length;
   const todayEarnings = earnings
     .filter((earning) =>
       isSameDay(
@@ -1233,6 +1300,7 @@ export default function DeliveryPage() {
         sum + earning.amount,
       0,
     );
+    
 
   const weekEarnings = earnings
     .filter((earning) =>
@@ -1323,26 +1391,82 @@ export default function DeliveryPage() {
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-slate-50">
-        <header className="border-b border-border bg-white">
-          <div className="mx-auto flex max-w-6xl items-center px-5 py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-700 text-white">
-                <Truck size={21} />
-              </div>
+        <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+  <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-5">
+    
+    {/* Brand / Partner greeting */}
+    <button
+      type="button"
+      onClick={() => setActiveTab("home")}
+      className="flex min-w-0 items-center gap-3 text-left"
+    >
+      <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-700 text-white shadow-sm">
+        <Truck size={20} />
 
-              <div>
-                <p className="text-xl font-semibold tracking-tight text-ink">
-                  NEXORA
-                </p>
+        <span
+          className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${
+            currentMember?.status === "offline"
+              ? "bg-slate-400"
+              : "bg-emerald-500"
+          }`}
+        />
+      </div>
 
-                <p className="text-xs text-muted">
-                  Delivery Partner
-                </p>
-              </div>
-            </div>
-          </div>
-        </header>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-ink sm:text-base">
+          {currentMember?.name
+            ? `Hi, ${currentMember.name.split(" ")[0]}`
+            : "Delivery Partner"}
+        </p>
 
+        <div className="mt-0.5 flex items-center gap-1.5">
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              currentMember?.status === "offline"
+                ? "bg-slate-400"
+                : "bg-emerald-500"
+            }`}
+          />
+
+          <p className="text-xs text-muted">
+            {statusText}
+          </p>
+        </div>
+      </div>
+    </button>
+
+    {/* Header actions */}
+    <div className="flex items-center gap-1.5">
+      {members.length > 1 && (
+        <select
+          value={selectedMemberId}
+          onChange={(event) => setSelectedMemberId(event.target.value)}
+          className="hidden rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-ink outline-none transition focus:border-teal-500 sm:block"
+        >
+          {members.map((member) => (
+            <option key={member.id} value={member.id}>
+              {member.name}
+            </option>
+          ))}
+        </select>
+      )}
+
+      <NotificationBell
+        recipientId={currentMember?.id ?? ""}
+        recipientType="delivery_partner"
+      />
+
+      <button
+        type="button"
+        onClick={() => setActiveTab("profile")}
+        className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-ink transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100 hover:shadow-sm active:scale-95"
+        aria-label="Open profile"
+      >
+        <UserRound size={18} />
+      </button>
+    </div>
+  </div>
+</header>
         <main className="mx-auto flex min-h-[calc(100vh-80px)] max-w-md items-center px-5 py-10">
           <section className="w-full rounded-3xl border border-border bg-white p-7 shadow-sm">
             <div className="text-center">
@@ -1607,7 +1731,7 @@ export default function DeliveryPage() {
 
             <div>
               <p className="text-xl font-semibold tracking-tight text-ink">
-                NEXORA
+                SundayShop
               </p>
 
               <p className="text-xs text-muted">
@@ -1705,51 +1829,74 @@ export default function DeliveryPage() {
             </section>
 
             {/* Earnings snapshot */}
-            <section className="grid gap-4 md:grid-cols-3">
-              <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-                <p className="text-sm text-muted">
-                  Today's earnings
-                </p>
+            <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+  <div className="group rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+    <div className="flex items-start justify-between">
+      <div>
+        <p className="text-xs font-medium text-muted">
+          Today's earnings
+        </p>
 
-                <p className="mt-2 text-3xl font-semibold tracking-tight text-ink">
-                  {formatCurrency(
-                    todayEarnings,
-                  )}
-                </p>
+        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
+          {formatCurrency(todayEarnings)}
+        </p>
+      </div>
 
-                <p className="mt-1 text-xs text-muted">
-                  Completed delivery earnings
-                </p>
-              </div>
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+        <Wallet size={19} />
+      </div>
+    </div>
 
-              <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-                <p className="text-sm text-muted">
-                  Booked blocks
-                </p>
+    <p className="mt-3 text-xs text-muted">
+      {todayCompletedCount} completed{" "}
+      {todayCompletedCount === 1 ? "delivery" : "deliveries"}
+    </p>
+  </div>
 
-                <p className="mt-2 text-3xl font-semibold tracking-tight text-ink">
-                  {currentBookings.length}
-                </p>
+  <div className="group rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+    <div className="flex items-start justify-between">
+      <div>
+        <p className="text-xs font-medium text-muted">
+          Booked blocks
+        </p>
 
-                <p className="mt-1 text-xs text-muted">
-                  Upcoming scheduled blocks
-                </p>
-              </div>
+        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
+          {currentBookings.length}
+        </p>
+      </div>
 
-              <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-                <p className="text-sm text-muted">
-                  Available now
-                </p>
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+        <CalendarDays size={19} />
+      </div>
+    </div>
 
-                <p className="mt-2 text-3xl font-semibold tracking-tight text-ink">
-                  {DELIVERY_BLOCKS.length}
-                </p>
+    <p className="mt-3 text-xs text-muted">
+      Upcoming delivery slots
+    </p>
+  </div>
 
-                <p className="mt-1 text-xs text-muted">
-                  Delivery blocks
-                </p>
-              </div>
-            </section>
+  <div className="group rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+    <div className="flex items-start justify-between">
+      <div>
+        <p className="text-xs font-medium text-muted">
+          Available now
+        </p>
+
+        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
+          {DELIVERY_BLOCKS.length}
+        </p>
+      </div>
+
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+        <Truck size={19} />
+      </div>
+    </div>
+
+    <p className="mt-3 text-xs text-muted">
+      Delivery blocks available
+    </p>
+  </div>
+</section>
 
             {/* Instant blocks */}
             <section className="rounded-3xl border border-border bg-white p-6 shadow-sm">
@@ -1856,334 +2003,449 @@ export default function DeliveryPage() {
             </section>
 
             {/* Active delivery */}
-            {isLoadingOrders ? (
-              <section className="rounded-3xl border border-border bg-white p-10 text-center shadow-sm">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-teal-700" />
+{isLoadingOrders ? (
+  <section className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+    <div className="mx-auto h-9 w-9 animate-spin rounded-full border-[3px] border-slate-200 border-t-teal-700" />
 
-                <p className="mt-4 text-sm text-muted">
-                  Loading delivery orders...
-                </p>
-              </section>
-            ) : assignedOrder ? (
-              <section className="space-y-5">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-teal-700">
-                      Active delivery
-                    </p>
+    <p className="mt-4 text-sm font-medium text-slate-600">
+      Loading delivery orders...
+    </p>
+  </section>
+) : assignedOrder ? (
+  <section className="space-y-5">
+    {/* Delivery header */}
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <div className="mb-2 flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
 
-                    <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
-                      Order #
-                      {assignedOrder.orderNumber}
-                    </h1>
-                  </div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-teal-700">
+            Active delivery
+          </p>
+        </div>
 
-                  <span className="inline-flex w-fit items-center gap-2 rounded-full bg-teal-50 px-4 py-2 text-sm font-medium text-teal-800">
-                    <Clock3 size={15} />
-                    {stageLabel(currentStage)}
-                  </span>
-                </div>
+        <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+          Order #{assignedOrder.orderNumber}
+        </h1>
 
-                {/* Customer */}
-                <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                      <UserRound size={19} />
-                    </div>
+        <p className="mt-1 text-sm text-muted">
+          Complete this delivery to earn ₹
+          {DELIVERY_EARNING_AMOUNT}
+          {assignedOrder.customerName
+            ? ` + applicable tip`
+            : ""}
+        </p>
+      </div>
 
-                    <div>
-                      <p className="text-sm text-muted">
-                        Customer
-                      </p>
+      <span className="inline-flex w-fit items-center gap-2 rounded-full bg-teal-50 px-4 py-2.5 text-sm font-semibold text-teal-800 ring-1 ring-teal-100">
+        <Clock3 size={15} />
+        {stageLabel(currentStage)}
+      </span>
+    </div>
 
-                      <p className="font-semibold text-ink">
-                        {assignedOrder.customerName}
-                      </p>
-                    </div>
-                  </div>
+    {/* Delivery progress */}
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-ink">
+          Delivery progress
+        </p>
 
-                  <div className="mt-5 grid gap-4 md:grid-cols-2">
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <div className="flex items-start gap-3">
-                        <MapPin
-                          size={18}
-                          className="mt-0.5 shrink-0 text-teal-700"
-                        />
+        <p className="text-xs font-medium text-muted">
+          {currentStage === "assigned"
+            ? "1 of 3"
+            : currentStage === "out-for-delivery"
+              ? "2 of 3"
+              : currentStage === "near-customer"
+                ? "3 of 3"
+                : "Completed"}
+        </p>
+      </div>
 
-                        <div>
-                          <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                            Delivery address
-                          </p>
+      <div className="mt-5 flex items-center">
+        <div className="flex items-center">
+          <div
+            className={`flex h-9 w-9 items-center justify-center rounded-full ${
+              currentStage === "assigned"
+                ? "bg-teal-700 text-white"
+                : "bg-emerald-100 text-emerald-700"
+            }`}
+          >
+            <Package size={16} />
+          </div>
 
-                          <p className="mt-1 text-sm leading-6 text-ink">
-                            {assignedOrder.address}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+          <div
+            className={`h-1 w-12 sm:w-20 ${
+              currentStage === "assigned"
+                ? "bg-slate-200"
+                : "bg-emerald-500"
+            }`}
+          />
+        </div>
 
-                    <div className="rounded-2xl bg-slate-50 p-4">
-                      <div className="flex items-start gap-3">
-                        <Phone
-                          size={18}
-                          className="mt-0.5 shrink-0 text-teal-700"
-                        />
+        <div className="flex items-center">
+          <div
+            className={`flex h-9 w-9 items-center justify-center rounded-full ${
+              currentStage === "assigned"
+                ? "bg-slate-100 text-slate-400"
+                : currentStage === "out-for-delivery"
+                  ? "bg-teal-700 text-white"
+                  : "bg-emerald-100 text-emerald-700"
+            }`}
+          >
+            <Truck size={16} />
+          </div>
 
-                        <div>
-                          <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                            Customer contact
-                          </p>
+          <div
+            className={`h-1 w-12 sm:w-20 ${
+              currentStage === "assigned" ||
+              currentStage === "out-for-delivery"
+                ? "bg-slate-200"
+                : "bg-emerald-500"
+            }`}
+          />
+        </div>
 
-                          {assignedOrder.customerPhone ? (
-                            <>
-                              <p className="mt-1 text-sm font-medium text-ink">
-                                {
-                                  assignedOrder.customerPhone
-                                }
-                              </p>
+        <div
+          className={`flex h-9 w-9 items-center justify-center rounded-full ${
+            currentStage === "near-customer"
+              ? "bg-teal-700 text-white"
+              : currentStage === "delivered"
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-slate-100 text-slate-400"
+          }`}
+        >
+          <CheckCircle2 size={16} />
+        </div>
+      </div>
 
-                              <a
-                                href={`tel:${assignedOrder.customerPhone}`}
-                                className="mt-2 inline-flex items-center gap-2 rounded-lg bg-teal-700 px-3 py-2 text-xs font-medium text-white transition hover:bg-teal-800"
-                              >
-                                <Phone size={13} />
-                                Call customer
-                              </a>
-                            </>
-                          ) : (
-                            <p className="mt-1 text-sm text-muted">
-                              Customer phone is not
-                              available.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+      <div className="mt-3 flex justify-between text-[11px] font-medium text-muted">
+        <span>Assigned</span>
+        <span>On the way</span>
+        <span>Delivered</span>
+      </div>
+    </div>
 
-                {/* Map */}
-                <div className="overflow-hidden rounded-3xl border border-border bg-white shadow-sm">
-                  <div className="flex h-[300px] items-center justify-center bg-slate-100">
-                    <div className="text-center">
-                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white text-teal-700 shadow-sm">
-                        <MapPin size={27} />
-                      </div>
+    {/* Customer */}
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
+            <UserRound size={19} />
+          </div>
 
-                      <p className="mt-4 font-semibold text-ink">
-                        Delivery map
-                      </p>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              Customer
+            </p>
 
-                      <p className="mt-1 max-w-sm text-sm text-muted">
-                        Live GPS tracking will be
-                        connected after the core
-                        delivery workflow is stable.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+            <p className="mt-0.5 font-semibold text-ink">
+              {assignedOrder.customerName}
+            </p>
+          </div>
+        </div>
 
-                {/* Order details */}
-                <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                      <Package size={19} />
-                    </div>
+        {assignedOrder.customerPhone && (
+          <a
+            href={`tel:${assignedOrder.customerPhone}`}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-teal-700 text-white transition-all duration-200 hover:bg-teal-800 hover:shadow-md active:scale-95"
+            aria-label="Call customer"
+          >
+            <Phone size={18} />
+          </a>
+        )}
+      </div>
 
-                    <div>
-                      <p className="text-sm text-muted">
-                        Order details
-                      </p>
+      <div className="mt-5 rounded-2xl bg-slate-50 p-4">
+        <div className="flex items-start gap-3">
+          <MapPin
+            size={19}
+            className="mt-0.5 shrink-0 text-teal-700"
+          />
 
-                      <p className="font-semibold text-ink">
-                        {assignedOrder.items.length}{" "}
-                        item
-                        {assignedOrder.items.length !==
-                        1
-                          ? "s"
-                          : ""}
-                      </p>
-                    </div>
-                  </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Delivery address
+            </p>
 
-                  <div className="mt-5 divide-y divide-border">
-                    {assignedOrder.items.map(
-                      (item) => (
-                        <div
-                          key={item.productId}
-                          className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
-                        >
-                          <div>
-                            <p className="text-sm font-medium text-ink">
-                              {item.productName}
-                            </p>
+            <p className="mt-1 text-sm leading-6 text-ink">
+              {assignedOrder.address}
+            </p>
+          </div>
+        </div>
+      </div>
 
-                            <p className="mt-1 text-xs text-muted">
-                              Qty: {item.qty}
-                            </p>
-                          </div>
+      {assignedOrder.customerPhone && (
+        <p className="mt-3 text-xs text-muted">
+          Customer: {assignedOrder.customerPhone}
+        </p>
+      )}
+    </div>
 
-                          <p className="text-sm font-medium text-ink">
-                            ₹
-                            {(
-                              item.price *
-                              item.qty
-                            ).toLocaleString(
-                              "en-IN",
-                            )}
-                          </p>
-                        </div>
-                      ),
-                    )}
-                  </div>
+    {/* Map */}
+   {/* Navigation */}
+<div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+  <div className="relative overflow-hidden bg-gradient-to-br from-teal-50 via-white to-slate-100 p-6 sm:p-8">
+    <div className="absolute inset-0 opacity-30">
+      <div className="absolute left-0 top-1/2 h-px w-full rotate-6 bg-slate-300" />
+      <div className="absolute left-1/4 top-0 h-full w-px -rotate-12 bg-slate-300" />
+      <div className="absolute right-1/4 top-0 h-full w-px rotate-12 bg-slate-300" />
+    </div>
 
-                  <div className="mt-5 flex items-center justify-between border-t border-border pt-5">
-                    <div>
-                      <p className="text-sm text-muted">
-                        Payment
-                      </p>
+    <div className="relative">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-700 text-white shadow-sm">
+            <MapPin size={25} />
+          </div>
 
-                      <p className="mt-1 text-sm font-medium text-ink">
-                        {assignedOrder.payment}
-                      </p>
-                    </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
+              Customer location
+            </p>
 
-                    <div className="text-right">
-                      <p className="text-sm text-muted">
-                        Total
-                      </p>
+            <h2 className="mt-1 text-lg font-bold text-ink">
+              Navigate to customer
+            </h2>
 
-                      <p className="mt-1 text-xl font-semibold text-ink">
-                        ₹
-                        {assignedOrder.total.toLocaleString(
-                          "en-IN",
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+            <p className="mt-1 max-w-lg text-sm leading-5 text-muted">
+              Open turn-by-turn directions to the
+              customer's delivery address.
+            </p>
+          </div>
+        </div>
 
-                {/* Delivery actions */}
-                <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-                  {currentStage === "assigned" ? (
-                    <button
-                      type="button"
-                      disabled={isUpdating}
-                      onClick={() =>
-                        updateDeliveryStage(
-                          "out-for-delivery",
-                        )
-                      }
-                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-700 px-5 py-4 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <Truck size={18} />
+        <button
+          type="button"
+          onClick={() =>
+            navigateToCustomer(
+              assignedOrder.address,
+            )
+          }
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-700 px-5 py-4 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-teal-800 hover:shadow-md active:scale-[0.99] sm:w-auto sm:min-w-[210px]"
+        >
+          <MapPin size={18} />
+          Navigate to customer
+        </button>
+      </div>
 
-                      {isUpdating
-                        ? "Updating..."
-                        : "Out for delivery"}
-                    </button>
-                  ) : currentStage ===
-                    "out-for-delivery" ? (
-                    <div>
-                      <div className="rounded-2xl bg-amber-50 p-4">
-                        <div className="flex items-start gap-3">
-                          <Truck
-                            size={19}
-                            className="mt-0.5 text-amber-700"
-                          />
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-white/90 p-4 backdrop-blur-sm">
+        <div className="flex items-start gap-3">
+          <MapPin
+            size={18}
+            className="mt-0.5 shrink-0 text-teal-700"
+          />
 
-                          <div>
-                            <p className="font-semibold text-amber-900">
-                              You're out for
-                              delivery
-                            </p>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Destination
+            </p>
 
-                            <p className="mt-1 text-sm leading-5 text-amber-700">
-                              The order is now
-                              marked as out for
-                              delivery.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+            <p className="mt-1 text-sm leading-6 text-ink">
+              {assignedOrder.address}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-                      <button
-                        type="button"
-                        disabled
-                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-slate-50 px-5 py-4 text-sm font-semibold text-slate-400"
-                      >
-                        <MapPin size={18} />
-                        Near customer — GPS
-                        detection coming next
-                      </button>
+    {/* Order details */}
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600">
+            <Package size={19} />
+          </div>
 
-                      <button
-                        type="button"
-                        disabled={isUpdating}
-                        onClick={() =>
-                          updateDeliveryStage(
-                            "delivered",
-                          )
-                        }
-                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <CheckCircle2 size={18} />
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              Order details
+            </p>
 
-                        {isUpdating
-                          ? "Updating..."
-                          : "Mark delivered"}
-                      </button>
-                    </div>
-                  ) : currentStage ===
-                    "near-customer" ? (
-                    <button
-                      type="button"
-                      disabled={isUpdating}
-                      onClick={() =>
-                        updateDeliveryStage(
-                          "delivered",
-                        )
-                      }
-                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-4 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <CheckCircle2 size={18} />
+            <p className="mt-0.5 font-semibold text-ink">
+              {assignedOrder.items.length}{" "}
+              {assignedOrder.items.length === 1
+                ? "item"
+                : "items"}
+            </p>
+          </div>
+        </div>
 
-                      {isUpdating
-                        ? "Updating..."
-                        : "Mark delivered"}
-                    </button>
-                  ) : (
-                    <div className="rounded-2xl bg-emerald-50 p-4 text-center">
-                      <CheckCircle2
-                        size={24}
-                        className="mx-auto text-emerald-600"
-                      />
+        <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+          {assignedOrder.payment}
+        </span>
+      </div>
 
-                      <p className="mt-2 font-semibold text-emerald-800">
-                        Delivery completed
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </section>
-            ) : (
-              <section className="rounded-3xl border border-border bg-white p-10 text-center shadow-sm">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                  <CheckCircle2 size={30} />
-                </div>
+      <div className="mt-5 divide-y divide-slate-100">
+        {assignedOrder.items.map((item) => (
+          <div
+            key={item.productId}
+            className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-ink">
+                {item.productName}
+              </p>
 
-                <h1 className="mt-5 text-2xl font-semibold tracking-tight text-ink">
-                  You're all caught up!
-                </h1>
+              <p className="mt-1 text-xs text-muted">
+                Quantity: {item.qty}
+              </p>
+            </div>
 
-                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">
-                  No active deliveries at the
-                  moment. New orders will be
-                  assigned automatically when
-                  you become eligible.
-                </p>
-              </section>
+            <p className="shrink-0 text-sm font-semibold text-ink">
+              ₹
+              {(item.price * item.qty).toLocaleString(
+                "en-IN",
+              )}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 flex items-end justify-between border-t border-slate-200 pt-5">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
+            Payment
+          </p>
+
+          <p className="mt-1 text-sm font-semibold text-ink">
+            {assignedOrder.payment}
+          </p>
+        </div>
+
+        <div className="text-right">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
+            Total
+          </p>
+
+          <p className="mt-1 text-2xl font-bold tracking-tight text-ink">
+            ₹
+            {assignedOrder.total.toLocaleString(
+              "en-IN",
             )}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    {/* Delivery actions */}
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      {currentStage === "assigned" ? (
+        <button
+          type="button"
+          disabled={isUpdating}
+          onClick={() =>
+            updateDeliveryStage("out-for-delivery")
+          }
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-700 px-5 py-4 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-teal-800 hover:shadow-md active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <Truck size={18} />
+
+          {isUpdating
+            ? "Updating..."
+            : "Start delivery"}
+        </button>
+      ) : currentStage === "out-for-delivery" ? (
+        <div>
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
+            <div className="flex items-start gap-3">
+              <Truck
+                size={19}
+                className="mt-0.5 shrink-0 text-amber-700"
+              />
+
+              <div>
+                <p className="font-semibold text-amber-900">
+                  You're on the way
+                </p>
+
+                <p className="mt-1 text-sm leading-5 text-amber-700">
+                  The customer is waiting for their
+                  delivery.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm font-semibold text-slate-400"
+          >
+            <MapPin size={18} />
+            Near customer — GPS coming next
+          </button>
+
+          <button
+            type="button"
+            disabled={isUpdating}
+            onClick={() =>
+              updateDeliveryStage("delivered")
+            }
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-4 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-md active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <CheckCircle2 size={18} />
+
+            {isUpdating
+              ? "Updating..."
+              : "Mark as delivered"}
+          </button>
+        </div>
+      ) : currentStage === "near-customer" ? (
+        <button
+          type="button"
+          disabled={isUpdating}
+          onClick={() =>
+            updateDeliveryStage("delivered")
+          }
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-4 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-md active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <CheckCircle2 size={18} />
+
+          {isUpdating
+            ? "Updating..."
+            : "Mark as delivered"}
+        </button>
+      ) : (
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+            <CheckCircle2 size={25} />
+          </div>
+
+          <p className="mt-3 font-semibold text-emerald-800">
+            Delivery completed
+          </p>
+
+          <p className="mt-1 text-xs text-emerald-700">
+            Earnings have been recorded.
+          </p>
+        </div>
+      )}
+    </div>
+  </section>
+) : (
+  <section className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+      <CheckCircle2 size={30} />
+    </div>
+
+    <h1 className="mt-5 text-2xl font-bold tracking-tight text-ink">
+      You're all caught up!
+    </h1>
+
+    <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">
+      No active deliveries at the moment. New
+      orders will be assigned automatically when
+      you become eligible.
+    </p>
+
+    <div className="mx-auto mt-5 inline-flex items-center gap-2 rounded-full bg-slate-50 px-4 py-2 text-xs font-medium text-slate-600">
+      <CheckCircle2 size={14} />
+      Ready for your next delivery
+    </div>
+  </section>
+)}
           </>
         ) : activeTab === "blocks" &&
           currentMember ? (
@@ -2240,7 +2502,7 @@ export default function DeliveryPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700">
                             {formatBlockDate(
-                              block.date,
+                            block.date
                             )}
                           </span>
 
@@ -2730,114 +2992,242 @@ export default function DeliveryPage() {
              PROFILE
           ========================== */
           <section className="space-y-6">
-            <div>
-              <p className="text-sm font-medium text-teal-700">
-                Account
-              </p>
+  {/* Profile header */}
+  <div>
+    <p className="text-sm font-medium text-teal-700">
+      Account
+    </p>
 
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
-                Partner profile
-              </h1>
+    <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+      Partner profile
+    </h1>
 
-              <p className="mt-1 text-sm text-muted">
-                Manage your delivery partner account.
-              </p>
-            </div>
+    <p className="mt-1 text-sm text-muted">
+      Manage your delivery partner account and activity.
+    </p>
+  </div>
 
-            <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-                  <UserRound size={25} />
-                </div>
+  {/* Partner identity */}
+  <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <div className="bg-gradient-to-br from-teal-700 to-teal-800 p-6 text-white sm:p-7">
+      <div className="flex items-center gap-4">
+        <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-white ring-1 ring-white/20">
+          <UserRound size={28} />
 
-                <div>
-                  <p className="text-xl font-semibold text-ink">
-                    {currentMember.name}
-                  </p>
+          <span
+            className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-[3px] border-teal-800 ${
+              currentMember.status === "offline"
+                ? "bg-slate-400"
+                : "bg-emerald-400"
+            }`}
+          />
+        </div>
 
-                  <p className="mt-1 text-sm text-muted">
-                    Delivery Partner
-                  </p>
-                </div>
-              </div>
+        <div className="min-w-0">
+          <p className="truncate text-xl font-bold">
+            {currentMember.name}
+          </p>
 
-              <div className="mt-6 divide-y divide-border">
-                <div className="flex items-center justify-between gap-4 py-4">
-                  <div>
-                    <p className="text-xs text-muted">
-                      Registered phone
-                    </p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <span
+              className={`h-2 w-2 rounded-full ${
+                currentMember.status === "offline"
+                  ? "bg-slate-300"
+                  : "bg-emerald-400"
+              }`}
+            />
 
-                    <p className="mt-1 text-sm font-medium text-ink">
-                      {currentMember.phone ||
-                        "Not provided"}
-                    </p>
-                  </div>
+            <p className="text-sm text-teal-50">
+              {statusText}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
 
-                  <Phone
-                    size={18}
-                    className="text-muted"
-                  />
-                </div>
+    {/* Performance snapshot */}
+    <div className="grid grid-cols-3 divide-x divide-slate-200 border-t border-slate-200">
+      <div className="p-4 text-center">
+        <p className="text-lg font-bold text-ink">
+          {todayCompletedCount}
+        </p>
+        <p className="mt-1 text-[11px] text-muted">
+          Today
+        </p>
+      </div>
 
-                <div className="flex items-center justify-between gap-4 py-4">
-                  <div>
-                    <p className="text-xs text-muted">
-                      Service area
-                    </p>
+      <div className="p-4 text-center">
+        <p className="text-lg font-bold text-ink">
+          {earnings.length}
+        </p>
+        <p className="mt-1 text-[11px] text-muted">
+          Deliveries
+        </p>
+      </div>
 
-                    <p className="mt-1 text-sm font-medium text-ink">
-                      {currentMember.area ||
-                        "Assigned delivery area"}
-                    </p>
-                  </div>
+      <div className="p-4 text-center">
+        <p className="text-lg font-bold text-ink">
+          {formatCurrency(monthEarnings)}
+        </p>
+        <p className="mt-1 text-[11px] text-muted">
+          This month
+        </p>
+      </div>
+    </div>
+  </div>
 
-                  <MapPin
-                    size={18}
-                    className="text-muted"
-                  />
-                </div>
+  {/* Account information */}
+  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+    <div className="mb-2">
+      <h2 className="text-lg font-semibold text-ink">
+        Account information
+      </h2>
 
-                <div className="flex items-center justify-between gap-4 py-4">
-                  <div>
-                    <p className="text-xs text-muted">
-                      Account status
-                    </p>
+      <p className="mt-1 text-sm text-muted">
+        Your registered delivery partner details.
+      </p>
+    </div>
 
-                    <p className="mt-1 text-sm font-medium text-ink">
-                      {statusText}
-                    </p>
-                  </div>
+    <div className="mt-4 divide-y divide-slate-100">
+      {/* Phone */}
+      <div className="flex items-center gap-4 py-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+          <Phone size={18} />
+        </div>
 
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-medium ${statusClass}`}
-                  >
-                    {statusText}
-                  </span>
-                </div>
-              </div>
-            </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-muted">
+            Registered phone
+          </p>
 
-            <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-ink">
-                Partner access
-              </h2>
+          <p className="mt-1 truncate text-sm font-semibold text-ink">
+            {currentMember.phone || "Not provided"}
+          </p>
+        </div>
+      </div>
 
-              <p className="mt-1 text-sm text-muted">
-                Sign out of this delivery partner
-                session on this device.
-              </p>
-              
+      {/* Service area */}
+      <div className="flex items-center gap-4 py-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+          <MapPin size={18} />
+        </div>
 
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="mt-5 rounded-xl border border-border px-4 py-3 text-sm font-semibold text-ink transition hover:bg-slate-50"
-              >
-                Sign out
-              </button>
-            </div>
-          </section>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-muted">
+            Service area
+          </p>
+
+          <p className="mt-1 truncate text-sm font-semibold text-ink">
+            {currentMember.area ||
+              "Assigned delivery area"}
+          </p>
+        </div>
+      </div>
+
+      {/* Account status */}
+      <div className="flex items-center gap-4 py-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+          <CheckCircle2 size={18} />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-muted">
+            Account status
+          </p>
+
+          <p className="mt-1 text-sm font-semibold text-ink">
+            {statusText}
+          </p>
+        </div>
+
+        <span
+          className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${statusClass}`}
+        >
+          {statusText}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  {/* Earnings summary */}
+  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <h2 className="text-lg font-semibold text-ink">
+          Earnings overview
+        </h2>
+
+        <p className="mt-1 text-sm text-muted">
+          Your delivery earnings at a glance.
+        </p>
+      </div>
+
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+        <Wallet size={20} />
+      </div>
+    </div>
+
+    <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="rounded-2xl bg-slate-50 p-4">
+        <p className="text-xs text-muted">
+          Today
+        </p>
+
+        <p className="mt-1 text-lg font-bold text-ink">
+          {formatCurrency(todayEarnings)}
+        </p>
+      </div>
+
+      <div className="rounded-2xl bg-slate-50 p-4">
+        <p className="text-xs text-muted">
+          This week
+        </p>
+
+        <p className="mt-1 text-lg font-bold text-ink">
+          {formatCurrency(weekEarnings)}
+        </p>
+      </div>
+
+      <div className="rounded-2xl bg-slate-50 p-4">
+        <p className="text-xs text-muted">
+          This month
+        </p>
+
+        <p className="mt-1 text-lg font-bold text-ink">
+          {formatCurrency(monthEarnings)}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {/* Partner access */}
+  <div className="rounded-3xl border border-red-100 bg-white p-5 shadow-sm sm:p-6">
+    <div className="flex items-start gap-4">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
+        <UserRound size={19} />
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-ink">
+          Partner access
+        </h2>
+
+        <p className="mt-1 text-sm leading-6 text-muted">
+          Sign out of your delivery partner session
+          on this device.
+        </p>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      onClick={handleLogout}
+      className="mt-5 w-full rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-50 hover:shadow-sm active:scale-[0.98] sm:w-auto"
+    >
+      Sign out
+    </button>
+  </div>
+</section>
         ) : (
           <section className="rounded-3xl border border-border bg-white p-10 text-center shadow-sm">
             <Truck
@@ -3068,99 +3458,159 @@ export default function DeliveryPage() {
       {/* =========================
           BOTTOM NAVIGATION
       ========================== */}
-      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-white">
-        <div className="mx-auto grid max-w-2xl grid-cols-5">
-          <button
-            type="button"
-            onClick={() =>
-              setActiveTab("home")
-            }
-            className={`flex flex-col items-center gap-1 px-2 py-3 ${
-              activeTab === "home"
-                ? "text-teal-700"
-                : "text-muted"
-            }`}
-          >
-            <Home size={20} />
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+  <div className="mx-auto grid max-w-2xl grid-cols-5 px-2 sm:px-4">
+    <button
+      type="button"
+      onClick={() => setActiveTab("home")}
+      className={`group flex min-h-[64px] flex-col items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 ${
+        activeTab === "home"
+          ? "text-teal-700"
+          : "text-slate-400 hover:text-slate-600"
+      }`}
+    >
+      <div
+        className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 ${
+          activeTab === "home"
+            ? "bg-teal-50 shadow-sm"
+            : "bg-transparent group-hover:bg-slate-50"
+        }`}
+      >
+        <Home size={19} />
+      </div>
 
-            <span className="text-xs font-medium">
-              Home
-            </span>
-          </button>
+      <span
+        className={`text-[11px] ${
+          activeTab === "home"
+            ? "font-bold"
+            : "font-medium"
+        }`}
+      >
+        Home
+      </span>
+    </button>
 
-          <button
-            type="button"
-            onClick={() =>
-              setActiveTab("blocks")
-            }
-            className={`flex flex-col items-center gap-1 px-2 py-3 ${
-              activeTab === "blocks"
-                ? "text-teal-700"
-                : "text-muted"
-            }`}
-          >
-            <Zap size={20} />
+    <button
+      type="button"
+      onClick={() => setActiveTab("blocks")}
+      className={`group flex min-h-[64px] flex-col items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 ${
+        activeTab === "blocks"
+          ? "text-teal-700"
+          : "text-slate-400 hover:text-slate-600"
+      }`}
+    >
+      <div
+        className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 ${
+          activeTab === "blocks"
+            ? "bg-teal-50 shadow-sm"
+            : "bg-transparent group-hover:bg-slate-50"
+        }`}
+      >
+        <Zap size={19} />
+      </div>
 
-            <span className="text-xs font-medium">
-              Blocks
-            </span>
-          </button>
+      <span
+        className={`text-[11px] ${
+          activeTab === "blocks"
+            ? "font-bold"
+            : "font-medium"
+        }`}
+      >
+        Blocks
+      </span>
+    </button>
 
-          <button
-            type="button"
-            onClick={() =>
-              setActiveTab("schedule")
-            }
-            className={`flex flex-col items-center gap-1 px-2 py-3 ${
-              activeTab === "schedule"
-                ? "text-teal-700"
-                : "text-muted"
-            }`}
-          >
-            <CalendarDays size={20} />
+    <button
+      type="button"
+      onClick={() => setActiveTab("schedule")}
+      className={`group flex min-h-[64px] flex-col items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 ${
+        activeTab === "schedule"
+          ? "text-teal-700"
+          : "text-slate-400 hover:text-slate-600"
+      }`}
+    >
+      <div
+        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-200 ${
+          activeTab === "schedule"
+            ? "bg-teal-700 text-white shadow-md shadow-teal-700/20"
+            : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
+        }`}
+      >
+        <CalendarDays size={19} />
+      </div>
 
-            <span className="text-xs font-medium">
-              Schedule
-            </span>
-          </button>
+      <span
+        className={`text-[11px] ${
+          activeTab === "schedule"
+            ? "font-bold"
+            : "font-medium"
+        }`}
+      >
+        Schedule
+      </span>
+    </button>
 
-          <button
-            type="button"
-            onClick={() =>
-              setActiveTab("earnings")
-            }
-            className={`flex flex-col items-center gap-1 px-2 py-3 ${
-              activeTab === "earnings"
-                ? "text-teal-700"
-                : "text-muted"
-            }`}
-          >
-            <Wallet size={20} />
+    <button
+      type="button"
+      onClick={() => setActiveTab("earnings")}
+      className={`group flex min-h-[64px] flex-col items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 ${
+        activeTab === "earnings"
+          ? "text-teal-700"
+          : "text-slate-400 hover:text-slate-600"
+      }`}
+    >
+      <div
+        className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 ${
+          activeTab === "earnings"
+            ? "bg-teal-50 shadow-sm"
+            : "bg-transparent group-hover:bg-slate-50"
+        }`}
+      >
+        <Wallet size={19} />
+      </div>
 
-            <span className="text-xs font-medium">
-              Earnings
-            </span>
-          </button>
+      <span
+        className={`text-[11px] ${
+          activeTab === "earnings"
+            ? "font-bold"
+            : "font-medium"
+        }`}
+      >
+        Earnings
+      </span>
+    </button>
 
-          <button
-            type="button"
-            onClick={() =>
-              setActiveTab("profile")
-            }
-            className={`flex flex-col items-center gap-1 px-2 py-3 ${
-              activeTab === "profile"
-                ? "text-teal-700"
-                : "text-muted"
-            }`}
-          >
-            <UserRound size={20} />
+    <button
+      type="button"
+      onClick={() => setActiveTab("profile")}
+      className={`group flex min-h-[64px] flex-col items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 ${
+        activeTab === "profile"
+          ? "text-teal-700"
+          : "text-slate-400 hover:text-slate-600"
+      }`}
+    >
+      <div
+        className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 ${
+          activeTab === "profile"
+            ? "bg-teal-50 shadow-sm"
+            : "bg-transparent group-hover:bg-slate-50"
+        }`}
+      >
+        <UserRound size={19} />
+      </div>
 
-            <span className="text-xs font-medium">
-              Profile
-            </span>
-          </button>
-        </div>
-      </nav>
+      <span
+        className={`text-[11px] ${
+          activeTab === "profile"
+            ? "font-bold"
+            : "font-medium"
+        }`}
+      >
+        Profile
+      </span>
+    </button>
+  </div>
+</nav>
     </div>
   );
 }

@@ -269,7 +269,7 @@ export default function SettingsPage() {
           </h2>
 
           <p className="mt-1 text-sm text-muted">
-            Choose how Nexora looks on your device.
+            Choose how SundayShop looks on your device.
           </p>
         </div>
 
@@ -328,7 +328,7 @@ export default function SettingsPage() {
           </h2>
 
           <p className="mt-1 text-sm text-muted">
-            Choose how and when Nexora can notify you.
+            Choose how and when SundayShop can notify you.
           </p>
         </div>
 
@@ -342,7 +342,7 @@ export default function SettingsPage() {
               <PreferenceRow
                 preferenceKey="in_app"
                 title="In-app notifications"
-                description="Receive notifications inside Nexora."
+                description="Receive notifications inside SundayShop."
               />
 
               <PreferenceRow
@@ -502,7 +502,7 @@ export default function SettingsPage() {
             type="button"
             className="w-full rounded-xl p-3 text-left font-medium hover:bg-surface-2"
           >
-            Contact Nexora
+            Contact SundayShop Support
           </button>
         </div>
       </Card>
@@ -510,7 +510,7 @@ export default function SettingsPage() {
       {/* About */}
       <Card className="mt-5 p-6">
         <h2 className="text-lg font-semibold">
-          About Nexora
+          About SundayShop
         </h2>
 
         <div className="mt-5 space-y-2">
@@ -518,7 +518,7 @@ export default function SettingsPage() {
             type="button"
             className="w-full rounded-xl p-3 text-left font-medium hover:bg-surface-2"
           >
-            About Nexora
+            About SundayShop
           </button>
 
           <button

@@ -1,3 +1,5 @@
+
+import { DeliveryTip } from "@/components/delivery-tip";
 import Link from "next/link";
 import { Card } from "@/components/ui";
 import { inr } from "@/lib/format";
@@ -16,6 +18,11 @@ type ApiOrder = {
   customer_name: string;
   customer_email: string;
   customer_phone: string | null;
+    delivery_partner_id: string | null;
+  delivery_partner: {
+    name: string;
+    phone: string | null;
+  } | null;
   address: string;
   subtotal: number;
   delivery_fee: number;
@@ -137,6 +144,38 @@ export default async function TrackPage({
         )}{" "}
         · {order.address}
       </p>
+      {order.status === "out-for-delivery" &&
+  order.delivery_partner && (
+    <Card className="mt-4 p-5">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs text-muted">
+            Your delivery partner
+          </p>
+
+          <p className="mt-1 font-semibold">
+            {order.delivery_partner.name}
+          </p>
+
+          {order.delivery_partner.phone && (
+            <p className="mt-1 text-sm text-muted">
+              {order.delivery_partner.phone}
+            </p>
+          )}
+        </div>
+
+        {order.delivery_partner.phone && (
+          <a
+            href={`tel:${order.delivery_partner.phone}`}
+            className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            Call
+          </a>
+        )}
+      </div>
+      <DeliveryTip orderId={order.id} />
+    </Card>
+  )}
 
       {isCancelled ? (
         <Card className="mt-6 p-6">

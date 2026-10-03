@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter,useSearchParams } from "next/navigation";
-import {useEffect, useState } from "react";
+import {useEffect,useRef, useState } from "react";
 import NotificationBell from "@/components/notification-bell";
 import {
   Bell,
@@ -35,7 +35,10 @@ export function Header() {
   } = useStore();
 
   const [q, setQ] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchRef = useRef<HTMLFormElement | null>(null);
   const [open, setOpen] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [cats, setCats] = useState(false);
   const [notes, setNotes] = useState(false);
   const [defaultAddress, setDefaultAddress] = useState<{
@@ -113,6 +116,43 @@ export function Header() {
     };
   }, []);
 
+  useEffect(() => {
+  try {
+    const saved = localStorage.getItem("sundayshop-search-history");
+
+    if (saved) {
+      const parsed = JSON.parse(saved);
+
+      if (Array.isArray(parsed)) {
+        console.log("Search history loaded:", parsed);
+        setSearchHistory(
+          parsed.filter(
+            (item): item is string =>
+              typeof item === "string" && item.trim().length > 0,
+          ),
+        );
+      }
+    }
+  } catch (error) {
+    console.error("Failed to load search history:", error);
+  }
+}, []);
+useEffect(() => {
+  function handleClickOutside(event: MouseEvent) {
+    if (
+      searchRef.current &&
+      !searchRef.current.contains(event.target as Node)
+    ) {
+      setSearchFocused(false);
+    }
+  }
+
+  document.addEventListener("mousedown", handleClickOutside);
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
   const router = useRouter();
   const searchParams = useSearchParams();
 const addToOrderId = searchParams.get("addToOrder");
@@ -131,16 +171,40 @@ const cartHref = addToOrderId
 
   const cartCount = cart.reduce((n, i) => n + i.qty, 0);
 
-  function submitSearch(e: React.FormEvent) {
-    e.preventDefault();
+ function submitSearch(e: React.FormEvent<HTMLFormElement>) {
+   console.log("SEARCH SUBMITTED", q);
+  e.preventDefault();
 
-    if (!q.trim()) {
-      router.push("/products");
-      return;
-    }
+  const term = q.trim();
 
-    router.push(`/products?q=${encodeURIComponent(q.trim())}`);
+  if (!term) {
+    setSearchFocused(false);
+    router.push("/products");
+    return;
   }
+
+  const updatedHistory = [
+    term,
+    ...searchHistory.filter(
+      (item) => item.toLowerCase() !== term.toLowerCase(),
+    ),
+  ].slice(0, 10);
+
+  setSearchHistory(updatedHistory);
+
+  try {
+    localStorage.setItem(
+      "sundayshop-search-history",
+      JSON.stringify(updatedHistory),
+    );
+  } catch (error) {
+    console.error("Failed to save search history:", error);
+  }
+
+  setSearchFocused(false);
+window.location.href = `/products?q=${encodeURIComponent(term)}`;
+ 
+}
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface/90">
@@ -180,11 +244,11 @@ const cartHref = addToOrderId
             className="flex shrink-0 items-center gap-2.5"
           >
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand text-lg font-bold text-white shadow-sm">
-              N
+              S
             </span>
 
             <span className="hidden text-xl font-bold tracking-tight sm:block">
-              Nexora
+              SundayShop
             </span>
           </Link>
 
@@ -226,7 +290,8 @@ const cartHref = addToOrderId
 
           {/* Search */}
           <form
-            className="relative ml-auto hidden flex-1 md:block"
+            ref={searchRef}
+            className="relative z-50 ml-auto hidden flex-1 md:block"
             onSubmit={submitSearch}
           >
             <Search
@@ -235,8 +300,21 @@ const cartHref = addToOrderId
             />
 
             <input
+            
               value={q}
               onChange={(e) => setQ(e.target.value)}
+              onFocus={() => {
+                 setSearchFocused(true);
+                 }}
+                
+                onClick={() => {
+    
+    setSearchFocused(true);
+
+    if (searchHistory.length > 0) {
+      setQ("");
+    }
+  }}
               placeholder="Search fruits, vegetables, groceries..."
               className="h-11 w-full rounded-xl border border-line bg-bg pl-11 pr-28 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/10"
               aria-label="Search fruits, vegetables and groceries"
@@ -247,22 +325,86 @@ const cartHref = addToOrderId
               Smart search
             </span>
 
-            {suggestions.length > 0 && (
-              <ul className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-line bg-surface p-1 shadow-[var(--shadow)]">
-                {suggestions.map((product) => (
-                  <li key={product.id}>
-                    <Link
-                      href={`/products/${product.id}`}
-                      className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition hover:bg-surface-2"
-                      onClick={() => setQ("")}
-                    >
-                      <Search size={15} className="text-muted" />
-                      <span>{product.name}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
+   {searchFocused && searchHistory.length > 0 && (
+  <div className="absolute left-0 right-0 top-full z-[100] mt-2 overflow-hidden rounded-2xl border border-line bg-surface p-1 shadow-[var(--shadow)]">
+
+    {q.trim().length === 0 && searchHistory.length > 0 && (
+      <div className="p-2">
+        <div className="flex items-center justify-between px-2 py-2">
+          <p className="text-xs font-semibold text-muted">
+            Recent searches
+          </p>
+
+          <button
+            type="button"
+            className="text-xs font-semibold text-brand hover:underline"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              setSearchHistory([]);
+
+              try {
+                localStorage.removeItem(
+                  "sundayshop-search-history",
+                );
+              } catch (error) {
+                console.error(
+                  "Failed to clear search history:",
+                  error,
+                );
+              }
+            }}
+          >
+            Clear
+          </button>
+        </div>
+
+        {searchHistory.map((term) => (
+          <button
+            key={term}
+            type="button"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm hover:bg-surface-2"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              setQ(term);
+              setSearchFocused(false);
+              router.push(
+                `/products?q=${encodeURIComponent(term)}`,
+              );
+            }}
+          >
+            <Search
+              size={15}
+              className="shrink-0 text-muted"
+            />
+
+            <span className="truncate">
+              {term}
+            </span>
+          </button>
+        ))}
+      </div>
+    )}
+
+    {q.trim().length > 0 && suggestions.length > 0 && (
+      <div className="p-1">
+        {suggestions.map((product) => (
+          <Link
+            key={product.id}
+            href={`/products/${product.id}`}
+            className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm hover:bg-surface-2"
+            onClick={() => {
+              setQ("");
+              setSearchFocused(false);
+            }}
+          >
+            <Search size={15} className="text-muted" />
+            <span>{product.name}</span>
+          </Link>
+        ))}
+      </div>
+    )}
+  </div>
+)}
           </form>
 
           {/* Actions */}
@@ -347,12 +489,85 @@ const cartHref = addToOrderId
             />
 
             <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
+  value={q}
+  onChange={(e) => setQ(e.target.value)}
+  onFocus={() => {
+    setSearchFocused(true);
+
+    if (searchHistory.length > 0) {
+      setQ("");
+    }
+  }}
+  onClick={() => {
+    setSearchFocused(true);
+
+    if (searchHistory.length > 0) {
+      setQ("");
+    }
+  }}
+  
               placeholder="Search fruits, vegetables & groceries"
               className="h-11 w-full rounded-xl border border-line bg-bg pl-10 pr-4 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/10"
               aria-label="Search groceries"
             />
+            {searchFocused && searchHistory.length > 0 && (
+  <div className="absolute left-0 right-0 top-full z-[100] mt-2 overflow-hidden rounded-2xl border border-line bg-surface p-1 shadow-[var(--shadow)]">
+    <div className="p-2">
+      <div className="flex items-center justify-between px-2 py-2">
+        <p className="text-xs font-semibold text-muted">
+          Recent searches
+        </p>
+
+        <button
+          type="button"
+          className="text-xs font-semibold text-brand hover:underline"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            setSearchHistory([]);
+
+            try {
+              localStorage.removeItem(
+                "sundayshop-search-history",
+              );
+            } catch (error) {
+              console.error(
+                "Failed to clear search history:",
+                error,
+              );
+            }
+          }}
+        >
+          Clear
+        </button>
+      </div>
+
+      {searchHistory.map((term) => (
+        <button
+          key={term}
+          type="button"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm hover:bg-surface-2"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            setQ(term);
+            setSearchFocused(false);
+            router.push(
+              `/products?q=${encodeURIComponent(term)}`,
+            );
+          }}
+        >
+          <Search
+            size={15}
+            className="shrink-0 text-muted"
+          />
+
+          <span className="truncate">
+            {term}
+          </span>
+        </button>
+      ))}
+    </div>
+  </div>
+)}
           </div>
         </form>
       </div>
@@ -412,7 +627,7 @@ const cartHref = addToOrderId
           N
         </span>
 
-        <span className="font-bold">Nexora</span>
+        <span className="font-bold">SundayShop</span>
       </Link>
 
       <button
@@ -502,15 +717,15 @@ const cartHref = addToOrderId
       </Link>
     </div>
 
-    {/* Contact Nexora */}
+    {/* Contact SundayShop */}
     <div className="mt-6 border-t border-line pt-5">
-      <p className="mb-3 px-3 font-semibold">Contact Nexora</p>
+      <p className="mb-3 px-3 font-semibold">Contact SundayShop</p>
 
       <a
         href="tel:+91XXXXXXXXXX"
         className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:scale-[0.98]"
       >
-        📞 Contact Nexora
+        📞 Contact SundayShop
       </a>
     </div>
 
@@ -527,9 +742,9 @@ const cartHref = addToOrderId
       </Link>
     </div>
 
-    {/* Why Nexora */}
+    {/* Why SundayShop */}
     <div className="mt-6 border-t border-line pt-5">
-      <p className="mb-3 px-3 font-semibold">Why Nexora?</p>
+      <p className="mb-3 px-3 font-semibold">Why SundayShop?</p>
 
       <div className="space-y-1 text-sm text-muted">
         <div className="rounded-xl px-3 py-2 transition-transform duration-200 hover:translate-x-1">
@@ -642,9 +857,9 @@ export function Footer() {
         <div>
           <div className="flex items-center gap-2">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand font-bold text-white">
-              N
+              S
             </span>
-            <p className="text-lg font-bold">Nexora</p>
+            <p className="text-lg font-bold">SundayShop</p>
           </div>
 
           <p className="mt-3 max-w-xs text-sm leading-6 text-muted">
@@ -717,7 +932,7 @@ export function Footer() {
           href="tel:+91XXXXXXXXXX"
          className="block py-2 text-sm text-muted hover:text-brand"
           > 
-           Contact Nexora
+           Contact SundayShop
             </a>
             <li>
               <Link href="/account" className="hover:text-brand">
@@ -729,7 +944,7 @@ export function Footer() {
 
         {/* Promise */}
         <div>
-          <p className="font-semibold">Why Nexora?</p>
+          <p className="font-semibold">Why SundayShop?</p>
 
           <div className="mt-3 space-y-3 text-sm text-muted">
             <p>💰 Low prices</p>
@@ -742,7 +957,7 @@ export function Footer() {
 
       <div className="border-t border-line">
         <div className="mx-auto max-w-7xl px-4 py-5 text-center text-xs text-muted">
-          © 2026 Nexora. Fresh groceries made simple.
+          © 2026 SundayShop. Fresh groceries made simple.
         </div>
       </div>
     </footer>

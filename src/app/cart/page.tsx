@@ -24,7 +24,9 @@ export default function CartPage() {
   const searchParams = useSearchParams();
   const addToOrderId = searchParams.get("addToOrder");
 
-  const { cart, setQty, removeFromCart } = useStore();
+  const { cart, setQty, removeFromCart,toggleWishlist,
+  wishlist,
+ } = useStore();
 
   const [allProducts, setAllProducts] = useState(staticProducts);
 
@@ -72,7 +74,7 @@ export default function CartPage() {
 
               id: product.id,
               name: product.name,
-              brand: product.brand || "",
+              brand: "SundayShop", // Hardcoded brand name
 
               category:
                 product.categories?.name?.toLowerCase() ||
@@ -131,7 +133,7 @@ export default function CartPage() {
                   : [primaryImage],
 
               sold: 0,
-              sellerId: "nexora",
+              sellerId: "sundayshop",
               location: "",
               tags: [],
               highlights: [],
@@ -351,17 +353,30 @@ export default function CartPage() {
                             </button>
                           </div>
 
-                          <button
-                            onClick={() =>
-                              removeFromCart(
-                                row.productId,
-                              )
-                            }
-                            className="flex items-center gap-1.5 text-xs font-medium text-danger hover:underline"
-                          >
-                            <Trash2 size={14} />
-                            Remove
-                          </button>
+                         <div className="flex items-center gap-3">
+  <button
+    onClick={() => {
+      if (!wishlist.includes(row.productId)) {
+        toggleWishlist(row.productId);
+      }
+
+      removeFromCart(row.productId);
+    }}
+    className="text-xs font-medium text-brand hover:underline"
+  >
+    Move to Wishlist
+  </button>
+
+  <button
+    onClick={() =>
+      removeFromCart(row.productId)
+    }
+    className="flex items-center gap-1.5 text-xs font-medium text-danger hover:underline"
+  >
+    <Trash2 size={14} />
+    Remove
+  </button>
+</div> 
                         </div>
 
                         {/* Quantity limit */}

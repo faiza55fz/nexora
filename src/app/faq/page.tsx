@@ -18,7 +18,7 @@ const faqs = [
   {
     question: "What happens if a product is out of stock?",
     answer:
-      'If a product is out of stock, you won\'t be able to add it to your cart. You can choose "Notify me when available" and Nexora will notify you when the product is back in stock.',
+      'If a product is out of stock, you won\'t be able to add it to your cart. You can choose "Notify me when available" and SundayShop will notify you when the product is back in stock.',
   },
   {
     question: "What if I receive a damaged or incorrect product?",
@@ -28,7 +28,7 @@ const faqs = [
   {
     question: "What happens if an item becomes unavailable after I place my order?",
     answer:
-      "If an item becomes unavailable after your order is placed, Nexora will mark that item as unavailable and it will not be included in your delivery. You will not be charged for an item that wasn't supplied.",
+      "If an item becomes unavailable after your order is placed, SundayShop will mark that item as unavailable and it will not be included in your delivery. You will not be charged for an item that wasn't supplied.",
   },
   {
     question: "Can I add more items after placing my order?",
@@ -48,7 +48,7 @@ const faqs = [
   {
     question: "Why is a product unavailable even though I saw it earlier?",
     answer:
-      "Nexora uses current stock availability. If the remaining stock is purchased by another customer, the product can become unavailable immediately. This is especially common with fresh fruits, vegetables and other limited-stock products.",
+      "SundayShop uses current stock availability. If the remaining stock is purchased by another customer, the product can become unavailable immediately. This is especially common with fresh fruits, vegetables and other limited-stock products.",
   },
 ];
 
@@ -74,7 +74,7 @@ export default function FAQPage() {
         {/* Header */}
         <div className="mb-8">
           <p className="mb-2 text-sm font-medium text-muted">
-            Nexora Help Center
+            SundayShop Help Center
           </p>
 
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -82,7 +82,7 @@ export default function FAQPage() {
           </h1>
 
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted sm:text-base">
-            Find answers to common questions about your Nexora orders,
+            Find answers to common questions about your SundayShop orders,
             products and delivery.
           </p>
         </div>
@@ -134,12 +134,12 @@ export default function FAQPage() {
 
         {/* Contact */}
         <section className="mt-10">
-          <h2 className="mb-4 text-lg font-semibold">Contact Nexora</h2>
+          <h2 className="mb-4 text-lg font-semibold">Contact SundayShop</h2>
 
           <div className="rounded-2xl border border-line bg-surface p-5">
             <p className="text-sm leading-6 text-muted">
               Need help with something that isn't covered here? Get in touch
-              with Nexora and we'll help you with your order.
+              with SundayShop and we'll help you with your order.
             </p>
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -148,7 +148,7 @@ export default function FAQPage() {
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-line px-4 py-3 text-sm font-medium transition-colors hover:bg-surface-2"
               >
                 <Phone className="h-4 w-4" />
-                Contact Nexora
+                Contact SundayShop
               </a>
 
               <a

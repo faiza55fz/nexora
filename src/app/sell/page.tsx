@@ -5,7 +5,7 @@ import { Button, Card } from "@/components/ui";
 export default function SellPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
-      <h1 className="text-3xl font-semibold tracking-tight">Sell on Nexora</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Sell on SundayShop</h1>
       <p className="mt-3 max-w-xl text-muted">
         Reach B2C shoppers and B2B buyers from one catalog. GST settlements, pan-India logistics, and AI pricing
         suggestions.

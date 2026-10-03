@@ -54,7 +54,7 @@ export function DashboardShell({
 
               <div>
                 <p className="text-sm font-bold tracking-tight">
-                  NEXORA
+                  SundayShop
                 </p>
 
                 <p className="text-[11px] font-medium text-muted">
@@ -96,7 +96,7 @@ export function DashboardShell({
                 <div className="invisible absolute right-0 top-full z-50 mt-2 w-64 translate-y-1 rounded-2xl border border-line bg-surface p-2 opacity-0 shadow-xl transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
                   <div className="px-3 py-3">
                     <p className="truncate text-sm font-semibold">
-                      {adminName || "Nexora Administrator"}
+                      {adminName || "SundayShop Administrator"}
                     </p>
 
                     <p className="mt-1 truncate text-xs text-muted">

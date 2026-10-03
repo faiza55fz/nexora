@@ -23,23 +23,28 @@ export async function GET(request: Request) {
       );
     }
 
-    const { data, error } = await supabase
-      .from("notifications")
-      .select(`
-        id,
-        recipient_id,
-        recipient_type,
-        type,
-        title,
-        message,
-        order_id,
-        is_read,
-        created_at
-      `)
-      .eq("recipient_id", recipientId)
-      .eq("recipient_type", recipientType)
-      .order("created_at", { ascending: false })
-      .limit(50);
+    const sevenDaysAgo = new Date(
+  Date.now() - 7 * 24 * 60 * 60 * 1000,
+).toISOString();
+
+const { data, error } = await supabase
+  .from("notifications")
+  .select(`
+    id,
+    recipient_id,
+    recipient_type,
+    type,
+    title,
+    message,
+    order_id,
+    is_read,
+    created_at
+  `)
+  .eq("recipient_id", recipientId)
+  .eq("recipient_type", recipientType)
+  .gte("created_at", sevenDaysAgo)
+  .order("created_at", { ascending: false })
+  .limit(50);
 
     if (error) {
       console.error("Notifications fetch error:", error);
