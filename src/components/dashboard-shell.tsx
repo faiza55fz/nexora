@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -26,6 +26,7 @@ export function DashboardShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [accountOpen, setAccountOpen] = useState(false);
 
   const isAdmin = title.toLowerCase() === "admin";
 
@@ -75,6 +76,7 @@ export function DashboardShell({
               <div className="relative group">
                 <button
                   type="button"
+                    onClick={() => setAccountOpen((current) => !current)}
                   className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 transition hover:bg-surface-2"
                 >
                   <UserCircle size={19} className="text-muted" />
@@ -93,7 +95,12 @@ export function DashboardShell({
                 </button>
 
                 {/* Dropdown */}
-                <div className="invisible absolute right-0 top-full z-50 mt-2 w-64 translate-y-1 rounded-2xl border border-line bg-surface p-2 opacity-0 shadow-xl transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+                <div className={cn(
+    "absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border border-line bg-surface p-2 shadow-xl transition-all",
+    accountOpen
+      ? "visible translate-y-0 opacity-100"
+      : "invisible translate-y-1 opacity-0",
+  )}>
                   <div className="px-3 py-3">
                     <p className="truncate text-sm font-semibold">
                       {adminName || "SundayShop Administrator"}
