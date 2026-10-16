@@ -69,41 +69,57 @@ export default async function TrackPage({
 }) {
   const { id } = await params;
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "http://localhost:3000";
-
   let order: ApiOrder | null = null;
 
-  try {
-    const response = await fetch(
-      `${baseUrl}/api/orders`,
-      {
-        cache: "no-store",
-      },
-    );
+try {
+  const { supabaseAdmin } = await import("@/lib/supabase-admin");
 
-    if (response.ok) {
-      const data = await response.json();
+  const { data, error } = await supabaseAdmin
+    .from("orders")
+    .select(`
+      id,
+      order_number,
+      customer_name,
+      customer_email,
+      customer_phone,
+      delivery_partner_id,
+      delivery_partner:delivery_partners (
+        name,
+        phone
+      ),
+      address,
+      subtotal,
+      delivery_fee,
+      total,
+      payment_method,
+      status,
+      created_at,
+      order_items (
+        id,
+        product_id,
+        product_name,
+        quantity,
+        price
+      )
+    `)
+    .or(`id.eq.${id},order_number.eq.${id}`)
+    .maybeSingle();
 
-      const orders: ApiOrder[] =
-        Array.isArray(data?.orders)
-          ? data.orders
-          : [];
-
-      order =
-        orders.find(
-          (item) =>
-            item.id === id ||
-            item.order_number === id,
-        ) ?? null;
-    }
-  } catch (error) {
+  if (error) {
     console.error(
       "Failed to load tracking order:",
       error,
     );
+  } else {
+    order = data as ApiOrder | null;
   }
+} catch (error) {
+  console.error(
+    "Failed to load tracking order:",
+    error,
+  );
+}
+   
 
   if (!order) {
     return (
