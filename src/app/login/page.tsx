@@ -54,7 +54,7 @@ function LoginForm() {
           name:
             customer?.name ||
             session.user.user_metadata?.name ||
-            "Nexora Customer",
+            "SundayShop Customer",
           email:
             customer?.email ||
             session.user.email ||
@@ -165,7 +165,7 @@ function LoginForm() {
         name:
           customer?.name ||
           data.user.user_metadata?.name ||
-          "Nexora Customer",
+          "SundayShop Customer",
         email:
           customer?.email ||
           data.user.email ||
@@ -239,15 +239,15 @@ function LoginForm() {
       <div className="mx-auto max-w-md">
         <div className="mb-8 text-center">
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand text-2xl font-bold text-white">
-            N
+            S
           </div>
 
           <h1 className="mt-4 text-3xl font-bold">
             {isForgotPassword
               ? "Reset your password"
               : isSignup
-                ? "Create your Nexora account"
-                : "Welcome to Nexora"}
+                ? "Create your SundayShop account"
+                : "Welcome to SundayShop"}
           </h1>
 
           <p className="mt-2 text-muted">

@@ -13,7 +13,7 @@ export default function LoyaltyPage() {
       </Link>
 
       <PageHeader
-        title="Nexora Rewards"
+        title="SundayShop Rewards"
         subtitle={customer.loyalty.next}
       />
 

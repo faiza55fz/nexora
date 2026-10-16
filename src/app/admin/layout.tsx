@@ -6,7 +6,7 @@ children,
 }: {
 children: ReactNode;
 }) {
-const adminName = process.env.ADMIN_NAME || "Nexora Administrator";
+const adminName = process.env.ADMIN_NAME || "SundayShop Administrator";
 const adminEmail = process.env.ADMIN_EMAIL || "Admin";
 
 return ( <DashboardShell

@@ -126,7 +126,7 @@ export default function ResetPasswordPage() {
           </h1>
 
           <p className="mt-2 text-muted">
-            Choose a new password for your Nexora account.
+            Choose a new password for your SundayShop account.
           </p>
         </div>
 

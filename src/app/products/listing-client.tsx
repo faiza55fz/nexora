@@ -77,7 +77,7 @@ export default function ListingClient() {
 
               id: product.id,
               name: product.name,
-              brand: product.brand || "",
+              brand: "SundayShop", // Hardcoded brand name
 
               category:
                 product.categories?.name?.toLowerCase() ||

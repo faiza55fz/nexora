@@ -984,7 +984,7 @@ export default function DeliveryPage() {
                             />
 
                             <span>
-                              Nexora Grocery
+                              SundayShop
                               Warehouse
                             </span>
                           </div>

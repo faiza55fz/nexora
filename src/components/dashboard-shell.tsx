@@ -32,7 +32,8 @@ export function DashboardShell({
 
   async function handleLogout() {
     if (!isAdmin) return;
-
+      setAccountOpen(false);
+       
     await fetch("/api/admin/logout", {
       method: "POST",
     });

@@ -55,7 +55,7 @@ export default function AdminLoginPage() {
           </div>
 
           <h1 className="mt-4 text-3xl font-bold">
-            Nexora Admin
+            SundayShop Admin
           </h1>
 
           <p className="mt-2 text-muted">
@@ -70,7 +70,7 @@ export default function AdminLoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@nexora.com"
+                placeholder="admin@SundayShop.com"
                 autoComplete="username"
                 required
               />
@@ -104,7 +104,7 @@ export default function AdminLoginPage() {
           </form>
 
           <p className="mt-5 text-center text-xs text-muted">
-            This area is restricted to authorized Nexora administrators.
+            This area is restricted to authorized SundayShop administrators.
           </p>
         </Card>
       </div>

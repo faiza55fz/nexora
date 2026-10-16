@@ -803,9 +803,9 @@ if (refreshedResponse.ok) {
     </p>
 
     <p className="mt-1 font-semibold">
-      ₹{earningsSummary.alreadyCashout.toLocaleString(
+      ₹{((earningsSummary.alreadyCashout ?? 0).toLocaleString(
         "en-IN",
-      )}
+      ))}
     </p>
   </div>
 
@@ -815,9 +815,9 @@ if (refreshedResponse.ok) {
     </p>
 
     <p className="mt-1 font-semibold">
-      ₹{earningsSummary.availableBalance.toLocaleString(
+      ₹{((earningsSummary.availableBalance ?? 0).toLocaleString(
         "en-IN",
-      )}
+      ))}
     </p>
   </div>
 
