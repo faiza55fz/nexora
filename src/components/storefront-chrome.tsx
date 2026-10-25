@@ -241,15 +241,20 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
           {/* Logo */}
           <Link
             href="/"
-            className="flex shrink-0 items-center gap-2.5"
+            className="flex shrink-0 items-center gap-2.5 group"
           >
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand text-lg font-bold text-white shadow-sm">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand text-xl font-extrabold text-white shadow-sm transition-transform group-hover:scale-105">
               S
             </span>
 
-            <span className="hidden text-xl font-bold tracking-tight sm:block">
-              SundayShop
-            </span>
+            <div className="hidden sm:block leading-tight">
+              <span className="text-xl font-extrabold tracking-tight text-ink block">
+                Sunday<span className="text-brand">Shop</span>
+              </span>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted block -mt-0.5">
+                Quick Groceries
+              </span>
+            </div>
           </Link>
 
           {/* Delivery location */}
@@ -439,13 +444,15 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
             {/* Cart */}
             <Link
               href={cartHref}
-              className="relative grid h-10 w-10 place-items-center rounded-xl transition hover:bg-surface-2"
+              className="relative flex h-10 items-center gap-1.5 rounded-xl bg-brand px-3 text-white transition hover:bg-brand-2 shadow-xs active:scale-98"
               aria-label="Shopping cart"
             >
-              <ShoppingBag size={20} />
-
+              <ShoppingBag size={18} />
+              <span className="hidden sm:inline-block text-xs font-bold">
+                {cartCount > 0 ? `${cartCount} items` : "Cart"}
+              </span>
               {cartCount > 0 && (
-                <span className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-cta px-1 text-[10px] font-bold text-white">
+                <span className="sm:hidden grid h-4 min-w-4 place-items-center rounded-full bg-cta px-1 text-[10px] font-bold text-white">
                   {cartCount}
                 </span>
               )}
@@ -624,7 +631,7 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
         onClick={() => setOpen(false)}
       >
         <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand font-bold text-white">
-          N
+          S
         </span>
 
         <span className="font-bold">SundayShop</span>

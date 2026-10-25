@@ -137,152 +137,169 @@ export function ProductCard({
     });
   }
 
+  const unitSize =
+    product.specs?.Unit ||
+    (product.specs as Record<string, string>)?.Weight ||
+    (product.specs as Record<string, string>)?.Pack ||
+    product.subcategory ||
+    "";
+
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-[var(--shadow)]">
-      <Link
-        href={`/products/${product.id}`}
-        className="relative block aspect-[4/3] overflow-hidden bg-surface-2"
-      >
-        <img
-          src={product.image}
-          alt={product.name}
-          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-        />
+    <article className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-line bg-surface p-2.5 sm:p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md">
+      {/* Product Image & Badges */}
+      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-surface-2">
+        <Link
+          href={`/products/${product.id}`}
+          className="block h-full w-full"
+        >
+          <img
+            src={product.image}
+            alt={product.name}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+          />
+        </Link>
 
         {off > 0 ? (
-          <div className="absolute left-3 top-3">
-            <Badge>{off}% OFF</Badge>
+          <div className="absolute left-2 top-2 pointer-events-none">
+            <span className="rounded-md bg-cta px-1.5 py-0.5 text-[10px] sm:text-[11px] font-bold text-white shadow-xs">
+              {off}% OFF
+            </span>
           </div>
         ) : null}
 
         {mode === "b2b" ? (
-          <div className="absolute right-3 top-3">
-            <Badge>Bulk</Badge>
-          </div>
-        ) : null}
-      </Link>
-
-      <div className="flex flex-1 flex-col p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted">
-              {product.brand}
-            </p>
-
-            <Link
-              href={`/products/${product.id}`}
-              className="mt-1 block font-semibold text-foreground transition hover:text-brand"
-            >
-              {product.name}
-            </Link>
-          </div>
-
-          <Stars value={product.rating} />
-        </div>
-
-        <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-lg font-bold text-foreground">
-            {inr(unit)}
-          </span>
-
-          {product.mrp > unit ? (
-            <span className="text-sm text-muted line-through">
-              {inr(product.mrp)}
+          <div className="absolute left-2 bottom-2 pointer-events-none">
+            <span className="rounded-md bg-brand px-1.5 py-0.5 text-[10px] font-semibold text-white">
+              Bulk
             </span>
-          ) : null}
-        </div>
-
-        {unavailable ? (
-          <p className="mt-3 text-sm font-medium text-muted">
-            {isUnavailable ? "Currently unavailable" : "Out of stock"}
-          </p>
+          </div>
         ) : null}
 
-        <div className="mt-4 flex items-center gap-2">
-          {unavailable ? (
-            <button
-              type="button"
-              onClick={handleNotify}
-              disabled={notifyLoading || notifySaved}
-              className="flex-1 rounded-xl border border-line px-3 py-2 text-sm font-semibold transition hover:border-brand disabled:cursor-default disabled:opacity-70"
-            >
-              {notifyLoading
-                ? "Saving..."
-                : notifySaved
-                  ? "You'll be notified"
-                  : "Notify me when available"}
-            </button>
-          ) : addToOrderMode ? (
-            <button
-              type="button"
-              onClick={handleAddToExistingOrder}
-              disabled={
-                !product.variantId ||
-                Boolean(
-                  existingOrderItem &&
-                    existingOrderItem.quantity >=
-                      existingOrderItem.maxQuantity,
-                )
-              }
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <ShoppingCart size={16} />
+        {/* Wishlist button */}
+        <button
+          type="button"
+          onClick={() => toggleWishlist(product.id)}
+          aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
+          className={`absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-white/90 shadow-sm backdrop-blur transition-transform active:scale-90 ${
+            saved
+              ? "text-red-500"
+              : "text-muted hover:text-red-500"
+          }`}
+        >
+          <Heart
+            size={14}
+            className={saved ? "fill-red-500 text-red-500" : ""}
+          />
+        </button>
+      </div>
 
-              {existingOrderItem
-                ? existingOrderItem.quantity >=
-                  existingOrderItem.maxQuantity
-                  ? "Limit reached"
-                  : "Added · Add more"
-                : "Add to order"}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() =>
-                addToCart(
-                  product.id,
-                  mode === "b2b" ? product.moq : 1,
-                )
-              }
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90"
-            >
-              <ShoppingCart size={16} />
-              Add
-            </button>
-          )}
+      {/* Product Details */}
+      <div className="flex flex-1 flex-col justify-between pt-2">
+        <div>
+          {/* Brand & Unit */}
+          <div className="flex items-center justify-between gap-1 text-[11px] leading-tight">
+            <span className="truncate font-medium uppercase tracking-wider text-muted">
+              {product.brand || "SundayShop"}
+            </span>
 
-          <button
-            type="button"
-            onClick={() => toggleWishlist(product.id)}
-            aria-label={
-              saved ? "Remove from wishlist" : "Add to wishlist"
-            }
-            className={`rounded-xl border p-2 transition ${
-              saved
-                ? "border-brand text-brand"
-                : "border-line text-muted hover:text-brand"
-            }`}
+            {unitSize ? (
+              <span className="shrink-0 font-medium text-ink/75">
+                {unitSize}
+              </span>
+            ) : null}
+          </div>
+
+          {/* Product Name */}
+          <Link
+            href={`/products/${product.id}`}
+            className="mt-1 block line-clamp-2 min-h-[2.4rem] text-xs sm:text-sm font-semibold leading-snug text-ink transition hover:text-brand"
+            title={product.name}
           >
-            <Heart
-              size={17}
-              className={saved ? "fill-current" : ""}
-            />
-          </button>
+            {product.name}
+          </Link>
 
-          <button
-            type="button"
-            onClick={() => toggleCompare(product.id)}
-            aria-label={
-              compared ? "Remove from compare" : "Add to compare"
-            }
-            className={`rounded-xl border p-2 transition ${
-              compared
-                ? "border-brand text-brand"
-                : "border-line text-muted hover:text-brand"
-            }`}
-          >
-            <GitCompare size={17} />
-          </button>
+          {/* Rating */}
+          <div className="mt-1 flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-0.5 rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-bold text-amber-600 dark:text-amber-400">
+              <Star size={11} className="fill-current text-amber-500" />
+              {product.rating ? Number(product.rating).toFixed(1) : "4.5"}
+            </span>
+
+            {product.reviewCount ? (
+              <span className="text-[10px] text-muted truncate">
+                ({product.reviewCount})
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Price & Add Section */}
+        <div className="mt-2.5 border-t border-line/60 pt-2">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-sm sm:text-base font-bold text-ink">
+              {inr(unit)}
+            </span>
+
+            {product.mrp > unit ? (
+              <span className="text-xs text-muted line-through">
+                {inr(product.mrp)}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-2">
+            {unavailable ? (
+              <button
+                type="button"
+                onClick={handleNotify}
+                disabled={notifyLoading || notifySaved}
+                className="w-full rounded-xl border border-line bg-surface-2 px-2 py-1.5 text-xs font-semibold text-muted transition hover:border-brand hover:text-brand disabled:cursor-default disabled:opacity-70"
+              >
+                {notifyLoading
+                  ? "Saving..."
+                  : notifySaved
+                    ? "You'll be notified"
+                    : "Notify me"}
+              </button>
+            ) : addToOrderMode ? (
+              <button
+                type="button"
+                onClick={handleAddToExistingOrder}
+                disabled={
+                  !product.variantId ||
+                  Boolean(
+                    existingOrderItem &&
+                      existingOrderItem.quantity >=
+                        existingOrderItem.maxQuantity,
+                  )
+                }
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand px-2 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <ShoppingCart size={14} />
+                {existingOrderItem
+                  ? existingOrderItem.quantity >=
+                    existingOrderItem.maxQuantity
+                    ? "Limit reached"
+                    : "Add more"
+                  : "Add to order"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  addToCart(
+                    product.id,
+                    mode === "b2b" ? product.moq : 1,
+                  )
+                }
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs sm:text-sm font-bold text-brand transition-all hover:bg-brand hover:text-white active:scale-98"
+              >
+                <ShoppingCart size={14} />
+                ADD
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </article>

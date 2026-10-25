@@ -698,11 +698,12 @@ if (product.active === false) {
               );
 
               setQty(
-                Math.max(
-                  product.moq ?? 1,
-                  Number.isNaN(value)
-                    ? 1
-                    : value,
+                Math.min(
+      5,
+      Math.max(
+        product.moq ?? 1,
+        Number.isNaN(value) ? 1 : value,
+      ),
                 ),
               );
             }}

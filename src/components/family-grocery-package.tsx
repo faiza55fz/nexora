@@ -33,41 +33,51 @@ const [packageProductsState, setPackageProductsState] =
 
   const [open, setOpen] = useState(false);
   useEffect(() => {
-  if (!user?.id) return;
-
-  fetch(
-    `/api/customer/family-package?customerId=${user.id}`,
-  )
-    .then((response) => response.json())
-    .then((result) => {
-      if (result.success) {
-  const fetchedProducts = result.products ?? [];
-
-  setRecommendedProducts(fetchedProducts);
-  setPackageProductsState(
-  (fetchedProducts.length > 0
-    ? fetchedProducts
-    : products.slice(0, 6)
-  ).map((product: PackageProduct) => ({
-    product,
-    qty: 1,
-  })),
-);
-}
-    })
-    .catch((error) => {
-      console.error(
-        "Failed to load family grocery package:",
-        error,
-      );
+    if (!user?.id) {
+      if (products && products.length > 0 && packageProductsState.length === 0) {
         setPackageProductsState(
-        products.slice(0, 6).map((product) => ({
-          product,
-          qty: 1,
-        })),
-      );
-    });
-}, [user?.id]);
+          products.slice(0, 6).map((product) => ({
+            product,
+            qty: 1,
+          })),
+        );
+      }
+      return;
+    }
+
+    fetch(
+      `/api/customer/family-package?customerId=${user.id}`,
+    )
+      .then((response) => response.json())
+      .then((result) => {
+        if (result.success) {
+          const fetchedProducts = result.products ?? [];
+
+          setRecommendedProducts(fetchedProducts);
+          setPackageProductsState(
+            (fetchedProducts.length > 0
+              ? fetchedProducts
+              : products.slice(0, 6)
+            ).map((product: PackageProduct) => ({
+              product,
+              qty: 1,
+            })),
+          );
+        }
+      })
+      .catch((error) => {
+        console.error(
+          "Failed to load family grocery package:",
+          error,
+        );
+        setPackageProductsState(
+          products.slice(0, 6).map((product) => ({
+            product,
+            qty: 1,
+          })),
+        );
+      });
+  }, [user?.id, products]);
 
   const packageProducts = useMemo(
    () => packageProductsState.map((item) => item.product),
@@ -87,92 +97,96 @@ const [packageProductsState, setPackageProductsState] =
 }
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-brand/20 bg-brand/5 p-5 sm:p-7">
-      <div className="pointer-events-none absolute -right-10 -top-10 text-[7rem] opacity-10">
-        🛒
-      </div>
-
+    <section className="relative overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-brand/5 via-surface to-brand-soft/30 p-5 sm:p-7 shadow-xs">
       <div className="relative">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-brand">
-                  🏠 Personalized from your purchases
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1 text-xs font-bold text-brand">
+              🏠 Weekly Family Bundle
+            </div>
 
-            </p>
-
-            <h2 className="mt-1 text-2xl font-bold sm:text-3xl">
+            <h2 className="mt-2 text-xl sm:text-2xl font-bold text-ink">
               Your Family Grocery Package
             </h2>
 
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-               We've gathered products you regularly buy into one
-  convenient family package. Add, remove or customize
-  anything you need.
+            <p className="mt-1 max-w-2xl text-xs sm:text-sm text-muted">
+              We&apos;ve gathered products you regularly buy into one convenient weekly package. Customize items or add everything in 1 click.
             </p>
           </div>
 
-          <div className="shrink-0 rounded-2xl bg-surface px-4 py-3 text-right shadow-sm">
-            <p className="text-xs text-muted">
-              Package value
+          <div className="shrink-0 rounded-2xl border border-line bg-surface px-5 py-3 text-left sm:text-right shadow-xs">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+              Package Value
             </p>
 
-            <p className="text-2xl font-bold text-brand">
+            <p className="text-xl sm:text-2xl font-bold text-brand">
               ₹{Math.round(packageTotal)}
             </p>
-            <p className="mt-1 text-xs text-muted">
-  {packageProducts.length} regular items
-</p>
+            <p className="mt-0.5 text-xs text-muted">
+              {packageProducts.length} regular essentials
+            </p>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {packageProducts.map((product) => (
-            <Card
-              key={product.id}
-              className="overflow-hidden border-line bg-surface"
-            >
-              <div className="flex items-center gap-3 p-3">
-                {product.image ? (
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="h-16 w-16 rounded-xl object-cover"
-                  />
-                ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-surface-2 text-2xl">
-                    🛒
-                  </div>
-                )}
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {packageProducts.map((product) => {
+            const qty =
+              packageProductsState.find(
+                (item) => item.product.id === product.id,
+              )?.qty ?? 1;
 
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">
+            return (
+              <div
+                key={product.id}
+                className="flex flex-col justify-between overflow-hidden rounded-xl border border-line bg-surface p-2.5 transition hover:shadow-xs"
+              >
+                <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-surface-2">
+                  {product.image ? (
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="grid h-full place-items-center text-3xl">
+                      🛒
+                    </div>
+                  )}
+
+                  {qty > 1 ? (
+                    <span className="absolute bottom-1 right-1 rounded-md bg-brand px-1.5 py-0.5 text-[10px] font-bold text-white">
+                      ×{qty}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="mt-2 min-w-0 flex-1">
+                  <p className="truncate text-xs font-semibold text-ink" title={product.name}>
                     {product.name}
                   </p>
 
-                  <p className="mt-1 text-sm font-bold text-brand">
-                    ₹{product.price * (packageProductsState.find(
-  (item) => item.product.id === product.id,
-)?.qty ?? 1)}
+                  <p className="mt-1 text-xs font-bold text-brand">
+                    ₹{product.price * qty}
                   </p>
                 </div>
               </div>
-            </Card>
-          ))
-          
-          }
+            );
+          })}
         </div>
-                {products.some(
+
+        {products.some(
           (product) =>
             !packageProductsState.some(
               (item) => item.product.id === product.id,
             ),
         ) ? (
-          <div className="mt-5">
-            <p className="mb-3 text-sm font-semibold">
-              Add products back
+          <div className="mt-4 pt-3 border-t border-line/60">
+            <p className="mb-2 text-xs font-semibold text-muted">
+              Add removed essentials back:
             </p>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {products
                 .filter(
                   (product) =>
@@ -181,9 +195,9 @@ const [packageProductsState, setPackageProductsState] =
                     ),
                 )
                 .map((product) => (
-                  <Button
+                  <button
                     key={product.id}
-                    variant="outline"
+                    type="button"
                     onClick={() =>
                       setPackageProductsState((current) => [
                         ...current,
@@ -193,24 +207,28 @@ const [packageProductsState, setPackageProductsState] =
                         },
                       ])
                     }
+                    className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink hover:border-brand hover:text-brand"
                   >
                     + {product.name}
-                  </Button>
+                  </button>
                 ))}
             </div>
           </div>
         ) : null}
 
-        <div className="mt-5 flex flex-wrap gap-3">
-          <Button onClick={addPackageToCart}>
-            🛒 Add package to cart
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <Button
+            onClick={addPackageToCart}
+            className="flex items-center gap-2 font-bold"
+          >
+            🛒 Add Package to Cart
           </Button>
 
           <Button
             variant="outline"
             onClick={() => setOpen((current) => !current)}
           >
-            {open ? "Hide package" : "Customize package"}
+            {open ? "Hide Details" : "Customize Package"}
           </Button>
         </div>
 

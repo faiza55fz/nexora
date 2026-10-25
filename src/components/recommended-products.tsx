@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { Card, Button } from "@/components/ui";
 import { useStore } from "@/components/providers";
+import { ProductCard } from "@/components/product-card";
 
 type Product = {
   id: string;
@@ -17,8 +18,6 @@ type Product = {
 
 export default function RecommendedProducts() {
   const { user } = useStore();
-  console.log("Recommendation user:", user);
-
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -68,21 +67,18 @@ export default function RecommendedProducts() {
    */
   if (loading) {
     return (
-      <section className="py-8">
-        <div className="mb-5">
-          <div className="h-7 w-56 animate-pulse rounded bg-muted/20" />
-
-          <div className="mt-2 h-4 w-72 animate-pulse rounded bg-muted/20" />
+      <section className="pt-8 sm:pt-10">
+        <div className="mb-4">
+          <div className="h-6 w-48 animate-pulse rounded bg-surface-2" />
+          <div className="mt-2 h-4 w-64 animate-pulse rounded bg-surface-2" />
         </div>
 
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Card
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div
               key={index}
-              className="h-72 animate-pulse bg-muted/10"
-            >
-              <div className="h-full w-full" />
-            </Card>
+              className="h-64 animate-pulse rounded-2xl bg-surface-2"
+            />
           ))}
         </div>
       </section>
@@ -97,75 +93,74 @@ export default function RecommendedProducts() {
   }
 
   return (
-    <section className="py-8">
-      <div className="mb-5">
-        <h2 className="text-2xl font-bold">
-          Recommended for you
-        </h2>
+    <section className="pt-8 sm:pt-10">
+      <div className="flex items-end justify-between gap-4 mb-4">
+        <div>
+          <span className="text-xs font-bold uppercase tracking-wider text-brand">
+            Curated For You
+          </span>
+          <h2 className="mt-0.5 text-xl sm:text-2xl font-bold text-ink">
+            Recommended for you
+          </h2>
+          <p className="mt-0.5 text-xs sm:text-sm text-muted">
+            {user
+              ? "Handpicked based on your recent grocery preferences"
+              : "Popular everyday groceries shoppers love"}
+          </p>
+        </div>
 
-        <p className="mt-1 text-sm text-muted">
-          {user
-            ? "Picked based on your shopping preferences"
-            : "Popular products you may like"}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
-        {products.map((product) => (
-          <Card
-            key={product.id}
-            className="overflow-hidden transition hover:-translate-y-1 hover:shadow-[var(--shadow)]"
-          >
-            <Link href={`/products/${product.id}`}>
-              <div className="aspect-square overflow-hidden bg-muted/10">
-                {product.image ? (
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="grid h-full place-items-center text-4xl">
-                    🛒
-                  </div>
-                )}
-              </div>
-
-              <div className="p-3">
-                <p className="line-clamp-2 min-h-10 text-sm font-semibold">
-                  {product.name}
-                </p>
-
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="font-bold">
-                    ₹{product.price}
-                  </span>
-
-                  {product.mrp &&
-                    product.mrp > product.price && (
-                      <span className="text-xs text-muted line-through">
-                        ₹{product.mrp}
-                      </span>
-                    )}
-                </div>
-
-                {product.category && (
-                  <p className="mt-1 text-xs text-muted">
-                    {product.category}
-                  </p>
-                )}
-              </div>
-            </Link>
-          </Card>
-        ))}
-      </div>
-
-      <div className="mt-5 text-center">
-        <Link href="/products">
-          <Button variant="outline">
-            Explore more products
-          </Button>
+        <Link
+          href="/products"
+          className="shrink-0 text-xs sm:text-sm font-semibold text-brand hover:underline"
+        >
+          View all →
         </Link>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
+        {products.slice(0, 10).map((product) => {
+          const cardProduct = {
+            id: product.id,
+            slug: product.id,
+            name: product.name,
+            brand: "SundayShop",
+            category: product.category || "groceries",
+            subcategory: "",
+            image:
+              product.image ||
+              "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1000&q=80",
+            images: [
+              product.image ||
+                "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1000&q=80",
+            ],
+            price: Number(product.price) || 0,
+            mrp:
+              Number(product.mrp) ||
+              Number(product.price) ||
+              0,
+            gstRate: 0,
+            rating: 4.8,
+            reviewCount: 84,
+            sold: 320,
+            sellerId: "SundayShop",
+            stock: 100,
+            deliveryEta: "Tomorrow",
+            location: "",
+            tags: [],
+            highlights: [],
+            description: "",
+            specs: { Unit: "1 pack" },
+            moq: 1,
+            tiers: [],
+          };
+
+          return (
+            <ProductCard
+              key={product.id}
+              product={cardProduct}
+            />
+          );
+        })}
       </div>
     </section>
   );
