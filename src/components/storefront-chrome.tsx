@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter,useSearchParams } from "next/navigation";
-import {useEffect,useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import NotificationBell from "@/components/notification-bell";
 import {
   Bell,
@@ -154,6 +154,7 @@ useEffect(() => {
   };
 }, []);
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 const addToOrderId = searchParams.get("addToOrder");
 
@@ -207,9 +208,9 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
 }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-surface/90">
-      {/* Top promise bar */}
-      <div className="bg-brand text-white">
+    <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur-md">
+      {/* Top promise bar - desktop only */}
+      <div className="hidden md:block bg-brand text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-center px-4 py-2 text-xs sm:justify-between">
           <p className="font-medium">
             Fresh groceries • Low prices • Delivered within a day
@@ -228,10 +229,10 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
 
       {/* Main header */}
       <div className="mx-auto max-w-7xl px-4">
-        <div className="flex min-h-[68px] items-center gap-3">
-          {/* Mobile menu */}
+        <div className="flex min-h-[58px] md:min-h-[68px] items-center gap-3">
+          {/* Mobile menu - hidden on mobile header to match Figma */}
           <button
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl hover:bg-surface-2 lg:hidden"
+            className="hidden h-10 w-10 shrink-0 place-items-center rounded-xl hover:bg-surface-2"
             aria-label="Open menu"
             onClick={() => setOpen(true)}
           >
@@ -247,11 +248,11 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
               S
             </span>
 
-            <div className="hidden sm:block leading-tight">
-              <span className="text-xl font-extrabold tracking-tight text-ink block">
+            <div className="leading-tight">
+              <span className="text-lg sm:text-xl font-extrabold tracking-tight text-ink block">
                 Sunday<span className="text-brand">Shop</span>
               </span>
-              <span className="text-[10px] uppercase font-bold tracking-wider text-muted block -mt-0.5">
+              <span className="hidden sm:block text-[10px] uppercase font-bold tracking-wider text-muted -mt-0.5">
                 Quick Groceries
               </span>
             </div>
@@ -417,10 +418,10 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
             
             
 
-            {/* Wishlist */}
+            {/* Wishlist - desktop only */}
             <Link
               href="/account/wishlist"
-              className="relative grid h-10 w-10 place-items-center rounded-xl transition hover:bg-surface-2"
+              className="relative hidden md:grid h-10 w-10 place-items-center rounded-xl transition hover:bg-surface-2"
               aria-label="Wishlist"
             >
               <Heart size={19} />
@@ -433,150 +434,159 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
             </Link>
 
             {/* Notifications */}
-           {/* Notifications */}
-{user && (
-  <NotificationBell
-    recipientId={user.id}
-    recipientType="customer"
-  />
-)}
+            {user ? (
+              <NotificationBell
+                recipientId={user.id}
+                recipientType="customer"
+              />
+            ) : (
+              <Link
+                href="/login"
+                className="relative grid h-10 w-10 place-items-center rounded-xl transition hover:bg-surface-2 text-muted hover:text-ink"
+                aria-label="Notifications"
+              >
+                <Bell size={19} />
+              </Link>
+            )}
 
             {/* Cart */}
             <Link
               href={cartHref}
-              className="relative flex h-10 items-center gap-1.5 rounded-xl bg-brand px-3 text-white transition hover:bg-brand-2 shadow-xs active:scale-98"
+              className="relative flex h-10 w-10 md:w-auto items-center justify-center gap-1.5 rounded-xl text-slate-700 hover:bg-surface-2 md:bg-brand md:text-white md:hover:bg-brand-2 md:px-3 md:shadow-xs active:scale-98 transition"
               aria-label="Shopping cart"
             >
-              <ShoppingBag size={18} />
-              <span className="hidden sm:inline-block text-xs font-bold">
+              <ShoppingBag size={20} className="md:hidden" />
+              <ShoppingBag size={18} className="hidden md:block" />
+              <span className="hidden md:inline-block text-xs font-bold">
                 {cartCount > 0 ? `${cartCount} items` : "Cart"}
               </span>
-              {cartCount > 0 && (
-                <span className="sm:hidden grid h-4 min-w-4 place-items-center rounded-full bg-cta px-1 text-[10px] font-bold text-white">
-                  {cartCount}
-                </span>
-              )}
+              <span className={`absolute -top-1 -right-1 md:static flex h-[18px] min-w-[18px] md:h-5 md:min-w-5 items-center justify-center rounded-full bg-[#f05a28] md:bg-white/20 px-1 text-[10px] md:text-xs font-bold text-white ring-2 ring-white md:ring-0 ${cartCount === 0 ? "md:hidden" : ""}`}>
+                {cartCount}
+              </span>
             </Link>
 
-            {/* Profile */}
-            {user ? (
-              <Link
-                href="/account"
-                className="ml-1 flex h-10 items-center gap-2 rounded-xl px-1.5 transition hover:bg-surface-2"
-                aria-label="My account"
-              >
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-soft text-brand">
-                  <User size={17} />
-                </span>
+            {/* Profile - desktop only */}
+            <div className="hidden md:flex items-center">
+              {user ? (
+                <Link
+                  href="/account"
+                  className="ml-1 flex h-10 items-center gap-2 rounded-xl px-1.5 transition hover:bg-surface-2"
+                  aria-label="My account"
+                >
+                  <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-soft text-brand">
+                    <User size={17} />
+                  </span>
 
-                <span className="hidden max-w-24 truncate text-sm font-semibold xl:block">
-                  {user.name}
-                </span>
-              </Link>
-            ) : (
-              <Link
-                href="/login"
-                className="ml-1 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
-              >
-                Log in
-              </Link>
-            )}
+                  <span className="hidden max-w-24 truncate text-sm font-semibold xl:block">
+                    {user.name}
+                  </span>
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="ml-1 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+                >
+                  Log in
+                </Link>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Mobile search */}
-        <form
-          className="pb-3 md:hidden"
-          onSubmit={submitSearch}
-        >
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"
-              size={17}
-            />
+        {/* Mobile search - only on non-homepage routes */}
+        {pathname !== "/" && (
+          <form
+            className="pb-3 md:hidden"
+            onSubmit={submitSearch}
+          >
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"
+                size={17}
+              />
 
-            <input
-  value={q}
-  onChange={(e) => setQ(e.target.value)}
-  onFocus={() => {
-    setSearchFocused(true);
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onFocus={() => {
+                  setSearchFocused(true);
 
-    if (searchHistory.length > 0) {
-      setQ("");
-    }
-  }}
-  onClick={() => {
-    setSearchFocused(true);
+                  if (searchHistory.length > 0) {
+                    setQ("");
+                  }
+                }}
+                onClick={() => {
+                  setSearchFocused(true);
 
-    if (searchHistory.length > 0) {
-      setQ("");
-    }
-  }}
-  
-              placeholder="Search fruits, vegetables & groceries"
-              className="h-11 w-full rounded-xl border border-line bg-bg pl-10 pr-4 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/10"
-              aria-label="Search groceries"
-            />
-            {searchFocused && searchHistory.length > 0 && (
-  <div className="absolute left-0 right-0 top-full z-[100] mt-2 overflow-hidden rounded-2xl border border-line bg-surface p-1 shadow-[var(--shadow)]">
-    <div className="p-2">
-      <div className="flex items-center justify-between px-2 py-2">
-        <p className="text-xs font-semibold text-muted">
-          Recent searches
-        </p>
+                  if (searchHistory.length > 0) {
+                    setQ("");
+                  }
+                }}
+                placeholder="Search fruits, vegetables & groceries"
+                className="h-11 w-full rounded-xl border border-line bg-bg pl-10 pr-4 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/10"
+                aria-label="Search groceries"
+              />
+              {searchFocused && searchHistory.length > 0 && (
+                <div className="absolute left-0 right-0 top-full z-[100] mt-2 overflow-hidden rounded-2xl border border-line bg-surface p-1 shadow-[var(--shadow)]">
+                  <div className="p-2">
+                    <div className="flex items-center justify-between px-2 py-2">
+                      <p className="text-xs font-semibold text-muted">
+                        Recent searches
+                      </p>
 
-        <button
-          type="button"
-          className="text-xs font-semibold text-brand hover:underline"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => {
-            setSearchHistory([]);
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-brand hover:underline"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setSearchHistory([]);
 
-            try {
-              localStorage.removeItem(
-                "sundayshop-search-history",
-              );
-            } catch (error) {
-              console.error(
-                "Failed to clear search history:",
-                error,
-              );
-            }
-          }}
-        >
-          Clear
-        </button>
-      </div>
+                          try {
+                            localStorage.removeItem(
+                              "sundayshop-search-history",
+                            );
+                          } catch (error) {
+                            console.error(
+                              "Failed to clear search history:",
+                              error,
+                            );
+                          }
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
 
-      {searchHistory.map((term) => (
-        <button
-          key={term}
-          type="button"
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm hover:bg-surface-2"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => {
-            setQ(term);
-            setSearchFocused(false);
-            router.push(
-              `/products?q=${encodeURIComponent(term)}`,
-            );
-          }}
-        >
-          <Search
-            size={15}
-            className="shrink-0 text-muted"
-          />
+                    {searchHistory.map((term) => (
+                      <button
+                        key={term}
+                        type="button"
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm hover:bg-surface-2"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setQ(term);
+                          setSearchFocused(false);
+                          router.push(
+                            `/products?q=${encodeURIComponent(term)}`,
+                          );
+                        }}
+                      >
+                        <Search
+                          size={15}
+                          className="shrink-0 text-muted"
+                        />
 
-          <span className="truncate">
-            {term}
-          </span>
-        </button>
-      ))}
-    </div>
-  </div>
-)}
-          </div>
-        </form>
+                        <span className="truncate">
+                          {term}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </form>
+        )}
       </div>
 
       {/* Categories dropdown */}

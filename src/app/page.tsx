@@ -354,25 +354,25 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-bg pb-16">
       {/* 2. Hero */}
-      <section className="mx-auto max-w-7xl px-4 pt-4 sm:pt-6">
-        <div className="relative overflow-hidden rounded-3xl sm:rounded-[2.5rem] bg-[#F8F7F1] border border-[#E9E6DC] p-6 sm:p-10 lg:p-12 shadow-xs">
+      <section className="mx-auto max-w-7xl px-0 md:px-4 pt-0 md:pt-6">
+        <div className="relative overflow-hidden rounded-none md:rounded-[2.5rem] bg-[#F8F7F1] border-b md:border border-[#E9E6DC] px-4 py-3 sm:py-8 lg:p-12 shadow-none md:shadow-xs">
           {/* Subtle ambient warm blur in corners */}
           <div className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full bg-amber-100/40 blur-3xl" />
           <div className="pointer-events-none absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-emerald-100/30 blur-3xl" />
 
-          <div className="grid gap-8 lg:grid-cols-12 lg:items-center">
+          <div className="flex flex-col gap-2 sm:gap-6 lg:grid lg:grid-cols-12 lg:items-center">
             {/* Left Content */}
             <div className="z-10 lg:col-span-7">
               {/* Eyebrow with golden accent line */}
-              <div className="flex items-center gap-2 mb-3">
-                <span className="h-[2.5px] w-6 bg-amber-400 rounded-full" />
-                <span className="text-xs sm:text-[13px] font-bold uppercase tracking-wider text-[#5c6b75]">
+              <div className="flex items-center gap-1.5 mb-1 sm:mb-3">
+                <span className="h-[2px] w-4 sm:w-6 bg-amber-400 rounded-full" />
+                <span className="text-[10px] sm:text-[13px] font-bold uppercase tracking-wider text-[#5c6b75]">
                   FARM-FRESH PICKS, EVERY DAY
                 </span>
               </div>
 
               {/* Main Headline */}
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.12] text-[#132029]">
+              <h1 className="text-[28px] sm:text-[34px] md:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.08] sm:leading-[1.12] text-[#132029]">
                 Fresh groceries.
                 <br />
                 Better prices.
@@ -381,87 +381,93 @@ export default function HomePage() {
               </h1>
 
               {/* Description */}
-              <p className="mt-4 max-w-lg text-sm sm:text-base leading-relaxed text-[#5c6b75]">
+              <p className="mt-1.5 sm:mt-4 max-w-sm sm:max-w-lg text-xs sm:text-base leading-relaxed text-[#5c6b75]">
                 From crisp produce to everyday essentials, fill your basket with quality you can trust—without stretching your budget.
               </p>
 
-              {/* CTA Area */}
-              <div className="mt-6 flex flex-wrap items-center gap-4 sm:gap-6">
+              {/* Shop Now CTA */}
+              <div className="mt-3 sm:mt-6">
                 <Link
                   href="/products"
-                  className="inline-flex min-h-12 items-center justify-center rounded-xl bg-brand px-7 py-3 text-sm sm:text-base font-bold text-white shadow-sm transition hover:bg-brand-2 active:scale-98"
+                  className="inline-flex h-[44px] sm:h-[46px] w-[130px] items-center justify-center gap-1.5 rounded-xl bg-[#f05a28] hover:bg-[#d84e1d] text-sm font-bold text-white shadow-sm transition active:scale-98"
                 >
                   Shop Now →
                 </Link>
-
-                <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-[#132029]">
-                  <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-soft text-brand">
-                    <Clock size={16} />
-                  </span>
-                  <span>Delivery by tomorrow</span>
-                </div>
               </div>
 
-              {/* Trust Points */}
-              <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs sm:text-sm font-medium text-[#132029]">
-                <span className="inline-flex items-center gap-1.5">
-                  <Check size={15} className="text-emerald-600 stroke-[3]" />
+              {/* Delivery Row (directly underneath Shop Now) */}
+              <div className="mt-2 sm:mt-3 flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#132029]">
+                <span className="grid h-6 w-6 sm:h-7 sm:w-7 place-items-center rounded-full bg-brand-soft text-brand">
+                  <Clock size={13} className="sm:hidden" />
+                  <Clock size={15} className="hidden sm:block" />
+                </span>
+                <span>Delivery by tomorrow</span>
+              </div>
+
+              {/* Trust Points (immediately below delivery info) */}
+              <div className="mt-2 sm:mt-4 flex flex-wrap items-center gap-x-3.5 gap-y-1 sm:gap-x-6 sm:gap-y-2 text-[11px] sm:text-sm font-medium text-[#132029]">
+                <span className="inline-flex items-center gap-1">
+                  <Check size={13} className="text-emerald-600 stroke-[3]" />
                   Fresh products
                 </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Check size={15} className="text-emerald-600 stroke-[3]" />
+                <span className="inline-flex items-center gap-1">
+                  <Check size={13} className="text-emerald-600 stroke-[3]" />
                   Low prices
                 </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Check size={15} className="text-emerald-600 stroke-[3]" />
+                <span className="inline-flex items-center gap-1">
+                  <Check size={13} className="text-emerald-600 stroke-[3]" />
                   Reliable delivery
                 </span>
               </div>
             </div>
 
-            {/* Right Side Oval Composition */}
-            <div className="relative flex items-center justify-center lg:col-span-5 pt-4 pb-3 lg:py-0">
-              <div className="relative w-full max-w-[340px] sm:max-w-[440px] lg:max-w-[480px] aspect-[16/11] flex items-center justify-center">
-                {/* Subtle Pale Green Outline / Ring surrounding the Oval */}
-                <div className="absolute inset-0 rounded-[50%] p-2 sm:p-2.5 bg-gradient-to-br from-emerald-200/50 via-emerald-100/60 to-brand/10 shadow-[0_12px_36px_rgba(14,92,99,0.08)]">
-                  {/* Inner White Ellipse / Oval with Grocery Image */}
-                  <div className="relative w-full h-full rounded-[50%] bg-white overflow-hidden shadow-sm flex items-center justify-center border-2 border-white">
-                    <img
-                      src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1000&q=80"
-                      alt="Fresh grocery basket and farm produce"
-                      className="w-full h-full object-cover object-center scale-105 transition-transform duration-500 hover:scale-110"
-                      loading="eager"
-                    />
-                    {/* Soft vignette inside oval for depth */}
-                    <div className="pointer-events-none absolute inset-0 rounded-[50%] bg-gradient-to-t from-black/15 via-transparent to-transparent" />
-                  </div>
+            {/* Right Side Oval + Grocery Image Composition */}
+            <div className="relative flex items-center justify-center lg:col-span-5 pt-3 pb-1 sm:py-6 lg:py-0 w-full">
+              <div className="relative w-full max-w-[320px] sm:max-w-[400px] lg:max-w-[480px] h-[175px] sm:h-[220px] lg:h-[260px] flex items-center justify-center mx-auto">
+                {/* Large soft/pale green oval sitting behind the grocery image */}
+                <div
+                  className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[120px] sm:h-[160px] lg:h-[190px] w-full rounded-[50%] bg-[#E4F2E9] border border-[#CFE7D8]/80 shadow-[0_4px_24px_rgba(14,92,99,0.06)]"
+                  aria-hidden="true"
+                />
+
+                {/* Grocery image centered horizontally and overlapping the oval */}
+                <div className="relative z-10 w-[200px] sm:w-[260px] lg:w-[310px] h-[135px] sm:h-[175px] lg:h-[205px] rounded-2xl sm:rounded-3xl overflow-hidden shadow-md border-2 border-white bg-white">
+                  <img
+                    src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1000&q=80"
+                    alt="Fresh grocery basket and farm produce"
+                    className="w-full h-full object-cover object-center scale-105"
+                    loading="eager"
+                  />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent" />
                 </div>
 
-                {/* Floating Badge: Top-Right (Delivery) */}
-                <div className="absolute -top-3 -right-2 sm:-top-4 sm:-right-4 z-20 flex items-center gap-2.5 rounded-2xl bg-white px-3.5 py-2 sm:px-4 sm:py-2.5 shadow-[0_8px_24px_rgba(19,32,41,0.1)] border border-[#E9E6DC]">
-                  <span className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-xl bg-brand-soft text-brand">
-                    <Truck size={17} />
+                {/* Floating Badge: Top-Right (Fast delivery) */}
+                <div className="absolute top-0 right-1 sm:-top-2 sm:right-0 z-20 flex items-center gap-1.5 sm:gap-2.5 rounded-xl sm:rounded-2xl bg-white px-2.5 py-1.5 sm:px-3.5 sm:py-2 shadow-md border border-[#E9E6DC]">
+                  <span className="grid h-6 w-6 sm:h-8 sm:w-8 place-items-center rounded-lg sm:rounded-xl bg-brand-soft text-brand">
+                    <Truck size={13} className="sm:hidden" />
+                    <Truck size={16} className="hidden sm:block" />
                   </span>
                   <div>
-                    <p className="text-xs sm:text-sm font-bold text-[#132029] leading-tight">
-                      Fast Delivery
+                    <p className="text-[11px] sm:text-xs font-bold text-[#132029] leading-tight">
+                      Fast delivery
                     </p>
-                    <p className="text-[10px] sm:text-[11px] font-medium text-muted leading-tight">
-                      At your doorstep
+                    <p className="text-[9px] sm:text-[10px] font-medium text-muted leading-tight">
+                      Right to your doorstep
                     </p>
                   </div>
                 </div>
 
                 {/* Floating Badge: Bottom-Left (100% Fresh) */}
-                <div className="absolute -bottom-3 -left-2 sm:-bottom-4 sm:-left-4 z-20 flex items-center gap-2.5 rounded-2xl bg-white px-3.5 py-2 sm:px-4 sm:py-2.5 shadow-[0_8px_24px_rgba(19,32,41,0.1)] border border-[#E9E6DC]">
-                  <span className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
-                    <Leaf size={17} className="fill-emerald-600/20" />
+                <div className="absolute bottom-0 left-1 sm:-bottom-2 sm:left-0 z-20 flex items-center gap-1.5 sm:gap-2.5 rounded-xl sm:rounded-2xl bg-white px-2.5 py-1.5 sm:px-3.5 sm:py-2 shadow-md border border-[#E9E6DC]">
+                  <span className="grid h-6 w-6 sm:h-8 sm:w-8 place-items-center rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-600">
+                    <Leaf size={13} className="fill-emerald-600/20 sm:hidden" />
+                    <Leaf size={16} className="fill-emerald-600/20 hidden sm:block" />
                   </span>
                   <div>
-                    <p className="text-xs sm:text-sm font-bold text-[#132029] leading-tight">
+                    <p className="text-[11px] sm:text-xs font-bold text-[#132029] leading-tight">
                       100% fresh
                     </p>
-                    <p className="text-[10px] sm:text-[11px] font-medium text-muted leading-tight">
+                    <p className="text-[9px] sm:text-[10px] font-medium text-muted leading-tight">
                       Quality checked
                     </p>
                   </div>
@@ -473,49 +479,48 @@ export default function HomePage() {
       </section>
 
       {/* 3. Shop by Category */}
-      <section className="mx-auto max-w-7xl px-4 pt-8 sm:pt-10">
-        <div className="flex items-end justify-between gap-4 mb-4">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-brand">
-              Browse Aisles
-            </span>
-            <h2 className="mt-0.5 text-xl sm:text-2xl font-bold text-ink">
-              Shop by category
-            </h2>
-            <p className="mt-0.5 text-xs sm:text-sm text-muted">
-              Select a category to explore fresh groceries & staples
-            </p>
+      <section className="mx-auto max-w-7xl px-3 sm:px-4 pt-3 sm:pt-8">
+        <div className="rounded-2xl sm:rounded-3xl bg-white border border-[#E9E6DC] p-3.5 sm:p-6 shadow-xs">
+          <div className="flex items-center justify-between gap-4 mb-3 sm:mb-4">
+            <div>
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#f05a28]">
+                EVERYDAY FRESH
+              </span>
+              <h2 className="text-base sm:text-2xl font-bold text-ink">
+                Shop by Category
+              </h2>
+            </div>
+
+            <Link
+              href="/products"
+              className="shrink-0 text-xs sm:text-sm font-semibold text-brand hover:underline"
+            >
+              All categories →
+            </Link>
           </div>
 
-          <Link
-            href="/products"
-            className="shrink-0 text-xs sm:text-sm font-semibold text-brand hover:underline"
-          >
-            All categories →
-          </Link>
-        </div>
+          <div className="flex gap-2.5 sm:gap-6 overflow-x-auto pb-1 scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x">
+            {homeCategories.map((category) => (
+              <Link
+                key={category.slug}
+                href={`/products?category=${category.slug}`}
+                className="group flex flex-col items-center shrink-0 snap-start w-[72px] sm:w-24 text-center focus:outline-none"
+              >
+                <div className="relative w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-brand/5 border-2 border-line/70 p-1 transition-all duration-300 group-hover:scale-105 group-hover:border-brand group-hover:shadow-md">
+                  <img
+                    src={category.image}
+                    alt={category.name}
+                    className="w-full h-full object-cover rounded-full"
+                    loading="lazy"
+                  />
+                </div>
 
-        <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-2 scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x">
-          {homeCategories.map((category) => (
-            <Link
-              key={category.slug}
-              href={`/products?category=${category.slug}`}
-              className="group flex flex-col items-center shrink-0 snap-start w-20 sm:w-24 text-center focus:outline-none"
-            >
-              <div className="relative w-18 h-18 sm:w-22 sm:h-22 rounded-full overflow-hidden bg-brand/5 border-2 border-line/70 p-1 transition-all duration-300 group-hover:scale-105 group-hover:border-brand group-hover:shadow-md">
-                <img
-                  src={category.image}
-                  alt={category.name}
-                  className="w-full h-full object-cover rounded-full"
-                  loading="lazy"
-                />
-              </div>
-
-              <span className="mt-2 text-xs sm:text-sm font-semibold text-ink group-hover:text-brand line-clamp-2 leading-tight transition-colors">
-                {category.name}
-              </span>
-            </Link>
-          ))}
+                <span className="mt-1.5 text-[11px] sm:text-xs font-semibold text-ink group-hover:text-brand line-clamp-2 leading-tight transition-colors">
+                  {category.name}
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 

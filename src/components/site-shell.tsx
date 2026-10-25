@@ -17,6 +17,7 @@ function SiteShellContent({
 
   const isAdmin = pathname.startsWith("/admin");
   const isDelivery = pathname.startsWith("/delivery");
+  const isHome = pathname === "/";
 
   // Admin and delivery portals have their own layouts/navigation.
   if (isAdmin || isDelivery) {
@@ -28,13 +29,13 @@ function SiteShellContent({
     <>
       <Header />
 
-      <main className="pb-20 md:pb-0">
+      <main className={isHome ? "pb-0" : "pb-20 md:pb-0"}>
         {children}
       </main>
 
       <Footer />
 
-      <BottomNav />
+      {!isHome && <BottomNav />}
     </>
   );
 }
