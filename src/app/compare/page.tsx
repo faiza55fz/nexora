@@ -6,6 +6,8 @@ import { useStore } from "@/components/providers";
 import { AiHint, Button, Card } from "@/components/ui";
 import { inr } from "@/lib/format";
 
+export const dynamic = 'force-dynamic';
+
 export default function ComparePage() {
   const { compare, toggleCompare } = useStore();
   const items = products.filter((p) => compare.includes(p.id));

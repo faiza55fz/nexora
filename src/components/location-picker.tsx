@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { LocateFixed } from "lucide-react";
-import "leaflet/dist/leaflet.css";
+// Leaflet CSS is imported dynamically in the client effect to avoid SSR build issues
 
 type LocationPickerProps = {
   latitude: number | null;
@@ -35,6 +35,7 @@ export default function LocationPicker({
       }
 
       const L = await import("leaflet");
+    await import('leaflet/dist/leaflet.css'); // load CSS client‑side
 
       if (cancelled || !mapRef.current) {
         return;
