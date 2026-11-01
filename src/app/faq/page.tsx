@@ -132,35 +132,7 @@ export default function FAQPage() {
           </div>
         </section>
 
-        {/* Contact */}
-        <section className="mt-10">
-          <h2 className="mb-4 text-lg font-semibold">Contact SundayShop</h2>
-
-          <div className="rounded-2xl border border-line bg-surface p-5">
-            <p className="text-sm leading-6 text-muted">
-              Need help with something that isn't covered here? Get in touch
-              with SundayShop and we'll help you with your order.
-            </p>
-
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-              <a
-                href="tel:+91XXXXXXXXXX"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-line px-4 py-3 text-sm font-medium transition-colors hover:bg-surface-2"
-              >
-                <Phone className="h-4 w-4" />
-                Contact SundayShop
-              </a>
-
-              <a
-                href="mailto:support@hublibazar.com"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-line px-4 py-3 text-sm font-medium transition-colors hover:bg-surface-2"
-              >
-                <Mail className="h-4 w-4" />
-                Email support
-              </a>
-            </div>
-          </div>
-        </section>
+        
       </div>
     </main>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import NotificationBell from "@/components/notification-bell";
@@ -32,6 +33,7 @@ export function Header() {
     notifications,
     compare,
     user,
+    logout,
   } = useStore();
 
   const [q, setQ] = useState("");
@@ -240,23 +242,20 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
           </button>
 
           {/* Logo */}
-          <Link
-            href="/"
-            className="flex shrink-0 items-center gap-2.5 group"
-          >
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand text-xl font-extrabold text-white shadow-sm transition-transform group-hover:scale-105">
-              S
-            </span>
-
-            <div className="leading-tight">
-              <span className="text-lg sm:text-xl font-extrabold tracking-tight text-ink block">
-                Sunday<span className="text-brand">Shop</span>
-              </span>
-              <span className="hidden sm:block text-[10px] uppercase font-bold tracking-wider text-muted -mt-0.5">
-                Quick Groceries
-              </span>
-            </div>
-          </Link>
+          
+<Link
+  href="/"
+  className="flex shrink-0 items-center group"
+>
+  <Image
+    src="/images/sundayshop-logo.png"
+    alt="SundayShop - Fresh Delivered"
+    width={170}
+    height={110}
+    priority
+    className="h-12 w-auto object-contain transition-transform group-hover:scale-105"
+  />
+</Link>
 
           {/* Delivery location */}
           <button 
@@ -620,168 +619,148 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
 >
   {/* Background overlay */}
   <div
-    className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ease-out ${
-      open ? "opacity-100" : "opacity-0"
-    }`}
-    onClick={() => setOpen(false)}
-  />
+  className={`fixed inset-0 z-[100] bg-black/40 transition-opacity duration-300 ${
+    open ? "opacity-100 visible" : "opacity-0 invisible"
+  }`}
+  onClick={() => setOpen(false)}
+/>
 
-  {/* Sliding drawer */}
-  <aside
-    className={`absolute left-0 top-0 h-full w-[min(82vw,340px)] overflow-y-auto bg-surface p-5 shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-      open ? "translate-x-0" : "-translate-x-full"
-    }`}
-    onClick={(e) => e.stopPropagation()}
-  >
-    {/* Header */}
-    <div className="flex items-center justify-between border-b border-line pb-4">
-      <Link
-        href="/"
-        className="flex items-center gap-2 transition-transform duration-200 hover:scale-[1.02]"
-        onClick={() => setOpen(false)}
-      >
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand font-bold text-white">
-          S
-        </span>
-
-        <span className="font-bold">SundayShop</span>
-      </Link>
-
-      <button
-        aria-label="Close menu"
-        className="grid h-9 w-9 place-items-center rounded-xl transition-all duration-200 hover:bg-surface-2 hover:scale-105 active:scale-95"
-        onClick={() => setOpen(false)}
-      >
-        <X size={20} />
-      </button>
-    </div>
-
-    {/* Delivery */}
-{/* Delivery */}
-<button
-  type="button"
-  onClick={() => {
-    setOpen(false);
-    router.push("/account/addresses");
-  }}
-  className="mt-5 flex w-full items-center gap-3 rounded-2xl bg-brand-soft p-4 text-left transition-transform duration-200 hover:scale-[1.01]"
+  
+{/* Sliding drawer */}
+<aside
+  className={`fixed left-0 top-0 z-[101] h-dvh w-[min(82vw,340px)] overflow-y-auto bg-surface p-5 shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+  open ? "translate-x-0" : "-translate-x-full"
+  }`}
+  onClick={(e) => e.stopPropagation()}
 >
-  <MapPin size={20} className="text-brand" />
+  {/* Header */}
+  <div className="flex items-center justify-between border-b border-line pb-4">
+    <Link href="/" onClick={() => setOpen(false)} className="flex items-center">
+  <Image
+    src="/images/sundayshop-logo.png"
+    alt="SundayShop"
+    width={150}
+    height={100}
+    priority
+    className="h-12 w-auto object-contain"
+  />
+</Link>
 
-  <div className="min-w-0">
-    <p className="text-xs text-muted">
-      Deliver to
-    </p>
-
-    <p className="truncate text-sm font-semibold">
-      {defaultAddress
-        ? `${defaultAddress.label} · ${defaultAddress.city}`
-        : "Add delivery address"}
-    </p>
-
-    {defaultAddress ? (
-      <p className="mt-0.5 truncate text-xs text-muted">
-        {defaultAddress.address_line1}
-      </p>
-    ) : null}
+    <button
+      aria-label="Close menu"
+      className="grid h-9 w-9 place-items-center rounded-xl hover:bg-surface-2"
+      onClick={() => setOpen(false)}
+    >
+      <X size={20} />
+    </button>
   </div>
 
-  <ChevronDown
-    size={16}
-    className="ml-auto shrink-0 text-muted"
-  />
-</button>
-
-    {/* Main navigation */}
-    <div className="mt-5 space-y-1">
-      <Link
-        href="/products"
-        onClick={() => setOpen(false)}
-       className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
-        >🛒 Shop groceries
-      </Link>
-
-      <Link
-        href="/deals"
-        onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
-      >
-        💰 Today's deals
-      </Link>
-
-      <Link
-        href={cartHref}
-        onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
-      >
-        🛍️ Cart {cartCount > 0 ? `(${cartCount})` : ""}
-      </Link>
-
-      <Link
-        href="/account/wishlist"
-        onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
-      >
-        ❤️ Wishlist
-      </Link>
-
-      <Link
-        href="/account"
-        onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
-      >
-        👤 My account
-      </Link>
+  {/* Delivery location */}
+  <button
+    type="button"
+    onClick={() => {
+      setOpen(false);
+      router.push("/account/addresses");
+    }}
+    className="mt-5 flex w-full items-center gap-3 rounded-2xl bg-brand-soft p-4 text-left"
+  >
+    <MapPin size={20} className="text-brand" />
+    <div className="min-w-0">
+      <p className="text-xs text-muted">Deliver to</p>
+      <p className="truncate text-sm font-semibold">
+        {defaultAddress
+          ? `${defaultAddress.label} · ${defaultAddress.city}`
+          : "Add delivery address"}
+      </p>
+      {defaultAddress && (
+        <p className="mt-0.5 truncate text-xs text-muted">
+          {defaultAddress.address_line1}
+        </p>
+      )}
     </div>
+    <ChevronDown size={16} className="ml-auto shrink-0 text-muted" />
+  </button>
 
-    {/* Contact SundayShop */}
-    <div className="mt-6 border-t border-line pt-5">
-      <p className="mb-3 px-3 font-semibold">Contact SundayShop</p>
+  {/* Account */}
+  <div className="mt-5 border-b border-line pb-4">
+    <p className="mb-2 px-3 font-semibold">My Account</p>
 
-      <a
-        href="tel:+91XXXXXXXXXX"
-        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:scale-[0.98]"
-      >
-        📞 Contact SundayShop
-      </a>
-    </div>
-
-    {/* FAQs */}
-    <div className="mt-5 border-t border-line pt-5">
-      <p className="mb-3 px-3 font-semibold">FAQs</p>
-
-      <Link
-        href="/faq"
-        onClick={() => setOpen(false)}
-        className="block rounded-xl px-3 py-3 text-sm text-muted transition-all duration-200 hover:translate-x-1 hover:bg-surface-2 hover:text-foreground active:translate-x-1 active:scale-[0.98] active:bg-surface-2"
-      >
-        ❓ View FAQs & Help
+    {user ? (
+      <>
+        <Link href="/account" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-3 text-sm hover:bg-surface-2">
+          👤 My Profile
+        </Link>
+        <Link href="/account/orders" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-3 text-sm hover:bg-surface-2">
+          📦 My Orders
+        </Link>
+        <Link href="/account/wishlist" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-3 text-sm hover:bg-surface-2">
+          ❤️ Wishlist
+        </Link>
+      </>
+    ) : (
+      <Link href="/login" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-3 text-sm font-semibold text-brand hover:bg-surface-2">
+        Login / Sign Up
       </Link>
+    )}
+  </div>
+
+  {/* Information */}
+  <div className="mt-5 border-b border-line pb-4">
+    <p className="mb-2 px-3 font-semibold">Information</p>
+    {[
+      { href: "/about", label: "About Us" },
+      { href: "/contact", label: "Contact Us" },
+      { href: "/faq", label: "FAQs & Help" },
+      { href: "/delivery-information", label: "Delivery Information" },
+    ].map((item) => (
+      <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className="block rounded-xl px-3 py-3 text-sm text-muted hover:bg-surface-2 hover:text-foreground">
+        {item.label}
+      </Link>
+    ))}
+  </div>
+
+  {/* Legal */}
+  <div className="mt-5 border-b border-line pb-4">
+    <p className="mb-2 px-3 font-semibold">Legal</p>
+    {[
+      { href: "/pricing", label: "Pricing" },
+      { href: "/privacy-policy", label: "Privacy Policy" },
+      { href: "/terms-and-conditions", label: "Terms & Conditions" },
+      { href: "/refund-policy", label: "Refund & Cancellation Policy" },
+    ].map((item) => (
+      <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className="block rounded-xl px-3 py-3 text-sm text-muted hover:bg-surface-2 hover:text-foreground">
+        {item.label}
+      </Link>
+    ))}
+  </div>
+
+  {/* Why SundayShop */}
+  <div className="mt-5">
+    <p className="mb-3 px-3 font-semibold">Why SundayShop?</p>
+    <div className="space-y-1 text-sm text-muted">
+      <p className="rounded-xl px-3 py-2">💰 Low prices</p>
+      <p className="rounded-xl px-3 py-2">🥬 Fresh groceries</p>
+      <p className="rounded-xl px-3 py-2">🚚 1-day delivery</p>
+      <p className="rounded-xl px-3 py-2">💵 Cash on delivery</p>
     </div>
+  </div>
 
-    {/* Why SundayShop */}
-    <div className="mt-6 border-t border-line pt-5">
-      <p className="mb-3 px-3 font-semibold">Why SundayShop?</p>
+  {/* Logout */}
+  {user && (
+    <button
+      type="button"
+      onClick={() => {
+        setOpen(false);
+        logout();
+        router.push("/");
+      }}
+      className="mt-5 w-full rounded-xl px-3 py-3 text-left text-sm font-semibold text-red-600 hover:bg-red-50"
+    >
+      ↪ Logout
+    </button>
+  )}
+</aside>
 
-      <div className="space-y-1 text-sm text-muted">
-        <div className="rounded-xl px-3 py-2 transition-transform duration-200 hover:translate-x-1">
-          💰 Low prices
-        </div>
-
-        <div className="rounded-xl px-3 py-2 transition-transform duration-200 hover:translate-x-1">
-          🥬 Fresh groceries
-        </div>
-
-        <div className="rounded-xl px-3 py-2 transition-transform duration-200 hover:translate-x-1">
-          🚚 1-day delivery
-        </div>
-
-        <div className="rounded-xl px-3 py-2 transition-transform duration-200 hover:translate-x-1">
-          💵 Cash on delivery
-        </div>
-      </div>
-    </div>
-  </aside>
 
 
               {/*{compare.length > 0 && (

@@ -51,7 +51,7 @@ export default function NotificationBell({
     (notification) => !notification.is_read,
   ).length;
 
-  async function loadNotifications() {
+  async function loadNotifications(signal?: AbortSignal) {
     if (!recipientId || !recipientId.trim()) {
   setNotifications([]);
   
@@ -69,6 +69,7 @@ export default function NotificationBell({
         )}`,
         {
           cache: "no-store",
+          signal,
         },
       );
 
@@ -83,6 +84,10 @@ export default function NotificationBell({
 
       setNotifications(data.notifications ?? []);
     } catch (error) {
+
+      if (error instanceof Error && error.name === "AbortError") {
+    return;
+  }
       console.error(
         "Notification loading error:",
         error,
@@ -179,22 +184,37 @@ export default function NotificationBell({
     }
   }
 
-  useEffect(() => {
+ useEffect(() => {
   if (!recipientId?.trim()) {
     setNotifications([]);
-    
     return;
   }
 
-  loadNotifications();
+  let controller: AbortController | null = null;
+  let isLoading = false;
 
-  const interval = window.setInterval(
-    loadNotifications,
-    15000,
-  );
+  async function refreshNotifications() {
+    if (isLoading) return;
+
+    isLoading = true;
+    controller = new AbortController();
+
+    try {
+      await loadNotifications(controller.signal);
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  void refreshNotifications();
+
+  const interval = window.setInterval(() => {
+    void refreshNotifications();
+  }, 15000);
 
   return () => {
     window.clearInterval(interval);
+    controller?.abort();
   };
 }, [recipientId, recipientType]);
 
