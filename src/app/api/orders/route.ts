@@ -145,7 +145,10 @@ export async function GET() {
           exchange_status,
           exchange_reason,
           created_at,
-          order_items (
+shipped_at,
+out_for_delivery_at,
+delivered_at,
+order_items (
             id,
             product_id,
             product_name,
@@ -449,12 +452,52 @@ export async function PATCH(
      * Other status updates remain unchanged.
      * These are currently used by admin/order management.
      */
-    const { data, error } =
-      await supabaseAdmin
-        .from("orders")
-        .update({
+    /*
+ * Other status updates remain unchanged.
+ * These are currently used by admin/order management.
+ */
+const { data: currentOrder } = await supabaseAdmin
+  .from("orders")
+  .select(
+    "status, shipped_at, out_for_delivery_at, delivered_at",
+  )
+  .eq("id", orderId)
+  .single();
+
+const deliveryTimestamps = {
+  ...(status === "shipped" &&
+  currentOrder?.status !== "shipped" &&
+  !currentOrder?.shipped_at
+    ? {
+        shipped_at: new Date().toISOString(),
+      }
+    : {}),
+
+  ...(status === "out-for-delivery" &&
+  currentOrder?.status !== "out-for-delivery" &&
+  !currentOrder?.out_for_delivery_at
+    ? {
+        out_for_delivery_at:
+          new Date().toISOString(),
+      }
+    : {}),
+
+  ...(status === "delivered" &&
+  currentOrder?.status !== "delivered" &&
+  !currentOrder?.delivered_at
+    ? {
+        delivered_at: new Date().toISOString(),
+      }
+    : {}),
+};
+
+const { data, error } =
+  await supabaseAdmin
+    .from("orders")
+    .update({
           status,
 
+          ...deliveryTimestamps,
           ...(deliveryPartnerId
             ? {
                 delivery_partner_id:
@@ -496,7 +539,7 @@ export async function PATCH(
         })
         .eq("id", orderId)
         .select(
-          "id, order_number, status, customer_email, customer_name, customer_phone, address, refund_status, refund_amount, return_reason, exchange_status, exchange_reason, delivery_partner_id",
+          "id, order_number, status, customer_email, customer_name, customer_phone, address, refund_status, refund_amount, return_reason, exchange_status, exchange_reason, delivery_partner_id, shipped_at, out_for_delivery_at, delivered_at",
         )
         .single();
 
