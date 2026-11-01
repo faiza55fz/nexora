@@ -52,7 +52,11 @@ export default function NotificationBell({
   ).length;
 
   async function loadNotifications() {
-    if (!recipientId) return;
+    if (!recipientId || !recipientId.trim()) {
+  setNotifications([]);
+  
+  return;
+}
 
     try {
       setLoading(true);
@@ -176,17 +180,23 @@ export default function NotificationBell({
   }
 
   useEffect(() => {
-    loadNotifications();
+  if (!recipientId?.trim()) {
+    setNotifications([]);
+    
+    return;
+  }
 
-    const interval = window.setInterval(
-      loadNotifications,
-      15000,
-    );
+  loadNotifications();
 
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [recipientId, recipientType]);
+  const interval = window.setInterval(
+    loadNotifications,
+    15000,
+  );
+
+  return () => {
+    window.clearInterval(interval);
+  };
+}, [recipientId, recipientType]);
 
   useEffect(() => {
     function handleOutsideClick(

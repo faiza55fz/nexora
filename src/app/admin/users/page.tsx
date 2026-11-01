@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -10,6 +11,7 @@ type Customer = {
   phone: string;
   lastActivityAt: string | null;
   status: "active" | "inactive";
+  khataBalance: number;
 };
 
 function formatActivityDate(value: string | null) {
@@ -19,6 +21,14 @@ function formatActivityDate(value: string | null) {
     dateStyle: "medium",
     timeStyle: "short",
   });
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 export default function AdminUsers() {
@@ -58,7 +68,7 @@ export default function AdminUsers() {
   }
 
   useEffect(() => {
-   void loadCustomers();
+    void loadCustomers();
   }, []);
 
   const activeCustomers = useMemo(
@@ -69,6 +79,16 @@ export default function AdminUsers() {
     [customers],
   );
 
+  const totalKhataOutstanding = useMemo(
+    () =>
+      customers.reduce(
+        (total, customer) =>
+          total + Math.max(0, customer.khataBalance || 0),
+        0,
+      ),
+    [customers],
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -76,7 +96,7 @@ export default function AdminUsers() {
         subtitle="Manage real SundayShop customer accounts and recent activity."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card className="p-5">
           <p className="text-sm text-muted">
             Total customers
@@ -98,6 +118,20 @@ export default function AdminUsers() {
 
           <p className="mt-1 text-xs text-muted">
             Activity within the last 30 days
+          </p>
+        </Card>
+
+        <Card className="p-5">
+          <p className="text-sm text-muted">
+            Total Khata outstanding
+          </p>
+
+          <p className="mt-2 text-3xl font-semibold">
+            {loading ? "—" : formatCurrency(totalKhataOutstanding)}
+          </p>
+
+          <p className="mt-1 text-xs text-muted">
+            Outstanding customer credit
           </p>
         </Card>
       </div>
@@ -134,13 +168,14 @@ export default function AdminUsers() {
         </Card>
       ) : (
         <Card className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-sm">
+          <table className="w-full min-w-[1050px] text-sm">
             <thead className="bg-surface-2 text-left">
               <tr>
                 <th className="p-3">Customer</th>
                 <th className="p-3">Email</th>
                 <th className="p-3">Phone</th>
                 <th className="p-3">Status</th>
+                <th className="p-3">Khata balance</th>
                 <th className="p-3">Last activity</th>
               </tr>
             </thead>
@@ -181,6 +216,18 @@ export default function AdminUsers() {
                         Inactive
                       </Badge>
                     )}
+                  </td>
+
+                  <td className="p-3">
+                    <span
+                      className={
+                        customer.khataBalance > 0
+                          ? "font-semibold text-danger"
+                          : "text-muted"
+                      }
+                    >
+                      {formatCurrency(customer.khataBalance || 0)}
+                    </span>
                   </td>
 
                   <td className="p-3 text-muted">

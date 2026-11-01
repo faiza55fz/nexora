@@ -232,7 +232,7 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
         <div className="flex min-h-[58px] md:min-h-[68px] items-center gap-3">
           {/* Mobile menu - hidden on mobile header to match Figma */}
           <button
-            className="hidden h-10 w-10 shrink-0 place-items-center rounded-xl hover:bg-surface-2"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl hover:bg-surface-2 md:hidden"
             aria-label="Open menu"
             onClick={() => setOpen(true)}
           >
@@ -925,39 +925,59 @@ export function Footer() {
           </ul>
         </div>
 
-        {/* Help */}
-        <div>
-          <p className="font-semibold">Help</p>
+       
+       
+{/* Help */}
+<div>
+  <p className="font-semibold">Help</p>
 
-          <ul className="mt-3 space-y-2 text-sm text-muted">
-            <li>
-              <Link href="/account/orders" className="hover:text-brand">
-                My orders
-              </Link>
-            </li>
-            <li>
-              <Link href="/track/NXR-240918-1842" className="hover:text-brand">
-                Track delivery
-              </Link>
-            </li>
-            <li>
-              <Link href="/account/returns" className="hover:text-brand">
-                Returns
-              </Link>
-            </li>
-            <a
-          href="tel:+91XXXXXXXXXX"
-         className="block py-2 text-sm text-muted hover:text-brand"
-          > 
-           Contact SundayShop
-            </a>
-            <li>
-              <Link href="/account" className="hover:text-brand">
-                My account
-              </Link>
-            </li>
-          </ul>
-        </div>
+  <ul className="mt-3 space-y-2 text-sm text-muted">
+    <li>
+      <Link href="/about" className="hover:text-brand">
+        About Us
+      </Link>
+    </li>
+    <li>
+      <Link href="/contact" className="hover:text-brand">
+        Contact Us
+      </Link>
+    </li>
+    <li>
+      <Link href="/account/orders" className="hover:text-brand">
+        My orders
+      </Link>
+    </li>
+    <li>
+      <Link href="/track/NXR-240918-1842" className="hover:text-brand">
+        Track delivery
+      </Link>
+    </li>
+    <li>
+      <Link href="/account/returns" className="hover:text-brand">
+        Returns
+      </Link>
+    </li>
+    <li>
+      <Link href="/account" className="hover:text-brand">
+        My account
+      </Link>
+    </li>
+  </ul>
+</div>
+
+
+{/* Legal */}
+<div>
+  <p className="font-semibold">Legal</p>
+
+  <ul className="mt-3 space-y-2 text-sm text-muted">
+    <li><Link href="/pricing" className="hover:text-brand">Pricing</Link></li>
+    <li><Link href="/privacy-policy" className="hover:text-brand">Privacy Policy</Link></li>
+    <li><Link href="/terms-and-conditions" className="hover:text-brand">Terms & Conditions</Link></li>
+    <li><Link href="/refund-policy" className="hover:text-brand">Refund & Cancellation</Link></li>
+  </ul>
+</div>
+
 
         {/* Promise */}
         <div>

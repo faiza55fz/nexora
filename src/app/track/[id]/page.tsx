@@ -74,41 +74,55 @@ export default async function TrackPage({
 try {
   const { supabaseAdmin } = await import("@/lib/supabase-admin");
 
-  const { data, error } = await supabaseAdmin
-    .from("orders")
-    .select(`
+  
+const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+const query = supabaseAdmin
+  .from("orders")
+  .select(`
+    id,
+    order_number,
+    customer_name,
+    customer_email,
+    customer_phone,
+    delivery_partner_id,
+    delivery_partner:delivery_partners (
+      name,
+      phone
+    ),
+    address,
+    subtotal,
+    delivery_fee,
+    total,
+    payment_method,
+    status,
+    created_at,
+    order_items (
       id,
-      order_number,
-      customer_name,
-      customer_email,
-      customer_phone,
-      delivery_partner_id,
-      delivery_partner:delivery_partners (
-        name,
-        phone
-      ),
-      address,
-      subtotal,
-      delivery_fee,
-      total,
-      payment_method,
-      status,
-      created_at,
-      order_items (
-        id,
-        product_id,
-        product_name,
-        quantity,
-        price
-      )
-    `)
-    .or(`id.eq.${id},order_number.eq.${id}`)
-    .maybeSingle();
+      product_id,
+      product_name,
+      quantity,
+      price
+    )
+  `);
+
+const { data, error } = isUuid
+  ? await query.eq("id", id).maybeSingle()
+  : await query.eq("order_number", id).maybeSingle();
+
+if (error) {
+  console.error("Tracking query failed:", error.message);
+} else {
+  order = data as ApiOrder | null;
+}
+
 
   if (error) {
-    console.error(
-      "Failed to load tracking order:",
-      error,
+    console.error("Tracking query failed:", {
+    message: error.message,
+    details: error.details,
+    hint: error.hint,
+    code: error.code,}  
     );
   } else {
     order = data as ApiOrder | null;

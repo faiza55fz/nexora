@@ -18,7 +18,12 @@ type CreateOrderRequest = {
   subtotal: number;
   deliveryFee: number;
   total: number;
-  paymentMethod: "cod";
+  paymentMethod: 
+  |"cod"
+  | "credit_card"
+  | "debit_card"
+  | "upi"
+  | "pay_later";
   couponCode?: string | null;
   items: OrderItemInput[];
 };
@@ -596,6 +601,57 @@ export async function POST(request: Request) {
     const body =
       (await request.json()) as CreateOrderRequest;
 
+         // Verify the logged-in customer.
+    const authorization =
+      request.headers.get("authorization");
+
+    const accessToken = authorization?.startsWith("Bearer ")
+      ? authorization.slice(7).trim()
+      : "";
+
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Please log in to place an order." },
+        { status: 401 },
+      );
+    }
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseAdmin.auth.getUser(accessToken);
+
+    if (authError || !user || !user.email) {
+      return NextResponse.json(
+        { error: "Your session is invalid. Please log in again." },
+        { status: 401 },
+      );
+    }
+
+    // Match the authenticated account to its customer record.
+    const { data: authenticatedCustomer, error: customerError } =
+      await supabaseAdmin
+        .from("customers")
+        .select("id, email")
+        .eq("id", user.id)
+        .maybeSingle();
+
+    if (
+      customerError ||
+      !authenticatedCustomer ||
+      authenticatedCustomer.email?.trim().toLowerCase() !==
+        user.email.trim().toLowerCase()
+    ) {
+      return NextResponse.json(
+        { error: "Your customer account could not be verified." },
+        { status: 403 },
+      );
+    }
+
+    // Always use the verified account's email.
+    const authenticatedEmail = authenticatedCustomer.email;
+    const authenticatedCustomerId = authenticatedCustomer.id; 
+
     if (
       !body.customerName ||
       !body.customerEmail ||
@@ -669,8 +725,7 @@ export async function POST(request: Request) {
           p_customer_name:
             body.customerName.trim(),
 
-          p_customer_email:
-            body.customerEmail.trim(),
+          p_customer_email: authenticatedEmail,
 
           p_customer_phone:
             body.customerPhone.trim(),
@@ -678,7 +733,7 @@ export async function POST(request: Request) {
           p_address:
             body.address.trim(),
 
-          p_payment_method: "cod",
+          p_payment_method: body.paymentMethod,
 
           p_items: items,
 
@@ -714,15 +769,9 @@ export async function POST(request: Request) {
      * itself to fail.
      */
     try {
-      const { data: customer } =
-        await supabaseAdmin
-          .from("customers")
-          .select("id")
-          .eq(
-            "email",
-            body.customerEmail.trim(),
-          )
-          .maybeSingle();
+      const customer = {
+  id: authenticatedCustomerId,
+};
 
       if (customer?.id) {
         const {

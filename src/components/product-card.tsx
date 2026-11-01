@@ -213,7 +213,7 @@ export function ProductCard({
           {/* Product Name */}
           <Link
             href={`/products/${product.id}`}
-            className="mt-1 block line-clamp-2 min-h-[2.4rem] text-xs sm:text-sm font-semibold leading-snug text-ink transition hover:text-brand"
+           className="mt-1 block line-clamp-2 min-h-[2.2rem] text-[12px] font-medium leading-[1.4] tracking-[0.01em] text-ink capitalize transition hover:text-brand"
             title={product.name}
           >
             {product.name}

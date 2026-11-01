@@ -228,56 +228,56 @@ export default function HomePage() {
     {
       slug: "fruits",
       name: "Fruits",
-      image:
-        "https://images.unsplash.com/photo-1619566636858-adf3ef46400b?auto=format&fit=crop&w=300&q=80",
+      image:"/images/home/fruits-banner.jpg"
+        ,
     },
     {
       slug: "vegetables",
       name: "Vegetables",
       image:
-        "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=300&q=80",
+        "/images/home/vegetables-banner.jpg",
     },
     {
       slug: "dairy",
       name: "Dairy & Eggs",
       image:
-        "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=300&q=80",
+        "/images/home/dairy.jpg",
     },
     {
       slug: "staples",
       name: "Rice, Atta & Grains",
       image:
-        "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=300&q=80",
+        "/images/home/staples.jpg",
     },
     {
       slug: "pulses",
       name: "Pulses",
       image:
-        "https://images.unsplash.com/photo-1585996838653-5d7a1f1c9f89?auto=format&fit=crop&w=300&q=80",
+        "/images/home/pulses.jpg",
     },
     {
       slug: "spices",
       name: "Masala & Spices",
       image:
-        "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=300&q=80",
+        "/images/home/spices.jpg",
     },
     {
       slug: "snacks",
       name: "Snacks",
       image:
-        "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=300&q=80",
+        "/images/home/snacks.jpg",
     },
     {
       slug: "beverages",
       name: "Beverages",
       image:
-        "https://images.unsplash.com/photo-1597318181409-cf64d0b5d8a2?auto=format&fit=crop&w=300&q=80",
+        "/images/home/beverages.jpg",
     },
     {
       slug: "household",
       name: "Household",
       image:
-        "https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=300&q=80",
+        "/images/home/household.jpg",
     },
   ];
 
@@ -422,108 +422,299 @@ export default function HomePage() {
             </div>
 
             {/* Right Side Oval + Grocery Image Composition */}
-            <div className="relative flex items-center justify-center lg:col-span-5 pt-3 pb-1 sm:py-6 lg:py-0 w-full">
-              <div className="relative w-full max-w-[320px] sm:max-w-[400px] lg:max-w-[480px] h-[175px] sm:h-[220px] lg:h-[260px] flex items-center justify-center mx-auto">
-                {/* Large soft/pale green oval sitting behind the grocery image */}
-                <div
-                  className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[120px] sm:h-[160px] lg:h-[190px] w-full rounded-[50%] bg-[#E4F2E9] border border-[#CFE7D8]/80 shadow-[0_4px_24px_rgba(14,92,99,0.06)]"
-                  aria-hidden="true"
-                />
+            {/* Right Side Oval + Grocery Cart Image Composition */}
+<div className="relative flex items-center justify-center lg:col-span-5 pt-3 pb-1 sm:py-6 lg:py-0 w-full">
+  <div className="relative w-full max-w-[420px] sm:max-w-[520px] lg:max-w-[600px] h-[300px] sm:h-[380px] lg:h-[440px] flex items-center justify-center mx-auto">
 
-                {/* Grocery image centered horizontally and overlapping the oval */}
-                <div className="relative z-10 w-[200px] sm:w-[260px] lg:w-[310px] h-[135px] sm:h-[175px] lg:h-[205px] rounded-2xl sm:rounded-3xl overflow-hidden shadow-md border-2 border-white bg-white">
-                  <img
-                    src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1000&q=80"
-                    alt="Fresh grocery basket and farm produce"
-                    className="w-full h-full object-cover object-center scale-105"
-                    loading="eager"
-                  />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent" />
-                </div>
+    {/* Large pale-green oval behind the image */}
+    <div
+      className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[190px] sm:h-[250px] lg:h-[300px] w-full rounded-[50%] bg-[#E4F2E9]"
+      aria-hidden="true"
+    />
 
-                {/* Floating Badge: Top-Right (Fast delivery) */}
-                <div className="absolute top-0 right-1 sm:-top-2 sm:right-0 z-20 flex items-center gap-1.5 sm:gap-2.5 rounded-xl sm:rounded-2xl bg-white px-2.5 py-1.5 sm:px-3.5 sm:py-2 shadow-md border border-[#E9E6DC]">
-                  <span className="grid h-6 w-6 sm:h-8 sm:w-8 place-items-center rounded-lg sm:rounded-xl bg-brand-soft text-brand">
-                    <Truck size={13} className="sm:hidden" />
-                    <Truck size={16} className="hidden sm:block" />
-                  </span>
-                  <div>
-                    <p className="text-[11px] sm:text-xs font-bold text-[#132029] leading-tight">
-                      Fast delivery
-                    </p>
-                    <p className="text-[9px] sm:text-[10px] font-medium text-muted leading-tight">
-                      Right to your doorstep
-                    </p>
-                  </div>
-                </div>
+    {/* Delivery cart image — no frame or inner oval */}
+    <img
+      src="/images/home/delivery-cart.png"
+      alt="SundayShop grocery delivery cart filled with fresh produce"
+      className="relative z-10 w-full h-full object-contain"
+      loading="eager"
+    />
 
-                {/* Floating Badge: Bottom-Left (100% Fresh) */}
-                <div className="absolute bottom-0 left-1 sm:-bottom-2 sm:left-0 z-20 flex items-center gap-1.5 sm:gap-2.5 rounded-xl sm:rounded-2xl bg-white px-2.5 py-1.5 sm:px-3.5 sm:py-2 shadow-md border border-[#E9E6DC]">
-                  <span className="grid h-6 w-6 sm:h-8 sm:w-8 place-items-center rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-600">
-                    <Leaf size={13} className="fill-emerald-600/20 sm:hidden" />
-                    <Leaf size={16} className="fill-emerald-600/20 hidden sm:block" />
-                  </span>
-                  <div>
-                    <p className="text-[11px] sm:text-xs font-bold text-[#132029] leading-tight">
-                      100% fresh
-                    </p>
-                    <p className="text-[9px] sm:text-[10px] font-medium text-muted leading-tight">
-                      Quality checked
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+    {/* Fast delivery badge */}
+    <div className="absolute top-2 right-0 sm:top-3 sm:right-1 z-20 flex items-center gap-1.5 sm:gap-2.5 rounded-xl sm:rounded-2xl bg-white px-2.5 py-1.5 sm:px-3.5 sm:py-2 shadow-md border border-[#E9E6DC]">
+      <span className="grid h-6 w-6 sm:h-8 sm:w-8 place-items-center rounded-lg sm:rounded-xl bg-brand-soft text-brand">
+        <Truck size={13} className="sm:hidden" />
+        <Truck size={16} className="hidden sm:block" />
+      </span>
+      <div>
+        <p className="text-[11px] sm:text-xs font-bold text-[#132029] leading-tight">
+          Fast delivery
+        </p>
+        <p className="text-[9px] sm:text-[10px] font-medium text-muted leading-tight">
+          Right to your doorstep
+        </p>
+      </div>
+    </div>
+
+    {/* Freshness badge */}
+    <div className="absolute bottom-2 left-0 sm:bottom-3 sm:left-1 z-20 flex items-center gap-1.5 sm:gap-2.5 rounded-xl sm:rounded-2xl bg-white px-2.5 py-1.5 sm:px-3.5 sm:py-2 shadow-md border border-[#E9E6DC]">
+      <span className="grid h-6 w-6 sm:h-8 sm:w-8 place-items-center rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-600">
+        <Leaf size={13} className="fill-emerald-600/20 sm:hidden" />
+        <Leaf size={16} className="fill-emerald-600/20 hidden sm:block" />
+      </span>
+      <div>
+        <p className="text-[11px] sm:text-xs font-bold text-[#132029] leading-tight">
+          100% fresh
+        </p>
+        <p className="text-[9px] sm:text-[10px] font-medium text-muted leading-tight">
+          Quality checked
+        </p>
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
         </div>
       </section>
 
-      {/* 3. Shop by Category */}
-      <section className="mx-auto max-w-7xl px-3 sm:px-4 pt-3 sm:pt-8">
-        <div className="rounded-2xl sm:rounded-3xl bg-white border border-[#E9E6DC] p-3.5 sm:p-6 shadow-xs">
-          <div className="flex items-center justify-between gap-4 mb-3 sm:mb-4">
-            <div>
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#f05a28]">
-                EVERYDAY FRESH
-              </span>
-              <h2 className="text-base sm:text-2xl font-bold text-ink">
-                Shop by Category
-              </h2>
-            </div>
+    {/* Promotional Banners */}
+<section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
 
-            <Link
-              href="/products"
-              className="shrink-0 text-xs sm:text-sm font-semibold text-brand hover:underline"
-            >
-              All categories →
-            </Link>
+    {/* Fruits & Vegetables */}
+    <Link
+      href="/products?category=fruits"
+      className="group relative flex min-h-[190px] items-end overflow-hidden rounded-2xl bg-green-900 p-5"
+    >
+      <img
+        src="https://images.unsplash.com/photo-1619566636858-adf3ef46400b?auto=format&fit=crop&w=700&q=85"
+        alt="Fresh fruits"
+        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+      <div className="relative z-10">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-green-200">
+          Fresh every day
+        </p>
+        <h3 className="text-xl font-extrabold text-white">
+          Fresh Fruits & Veggies
+        </h3>
+        <span className="mt-3 inline-block rounded-full bg-white px-4 py-2 text-sm font-bold text-green-800">
+          Explore Now →
+        </span>
+      </div>
+    </Link>
+
+    {/* Daily Essentials */}
+    <Link
+      href="/products?category=staples"
+      className="group relative flex min-h-[190px] items-end overflow-hidden rounded-2xl bg-amber-900 p-5"
+    >
+      <img
+        src="https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=700&q=85"
+        alt="Grocery essentials"
+        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+      <div className="relative z-10">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-amber-200">
+          Stock up today
+        </p>
+        <h3 className="text-xl font-extrabold text-white">
+          Daily Grocery Essentials
+        </h3>
+        <span className="mt-3 inline-block rounded-full bg-white px-4 py-2 text-sm font-bold text-amber-800">
+          Shop Now →
+        </span>
+      </div>
+    </Link>
+
+    {/* Snacks */}
+    <Link
+      href="/products?category=snacks"
+      className="group relative flex min-h-[190px] items-end overflow-hidden rounded-2xl bg-orange-900 p-5"
+    >
+      <img
+        src="https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=700&q=85"
+        alt="Snacks"
+        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+      <div className="relative z-10">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-orange-200">
+          Something tasty
+        </p>
+        <h3 className="text-xl font-extrabold text-white">
+          Snacks for Every Craving
+        </h3>
+        <span className="mt-3 inline-block rounded-full bg-white px-4 py-2 text-sm font-bold text-orange-800">
+          Discover More →
+        </span>
+      </div>
+    </Link>
+
+  </div>
+</section>
+  
+        {/* 8. Promotional banner */}
+      
+<section className="mx-auto max-w-7xl px-3 pt-4 sm:px-4 sm:pt-6">
+  <div className="relative isolate overflow-hidden rounded-[28px] bg-gradient-to-br from-[#F04F24] via-[#F76B2E] to-[#FF9B42] p-5 text-white shadow-xl sm:rounded-[32px] sm:p-8 lg:p-10">
+
+    {/* Decorative circles */}
+    <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-yellow-300/20 blur-2xl" />
+    <div className="pointer-events-none absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-white/15 blur-2xl" />
+
+    <div className="relative z-10 grid items-center gap-7 lg:grid-cols-[1.15fr_0.85fr] lg:gap-10">
+
+      {/* Left content */}
+      <div>
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/15 px-3.5 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] backdrop-blur-sm sm:text-xs">
+          <span>✨</span>
+          Today's Special Offers
+        </span>
+
+        <h2 className="mt-4 max-w-xl text-[38px] font-black leading-[0.98] tracking-[-0.055em] sm:text-5xl lg:text-[62px]">
+          FRESH
+          <br />
+          FINDS.
+          <br />
+          <span className="text-[#FFF1A8]">BETTER</span> PRICES.
+        </h2>
+
+        <p className="mt-4 max-w-md text-sm font-medium leading-relaxed text-white/90 sm:text-base">
+          Your everyday groceries, fruits and essentials — fresh picks and
+          exciting savings, all in one place.
+        </p>
+
+        <Link
+          href="/products"
+          className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-extrabold text-[#E94F24] shadow-lg transition hover:-translate-y-0.5 hover:bg-[#FFF4E9] active:translate-y-0"
+        >
+          SHOP NOW
+          <span className="text-lg">→</span>
+        </Link>
+      </div>
+
+      {/* Right coupon card */}
+      {coupons.length > 0 && (
+        <div className="relative mx-auto w-full max-w-md">
+          <div className="absolute -right-2 -top-3 z-10 rotate-6 rounded-full bg-[#FFE66D] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-[#713A16] shadow-md sm:-right-3">
+            Limited Offer!
           </div>
 
-          <div className="flex gap-2.5 sm:gap-6 overflow-x-auto pb-1 scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x">
-            {homeCategories.map((category) => (
-              <Link
-                key={category.slug}
-                href={`/products?category=${category.slug}`}
-                className="group flex flex-col items-center shrink-0 snap-start w-[72px] sm:w-24 text-center focus:outline-none"
+          <div className="overflow-hidden rounded-[24px] bg-white text-[#252525] shadow-2xl sm:rounded-[28px]">
+            <div className="bg-[#FFF5E9] px-5 py-4 text-center sm:px-7">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#E95A2A] sm:text-xs">
+                A LITTLE SOMETHING FOR YOU
+              </p>
+
+              <h3 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
+                SAVE MORE!
+              </h3>
+            </div>
+
+            <div className="px-5 py-5 text-center sm:px-7 sm:py-6">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                USE THIS COUPON
+              </p>
+
+              <button
+                type="button"
+                onClick={() => copyCoupon(coupons[0].code)}
+                className="mt-3 w-full rounded-xl border-2 border-dashed border-[#F16A37] bg-[#FFF9F4] px-3 py-4 font-mono text-2xl font-black tracking-[0.12em] text-[#E94F24] transition hover:bg-[#FFF0E5] sm:text-3xl"
               >
-                <div className="relative w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-brand/5 border-2 border-line/70 p-1 transition-all duration-300 group-hover:scale-105 group-hover:border-brand group-hover:shadow-md">
-                  <img
-                    src={category.image}
-                    alt={category.name}
-                    className="w-full h-full object-cover rounded-full"
-                    loading="lazy"
-                  />
-                </div>
+                {copiedCoupon === coupons[0].code
+                  ? "COPIED! ✓"
+                  : coupons[0].code}
+              </button>
 
-                <span className="mt-1.5 text-[11px] sm:text-xs font-semibold text-ink group-hover:text-brand line-clamp-2 leading-tight transition-colors">
-                  {category.name}
-                </span>
-              </Link>
-            ))}
+              <p className="mt-3 text-sm font-bold text-gray-700">
+                {formatCouponDiscount(coupons[0])}
+              </p>
+
+              <p className="mt-1 text-[11px] font-medium text-gray-500">
+                Tap the code to copy it
+              </p>
+            </div>
+
+            <div className="border-t border-dashed border-gray-200 bg-[#FFFDFB] px-5 py-3 text-center">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#E95A2A]">
+                FRESHNESS • VALUE • HAPPINESS
+              </p>
+            </div>
           </div>
         </div>
-      </section>
+      )}
 
+    </div>
+  </div>
+</section>
+      
+      {/* 3. Shop by Category */}
+<section className="mx-auto max-w-7xl px-3 sm:px-4 pt-3 sm:pt-8">
+  <div className="rounded-2xl sm:rounded-3xl bg-white border border-[#E9E6DC] p-3.5 sm:p-6 shadow-xs">
+
+    <div className="flex items-center justify-between gap-4 mb-4 sm:mb-5">
+      <div>
+        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#f05a28]">
+          EVERYDAY FRESH
+        </span>
+        <h2 className="text-base sm:text-2xl font-bold text-ink">
+          Shop by Category
+        </h2>
+      </div>
+
+      <Link
+        href="/products"
+        className="shrink-0 text-xs sm:text-sm font-semibold text-brand hover:underline"
+      >
+        All categories →
+      </Link>
+    </div>
+
+    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-9 gap-x-2 gap-y-5 sm:gap-x-4 sm:gap-y-6">
+      {homeCategories.map((category, index) => {
+        const tileColors = [
+          "bg-[#EAF5DF]",
+          "bg-[#FFF2D2]",
+          "bg-[#FCE8E5]",
+          "bg-[#E5F2FA]",
+          "bg-[#F2EAF8]",
+          "bg-[#FCEEDC]",
+          "bg-[#E4F3EF]",
+          "bg-[#F9E8F0]",
+          "bg-[#EEF0DF]",
+        ];
+
+        return (
+          <Link
+            key={category.slug}
+            href={`/products?category=${category.slug}`}
+            className="group flex min-w-0 flex-col items-center text-center focus:outline-none"
+          >
+            <div
+              className={`w-full aspect-square max-w-[110px] overflow-hidden rounded-2xl sm:rounded-3xl transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-md ${tileColors[index % tileColors.length]}`}
+            >
+              <img
+                src={category.image}
+                alt={category.name}
+                className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+              />
+            </div>
+
+            <span className="mt-2 text-[10px] sm:text-xs font-semibold leading-tight text-ink group-hover:text-brand line-clamp-2">
+              {category.name}
+            </span>
+          </Link>
+        );
+      })}
+    </div>
+
+  </div>
+</section>
+    
       {/* 4. Today's Low Prices */}
       <section className="mx-auto max-w-7xl px-4 pt-8 sm:pt-12">
         <div className="flex items-end justify-between gap-4 mb-4">
@@ -584,74 +775,71 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6. Family Package */}
-      <section className="mx-auto max-w-7xl px-4 pt-8 sm:pt-12">
+    {/* 6. Family Package */}
+<section className="mx-auto max-w-7xl px-3 pt-8 sm:px-4 sm:pt-12">
+  <div className="relative overflow-hidden rounded-[28px] bg-[#FFF0C2] px-4 py-6 sm:rounded-[32px] sm:px-8 sm:py-9">
+
+    {/* Decorative shapes */}
+    <div className="pointer-events-none absolute -right-12 -top-16 h-52 w-52 rounded-full bg-[#FFB4A2]/50" />
+    <div className="pointer-events-none absolute -bottom-20 left-1/3 h-52 w-52 rounded-full bg-[#B9DDA8]/60" />
+
+    <div className="relative z-10">
+
+      {/* Editorial heading */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <span className="text-[11px] font-black uppercase tracking-[0.22em] text-[#D94F38]">
+            SUNDAYSHOP PRESENTS
+          </span>
+
+          <h2 className="mt-2 font-black text-[40px] leading-[0.9] tracking-[-0.06em] text-[#34254C] sm:text-6xl lg:text-7xl">
+            FAMILY
+            <br />
+            <span className="font-serif font-normal italic text-[#E65B43]">
+              BUNDLE.
+            </span>
+          </h2>
+
+          <p className="mt-4 max-w-md text-sm font-semibold leading-relaxed text-[#66536C] sm:text-base">
+            Big family? Big grocery list? We've got your everyday essentials
+            covered in one convenient package.
+          </p>
+        </div>
+
+        {/* Decorative sticker */}
+        <div className="flex h-24 w-24 rotate-12 flex-col items-center justify-center rounded-full bg-[#E85B43] text-center text-white shadow-lg sm:h-32 sm:w-32">
+          <span className="text-3xl sm:text-4xl">🧺</span>
+          <span className="mt-1 text-[9px] font-black uppercase tracking-wider sm:text-[10px]">
+            SHOP TOGETHER
+          </span>
+        </div>
+      </div>
+
+      {/* Package component */}
+      <div className="relative mt-7">
         <FamilyGroceryPackage products={activeProducts} />
-      </section>
+      </div>
+
+      {/* Bottom strip */}
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t-2 border-dashed border-[#D9C58D] pt-4">
+        <p className="text-xs font-black uppercase tracking-wider text-[#34254C] sm:text-sm">
+          GOOD FOOD. GREAT FAMILY MOMENTS.
+        </p>
+        <span className="rounded-full bg-[#34254C] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white sm:text-xs">
+          MADE FOR EVERY HOME ♥
+        </span>
+      </div>
+
+    </div>
+  </div>
+</section>
 
       {/* 7. Recommended for You */}
       <section className="mx-auto max-w-7xl px-4">
         <RecommendedProducts />
       </section>
 
-      {/* 8. Promotional banner */}
-      <section className="mx-auto max-w-7xl px-4 pt-10 sm:pt-14">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0c4e54] via-[#0e5c63] to-[#147780] p-6 text-white shadow-sm sm:p-8 lg:p-10">
-          <div className="pointer-events-none absolute -right-10 -top-10 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-10 right-1/3 h-48 w-48 rounded-full bg-emerald-400/10 blur-2xl" />
 
-          <div className="relative z-10 flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
-            <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur">
-                ✨ Special Grocery Value
-              </span>
-
-              <h2 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">
-                Fresh essentials, better prices.
-              </h2>
-
-              <p className="mt-2 text-sm text-white/85 sm:text-base leading-relaxed">
-                Stock up on fresh farm produce, pure dairy, pantry staples and daily household favorites at genuine everyday savings.
-              </p>
-
-              <div className="mt-5 flex flex-wrap items-center gap-3">
-                <Link
-                  href="/products"
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-brand shadow-sm transition hover:bg-white/90 active:scale-98"
-                >
-                  Shop Essentials Now →
-                </Link>
-
-                {coupons.length > 0 && (
-                  <div className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-3.5 py-2 text-xs font-medium backdrop-blur">
-                    <span>Use coupon:</span>
-                    <button
-                      type="button"
-                      onClick={() => copyCoupon(coupons[0].code)}
-                      className="font-mono font-bold tracking-wider text-emerald-300 hover:underline"
-                    >
-                      {copiedCoupon === coupons[0].code
-                        ? "COPIED! ✓"
-                        : coupons[0].code}
-                    </button>
-                    <span>({formatCouponDiscount(coupons[0])})</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="hidden lg:block shrink-0">
-              <div className="relative h-44 w-64 overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-1.5 backdrop-blur shadow-md">
-                <img
-                  src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=80"
-                  alt="Fresh groceries banner"
-                  className="h-full w-full rounded-xl object-cover"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* 9. Daily Essentials */}
       <section className="mx-auto max-w-7xl px-4 pt-10 sm:pt-14">

@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/lib/supabase-admin";
@@ -11,7 +12,6 @@ function isValidAdminSession(token: string | undefined) {
   if (!secret || !adminEmail) return false;
 
   const parts = token.split("|");
-
   if (parts.length !== 3) return false;
 
   const [email, expiresAtString, signature] = parts;
@@ -21,11 +21,7 @@ function isValidAdminSession(token: string | undefined) {
     return false;
   }
 
-  if (Date.now() > expiresAt) {
-    return false;
-  }
-
-  if (email !== adminEmail) {
+  if (Date.now() > expiresAt || email !== adminEmail) {
     return false;
   }
 
@@ -39,9 +35,7 @@ function isValidAdminSession(token: string | undefined) {
     const actual = Buffer.from(signature, "hex");
     const expected = Buffer.from(expectedSignature, "hex");
 
-    if (actual.length !== expected.length) {
-      return false;
-    }
+    if (actual.length !== expected.length) return false;
 
     return timingSafeEqual(actual, expected);
   } catch {
@@ -66,11 +60,7 @@ export async function GET(request: NextRequest) {
         .select("id, name, email, phone");
 
     if (customersError) {
-      console.error(
-        "Fetching customers failed:",
-        customersError,
-      );
-
+      console.error("Fetching customers failed:", customersError);
       return NextResponse.json(
         { error: customersError.message },
         { status: 500 },
@@ -90,17 +80,11 @@ export async function GET(request: NextRequest) {
       const { data: activityData, error: activityError } =
         await supabaseAdmin
           .from("customer_product_activity")
-          .select(
-            "customer_id, last_activity_at",
-          )
+          .select("customer_id, last_activity_at")
           .in("customer_id", customerIds);
 
       if (activityError) {
-        console.error(
-          "Fetching customer activity failed:",
-          activityError,
-        );
-
+        console.error("Fetching customer activity failed:", activityError);
         return NextResponse.json(
           { error: activityError.message },
           { status: 500 },
@@ -110,14 +94,51 @@ export async function GET(request: NextRequest) {
       activities = activityData ?? [];
     }
 
-    const latestActivity = new Map<
-      string,
-      string | null
-    >();
+    // Fetch Khata transactions for these customers.
+    let khataTransactions: {
+      customer_id: string;
+      entry_type: "credit" | "payment";
+      amount: number | string;
+    }[] = [];
+
+    if (customerIds.length > 0) {
+      const { data: khataData, error: khataError } =
+        await supabaseAdmin
+          .from("khata_transactions")
+          .select("customer_id, entry_type, amount")
+          .in("customer_id", customerIds);
+
+      if (khataError) {
+        console.error("Fetching Khata transactions failed:", khataError);
+        return NextResponse.json(
+          { error: khataError.message },
+          { status: 500 },
+        );
+      }
+
+      khataTransactions = khataData ?? [];
+    }
+
+    // Calculate each customer's outstanding balance.
+    const khataBalances = new Map<string, number>();
+
+    for (const transaction of khataTransactions) {
+      const currentBalance =
+        khataBalances.get(transaction.customer_id) ?? 0;
+
+      const amount = Number(transaction.amount);
+
+      khataBalances.set(
+        transaction.customer_id,
+        currentBalance +
+          (transaction.entry_type === "credit" ? amount : -amount),
+      );
+    }
+
+    const latestActivity = new Map<string, string | null>();
 
     for (const activity of activities) {
-      const current =
-        latestActivity.get(activity.customer_id);
+      const current = latestActivity.get(activity.customer_id);
 
       if (
         activity.last_activity_at &&
@@ -132,29 +153,28 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const activeSince =
-      Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const activeSince = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
-    const result = (customers ?? []).map(
-      (customer) => {
-        const lastActivity =
-          latestActivity.get(customer.id) ?? null;
+    const result = (customers ?? []).map((customer) => {
+      const lastActivity =
+        latestActivity.get(customer.id) ?? null;
 
-        const isActive =
-          !!lastActivity &&
-          new Date(lastActivity).getTime() >=
-            activeSince;
+      const isActive =
+        !!lastActivity &&
+        new Date(lastActivity).getTime() >= activeSince;
 
-        return {
-          id: customer.id,
-          name: customer.name || "Customer",
-          email: customer.email || "",
-          phone: customer.phone || "",
-          lastActivityAt: lastActivity,
-          status: isActive ? "active" : "inactive",
-        };
-      },
-    );
+      return {
+        id: customer.id,
+        name: customer.name || "Customer",
+        email: customer.email || "",
+        phone: customer.phone || "",
+        lastActivityAt: lastActivity,
+        status: isActive ? "active" : "inactive",
+        khataBalance: Number(
+          (khataBalances.get(customer.id) ?? 0).toFixed(2),
+        ),
+      };
+    });
 
     return NextResponse.json({
       success: true,
@@ -165,10 +185,7 @@ export async function GET(request: NextRequest) {
       ).length,
     });
   } catch (error) {
-    console.error(
-      "Admin customers API error:",
-      error,
-    );
+    console.error("Admin customers API error:", error);
 
     return NextResponse.json(
       { error: "Unable to fetch customers." },

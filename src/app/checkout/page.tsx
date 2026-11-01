@@ -82,7 +82,7 @@ export default function CheckoutPage() {
   const [allProducts, setAllProducts] =
     useState(staticProducts);
     const [paymentMethod, setPaymentMethod] = useState<
-  "cod" | "card" | "upi" | "wallet"
+  "cod" | "credit_card" | "debit_card" | "upi" | "wallet"| "pay_later"
 >("cod");
 const [couponCode, setCouponCode] = useState("");
 const [couponLoading, setCouponLoading] = useState(false);
@@ -638,6 +638,16 @@ if (!codeToApply) {
         return;
       }
 
+      const {
+  data: { session },
+} = await supabase.auth.getSession();
+
+if (!session?.access_token) {
+  throw new Error(
+    "Your session has expired. Please log in again."
+  );
+}
+
       /*
        * NORMAL NEW ORDER
        */
@@ -645,6 +655,7 @@ if (!codeToApply) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           customerName:
@@ -1089,9 +1100,9 @@ if (!codeToApply) {
     {/* Credit / Debit Card */}
     <button
       type="button"
-      onClick={() => setPaymentMethod("card")}
+      onClick={() => setPaymentMethod("credit_card")}
       className={`w-full rounded-2xl border-2 p-5 text-left transition ${
-        paymentMethod === "card"
+        paymentMethod === "credit_card"
           ? "border-brand bg-brand-soft"
           : "border-line hover:border-brand/50"
       }`}
@@ -1100,8 +1111,8 @@ if (!codeToApply) {
         <input
           type="radio"
           name="payment"
-          checked={paymentMethod === "card"}
-          onChange={() => setPaymentMethod("card")}
+          checked={paymentMethod === "credit_card"}
+          onChange={() => setPaymentMethod("credit_card")}
           className="h-4 w-4 accent-brand"
         />
 
@@ -1118,7 +1129,7 @@ if (!codeToApply) {
       </div>
     </button>
 
-    {paymentMethod === "card" ? (
+    {paymentMethod === "credit_card" ? (
       <div className="rounded-2xl border border-line p-5">
         <div className="grid gap-4">
           <div>
@@ -1257,9 +1268,44 @@ if (!codeToApply) {
           <span className="rounded-full bg-surface-2 px-3 py-1">
             Net Banking
           </span>
+          <span className="rounded-full bg-surface-2 px-3 py-1">
+            pay later
+          </span>
         </div>
       </div>
     ) : null}
+
+    {/* Pay Later */}
+<button
+  type="button"
+  onClick={() => setPaymentMethod("pay_later")}
+  className={`w-full rounded-2xl border-2 p-5 text-left transition ${
+    paymentMethod === "pay_later"
+      ? "border-brand bg-brand-soft"
+      : "border-line hover:border-brand/50"
+  }`}
+>
+  <div className="flex items-center gap-4">
+    <input
+      type="radio"
+      name="payment"
+      checked={paymentMethod === "pay_later"}
+      onChange={() => setPaymentMethod("pay_later")}
+      className="h-4 w-4 accent-brand"
+    />
+
+    <div className="flex-1">
+      <div className="flex items-center justify-between gap-3">
+        <strong>Pay Later</strong>
+        <span className="text-xl">🕐</span>
+      </div>
+
+      <p className="mt-1 text-sm text-muted">
+        Place your order now and pay later.
+      </p>
+    </div>
+  </div>
+</button>
 
     {/* Digital Wallet */}
     <button
@@ -1498,11 +1544,13 @@ if (!codeToApply) {
                       <strong>
                        {paymentMethod === "cod"
     ? "Cash on delivery"
-    : paymentMethod === "card"
-      ? "Credit / Debit Card"
-      : paymentMethod === "upi"
-        ? "UPI / Net Banking"
-        : "Digital Wallet"}
+    : paymentMethod === "credit_card"
+      ? "Credit Card"
+      : paymentMethod === "debit_card"
+        ? "Debit Card"
+        : paymentMethod === "upi"
+          ? "UPI / Net Banking"
+          : "Pay Later"}
                       </strong>
                     </div>
                   </div>
@@ -1873,11 +1921,14 @@ if (!codeToApply) {
                   <strong>
                     {paymentMethod === "cod"
     ?   "Cash on delivery"
-    : paymentMethod === "card"
-      ? "Credit / Debit Card"
-      : paymentMethod === "upi"
-        ? "UPI / Net Banking"
-        : "Digital Wallet"}
+    : paymentMethod === "credit_card"
+      ? "Credit Card"
+      : paymentMethod === "debit_card"
+        ? "Debit Card"
+        : paymentMethod === "upi"
+          ? "UPI / Net Banking"
+          : "Pay Later"
+            }
                   </strong>
                 </div>
               </div>
