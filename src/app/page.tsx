@@ -355,7 +355,7 @@ export default function HomePage() {
     <main className="min-h-screen bg-bg pb-16">
       {/* 2. Hero */}
       <section className="mx-auto max-w-7xl px-0 md:px-4 pt-0 md:pt-6">
-        <div className="relative overflow-hidden rounded-none md:rounded-[2.5rem] bg-[#F8F7F1] border-b md:border border-[#E9E6DC] px-4 py-3 sm:py-8 lg:p-12 shadow-none md:shadow-xs">
+      <div className="relative overflow-hidden rounded-none md:rounded-[2.5rem] bg-bg border-b md:border border-line px-4 py-3 sm:py-8 lg:p-12 shadow-none md:shadow-xs">  
           {/* Subtle ambient warm blur in corners */}
           <div className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full bg-amber-100/40 blur-3xl" />
           <div className="pointer-events-none absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-emerald-100/30 blur-3xl" />
@@ -366,13 +366,13 @@ export default function HomePage() {
               {/* Eyebrow with golden accent line */}
               <div className="flex items-center gap-1.5 mb-1 sm:mb-3">
                 <span className="h-[2px] w-4 sm:w-6 bg-amber-400 rounded-full" />
-                <span className="text-[10px] sm:text-[13px] font-bold uppercase tracking-wider text-[#5c6b75]">
+                <span className="text-[10px] sm:text-[13px] font-bold uppercase tracking-wider text-muted">
                   FARM-FRESH PICKS, EVERY DAY
                 </span>
               </div>
 
               {/* Main Headline */}
-              <h1 className="text-[28px] sm:text-[34px] md:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.08] sm:leading-[1.12] text-[#132029]">
+              <h1 className="text-[28px] sm:text-[34px] md:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.08] sm:leading-[1.12] text-ink">
                 Fresh groceries.
                 <br />
                 Better prices.
@@ -381,7 +381,7 @@ export default function HomePage() {
               </h1>
 
               {/* Description */}
-              <p className="mt-1.5 sm:mt-4 max-w-sm sm:max-w-lg text-xs sm:text-base leading-relaxed text-[#5c6b75]">
+              <p className="mt-1.5 sm:mt-4 max-w-sm sm:max-w-lg text-xs sm:text-base leading-relaxed text-muted">
                 From crisp produce to everyday essentials, fill your basket with quality you can trust—without stretching your budget.
               </p>
 
@@ -396,7 +396,7 @@ export default function HomePage() {
               </div>
 
               {/* Delivery Row (directly underneath Shop Now) */}
-              <div className="mt-2 sm:mt-3 flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#132029]">
+              <div className="mt-2 sm:mt-3 flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-ink">
                 <span className="grid h-6 w-6 sm:h-7 sm:w-7 place-items-center rounded-full bg-brand-soft text-brand">
                   <Clock size={13} className="sm:hidden" />
                   <Clock size={15} className="hidden sm:block" />
@@ -405,7 +405,7 @@ export default function HomePage() {
               </div>
 
               {/* Trust Points (immediately below delivery info) */}
-              <div className="mt-2 sm:mt-4 flex flex-wrap items-center gap-x-3.5 gap-y-1 sm:gap-x-6 sm:gap-y-2 text-[11px] sm:text-sm font-medium text-[#132029]">
+              <div className="mt-2 sm:mt-4 flex flex-wrap items-center gap-x-3.5 gap-y-1 sm:gap-x-6 sm:gap-y-2 text-[11px] sm:text-sm font-medium text-ink">
                 <span className="inline-flex items-center gap-1">
                   <Check size={13} className="text-emerald-600 stroke-[3]" />
                   Fresh products
@@ -441,13 +441,13 @@ export default function HomePage() {
     />
 
     {/* Fast delivery badge */}
-    <div className="absolute top-2 right-0 sm:top-3 sm:right-1 z-20 flex items-center gap-1.5 sm:gap-2.5 rounded-xl sm:rounded-2xl bg-white px-2.5 py-1.5 sm:px-3.5 sm:py-2 shadow-md border border-[#E9E6DC]">
+    <div className="absolute top-2 right-0 sm:top-3 sm:right-1 z-20 flex items-center gap-1.5 sm:gap-2.5 rounded-xl sm:rounded-2xl bg-surface px-2.5 py-1.5 sm:px-3.5 sm:py-2 shadow-md border border-[#E9E6DC]">
       <span className="grid h-6 w-6 sm:h-8 sm:w-8 place-items-center rounded-lg sm:rounded-xl bg-brand-soft text-brand">
         <Truck size={13} className="sm:hidden" />
         <Truck size={16} className="hidden sm:block" />
       </span>
       <div>
-        <p className="text-[11px] sm:text-xs font-bold text-[#132029] leading-tight">
+        <p className="text-[11px] sm:text-xs font-bold text-ink leading-tight">
           Fast delivery
         </p>
         <p className="text-[9px] sm:text-[10px] font-medium text-muted leading-tight">
@@ -457,13 +457,13 @@ export default function HomePage() {
     </div>
 
     {/* Freshness badge */}
-    <div className="absolute bottom-2 left-0 sm:bottom-3 sm:left-1 z-20 flex items-center gap-1.5 sm:gap-2.5 rounded-xl sm:rounded-2xl bg-white px-2.5 py-1.5 sm:px-3.5 sm:py-2 shadow-md border border-[#E9E6DC]">
+    <div className="absolute bottom-2 left-0 sm:bottom-3 sm:left-1 z-20 flex items-center gap-1.5 sm:gap-2.5 rounded-xl sm:rounded-2xl bg-surface px-2.5 py-1.5 sm:px-3.5 sm:py-2 shadow-md border border-[#E9E6DC]">
       <span className="grid h-6 w-6 sm:h-8 sm:w-8 place-items-center rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-600">
         <Leaf size={13} className="fill-emerald-600/20 sm:hidden" />
         <Leaf size={16} className="fill-emerald-600/20 hidden sm:block" />
       </span>
       <div>
-        <p className="text-[11px] sm:text-xs font-bold text-[#132029] leading-tight">
+        <p className="text-[11px] sm:text-xs font-bold text-ink leading-tight">
           100% fresh
         </p>
         <p className="text-[9px] sm:text-[10px] font-medium text-muted leading-tight">
@@ -651,67 +651,74 @@ export default function HomePage() {
   </div>
 </section>
       
-      {/* 3. Shop by Category */}
+    {/* 3. Shop by Category */}
 <section className="mx-auto max-w-7xl px-3 sm:px-4 pt-3 sm:pt-8">
-  <div className="rounded-2xl sm:rounded-3xl bg-white border border-[#E9E6DC] p-3.5 sm:p-6 shadow-xs">
+  <div className="relative isolate overflow-hidden rounded-none md:rounded-[2.5rem] bg-bg border-b md:border border-line px-4 py-3 sm:py-8 lg:p-12 shadow-none md:shadow-xs">
 
-    <div className="flex items-center justify-between gap-4 mb-4 sm:mb-5">
-      <div>
-        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#f05a28]">
-          EVERYDAY FRESH
-        </span>
-        <h2 className="text-base sm:text-2xl font-bold text-ink">
-          Shop by Category
-        </h2>
+    {/* Same ambient corner effects as the hero */}
+    <div className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full bg-amber-100/40 blur-3xl" />
+    <div className="pointer-events-none absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-emerald-100/30 blur-3xl" />
+
+    <div className="relative z-10">
+
+      <div className="flex items-center justify-between gap-4 mb-4 sm:mb-5">
+        <div>
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#f05a28]">
+            EVERYDAY FRESH
+          </span>
+          <h2 className="text-base sm:text-2xl font-bold text-ink">
+            Shop by Category
+          </h2>
+        </div>
+
+        <Link
+          href="/products"
+          className="shrink-0 text-xs sm:text-sm font-semibold text-brand hover:underline"
+        >
+          All categories →
+        </Link>
       </div>
 
-      <Link
-        href="/products"
-        className="shrink-0 text-xs sm:text-sm font-semibold text-brand hover:underline"
-      >
-        All categories →
-      </Link>
-    </div>
+      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-9 gap-x-2 gap-y-5 sm:gap-x-4 sm:gap-y-6">
+        {homeCategories.map((category, index) => {
+          const tileColors = [
+            "bg-[#EAF5DF]",
+            "bg-[#FFF2D2]",
+            "bg-[#FCE8E5]",
+            "bg-[#E5F2FA]",
+            "bg-[#F2EAF8]",
+            "bg-[#FCEEDC]",
+            "bg-[#E4F3EF]",
+            "bg-[#F9E8F0]",
+            "bg-[#EEF0DF]",
+          ];
 
-    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-9 gap-x-2 gap-y-5 sm:gap-x-4 sm:gap-y-6">
-      {homeCategories.map((category, index) => {
-        const tileColors = [
-          "bg-[#EAF5DF]",
-          "bg-[#FFF2D2]",
-          "bg-[#FCE8E5]",
-          "bg-[#E5F2FA]",
-          "bg-[#F2EAF8]",
-          "bg-[#FCEEDC]",
-          "bg-[#E4F3EF]",
-          "bg-[#F9E8F0]",
-          "bg-[#EEF0DF]",
-        ];
-
-        return (
-          <Link
-            key={category.slug}
-            href={`/products?category=${category.slug}`}
-            className="group flex min-w-0 flex-col items-center text-center focus:outline-none"
-          >
-            <div
-              className={`w-full aspect-square max-w-[110px] overflow-hidden rounded-2xl sm:rounded-3xl transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-md ${tileColors[index % tileColors.length]}`}
+          return (
+            <Link
+              key={category.slug}
+              href={`/products?category=${category.slug}`}
+              className="group flex min-w-0 flex-col items-center text-center focus:outline-none"
             >
-              <img
-                src={category.image}
-                alt={category.name}
-                className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
-                loading="lazy"
-              />
-            </div>
+              <div
+                className={`w-full aspect-square max-w-[110px] overflow-hidden rounded-2xl sm:rounded-3xl transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-md ${tileColors[index % tileColors.length]}`}
+              >
+                <img
+                  src={category.image}
+                  alt={category.name}
+                  className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                  loading="lazy"
+                />
+              </div>
 
-            <span className="mt-2 text-[10px] sm:text-xs font-semibold leading-tight text-ink group-hover:text-brand line-clamp-2">
-              {category.name}
-            </span>
-          </Link>
-        );
-      })}
+              <span className="mt-2 text-[10px] sm:text-xs font-semibold leading-tight text-ink group-hover:text-brand line-clamp-2">
+                {category.name}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+
     </div>
-
   </div>
 </section>
     

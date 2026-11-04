@@ -22,6 +22,8 @@ import {
 import { useStore } from "@/components/providers";
 import { categories, products } from "@/lib/data";
 import { Badge } from "@/components/ui";
+import { Modal } from "@/components/ui/Modal";
+import { Drawer } from "@/components/ui/Drawer";
 import { supabase } from "@/lib/supabase";
 
 export function Header() {
@@ -611,40 +613,20 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
         </div>
       )}
 
-      {/* Mobile menu */}
-<div
-  className={`fixed inset-0 z-50 lg:hidden ${
-    open ? "pointer-events-auto" : "pointer-events-none"
-  }`}
->
-  {/* Background overlay */}
-  <div
-  className={`fixed inset-0 z-[100] bg-black/40 transition-opacity duration-300 ${
-    open ? "opacity-100 visible" : "opacity-0 invisible"
-  }`}
-  onClick={() => setOpen(false)}
-/>
-
-  
-{/* Sliding drawer */}
-<aside
-  className={`fixed left-0 top-0 z-[101] h-dvh w-[min(82vw,340px)] overflow-y-auto bg-surface p-5 shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-  open ? "translate-x-0" : "-translate-x-full"
-  }`}
-  onClick={(e) => e.stopPropagation()}
->
+{/* Mobile menu */}
+<Drawer isOpen={open} onClose={() => setOpen(false)}>
   {/* Header */}
   <div className="flex items-center justify-between border-b border-line pb-4">
     <Link href="/" onClick={() => setOpen(false)} className="flex items-center">
-  <Image
-    src="/images/sundayshop-logo.png"
-    alt="SundayShop"
-    width={150}
-    height={100}
-    priority
-    className="h-12 w-auto object-contain"
-  />
-</Link>
+      <Image
+        src="/images/sundayshop-logo.png"
+        alt="SundayShop"
+        width={150}
+        height={100}
+        priority
+        className="h-12 w-auto object-contain"
+      />
+    </Link>
 
     <button
       aria-label="Close menu"
@@ -713,7 +695,7 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
       { href: "/faq", label: "FAQs & Help" },
       { href: "/delivery-information", label: "Delivery Information" },
     ].map((item) => (
-      <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className="block rounded-xl px-3 py-3 text-sm text-muted hover:bg-surface-2 hover:text-foreground">
+      <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className="block rounded-xl px-3 py-3 text-sm text-muted hover:bg-surface-2 hover:text-ink">
         {item.label}
       </Link>
     ))}
@@ -728,7 +710,7 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
       { href: "/terms-and-conditions", label: "Terms & Conditions" },
       { href: "/refund-policy", label: "Refund & Cancellation Policy" },
     ].map((item) => (
-      <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className="block rounded-xl px-3 py-3 text-sm text-muted hover:bg-surface-2 hover:text-foreground">
+      <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className="block rounded-xl px-3 py-3 text-sm text-muted hover:bg-surface-2 hover:text-ink">
         {item.label}
       </Link>
     ))}
@@ -759,8 +741,7 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
       ↪ Logout
     </button>
   )}
-</aside>
-
+</Drawer>
 
 
               {/*{compare.length > 0 && (
@@ -772,7 +753,7 @@ window.location.href = `/products?q=${encodeURIComponent(term)}`;
                   ⚖️ Compare ({compare.length})
                 </Link>
               )}*/}
-            </div>
+            
 
             {/* Temporary testing access 
             <div className="mt-6 border-t border-line pt-5">

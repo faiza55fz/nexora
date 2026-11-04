@@ -75,7 +75,15 @@ const Ctx = createContext<Store | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [mode, setMode] = useState<Mode>("b2c");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  // Initialise theme from localStorage (avoid flash)
+  // Initialise theme from localStorage (avoid flash on first render)
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("theme");
+      return stored === "dark" ? "dark" : "light";
+    }
+    return "light";
+  });
   const [authReady, setAuthReady] = useState(false);
 
   const [cart, setCart] = useState<CartItem[]>([]);
