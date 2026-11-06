@@ -1,23 +1,23 @@
 
 export default function RefundPolicyPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-bg">
       <section className="mx-auto max-w-5xl px-6 py-16">
-        <p className="mb-3 font-semibold text-green-600">
+        <p className="mb-3 font-semibold text-brand">
           SUNDAYSHOP POLICIES
         </p>
 
-        <h1 className="mb-4 text-4xl font-bold text-gray-900">
+        <h1 className="mb-4 text-4xl font-bold text-ink">
           Refund & Cancellation Policy
         </h1>
 
-        <p className="mb-10 text-sm text-gray-500">
+        <p className="mb-10 text-sm text-muted">
           Last updated: November 1, 2026
         </p>
 
-        <div className="space-y-8 text-gray-600 leading-7">
+        <div className="space-y-8 text-muted leading-7">
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               1. Order Cancellation
             </h2>
             <p>
@@ -29,7 +29,7 @@ export default function RefundPolicyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               2. Refund Eligibility
             </h2>
             <p className="mb-3">
@@ -44,7 +44,7 @@ export default function RefundPolicyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               3. Fresh Fruits, Vegetables & Grocery Products
             </h2>
             <p>
@@ -61,7 +61,7 @@ export default function RefundPolicyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               4. Refund Process
             </h2>
             <p>
@@ -73,7 +73,7 @@ export default function RefundPolicyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               5. Non-Refundable Situations
             </h2>
             <p>
@@ -85,7 +85,7 @@ export default function RefundPolicyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               6. How to Request a Refund
             </h2>
             <p>
@@ -96,7 +96,7 @@ export default function RefundPolicyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               7. Contact Us
             </h2>
             <p>For refund and cancellation assistance:</p>
@@ -104,7 +104,7 @@ export default function RefundPolicyPage() {
               <strong>Email:</strong>{" "}
               <a
                 href="mailto:mmc.javed@gmail.com"
-                className="text-green-700 underline"
+                className="text-brand underline"
               >
                 mmc.javed@gmail.com
               </a>

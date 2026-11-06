@@ -3,21 +3,21 @@ import Link from "next/link";
 
 export default function TermsAndConditionsPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-bg">
       <section className="mx-auto max-w-5xl px-6 py-16">
-        <p className="mb-3 font-semibold text-green-600">SUNDAYSHOP</p>
+        <p className="mb-3 font-semibold text-brand">SUNDAYSHOP</p>
 
-        <h1 className="mb-4 text-4xl font-bold text-gray-900">
+        <h1 className="mb-4 text-4xl font-bold text-ink">
           Terms & Conditions
         </h1>
 
-        <p className="mb-10 text-sm text-gray-500">
+        <p className="mb-10 text-sm text-muted">
           Last updated: November 1, 2026
         </p>
 
-        <div className="space-y-8 leading-7 text-gray-600">
+        <div className="space-y-8 leading-7 text-muted">
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">1. Introduction</h2>
+            <h2 className="mb-2 text-xl font-semibold text-ink">1. Introduction</h2>
             <p>
               These Terms & Conditions govern your use of the SundayShop
               website and services. By accessing the website or placing an
@@ -26,7 +26,7 @@ export default function TermsAndConditionsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">2. Our Services</h2>
+            <h2 className="mb-2 text-xl font-semibold text-ink">2. Our Services</h2>
             <p>
               SundayShop provides an online platform for browsing and
               purchasing groceries, fruits, vegetables and other available
@@ -36,7 +36,7 @@ export default function TermsAndConditionsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">3. Customer Accounts</h2>
+            <h2 className="mb-2 text-xl font-semibold text-ink">3. Customer Accounts</h2>
             <p>
               You are responsible for providing accurate account and delivery
               information and keeping your login credentials secure. Please
@@ -45,7 +45,7 @@ export default function TermsAndConditionsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">4. Orders and Acceptance</h2>
+            <h2 className="mb-2 text-xl font-semibold text-ink">4. Orders and Acceptance</h2>
             <p>
               Placing an order is a request to purchase the selected products.
               Orders are subject to product availability, serviceability and
@@ -55,7 +55,7 @@ export default function TermsAndConditionsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">5. Product Information</h2>
+            <h2 className="mb-2 text-xl font-semibold text-ink">5. Product Information</h2>
             <p>
               We aim to display accurate product descriptions, images and
               prices. Actual product appearance, size, weight or packaging may
@@ -64,7 +64,7 @@ export default function TermsAndConditionsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">6. Pricing and Payments</h2>
+            <h2 className="mb-2 text-xl font-semibold text-ink">6. Pricing and Payments</h2>
             <p>
               Prices are displayed on the website and may change from time to
               time. Applicable delivery charges and other fees, if any, will
@@ -74,7 +74,7 @@ export default function TermsAndConditionsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">7. Delivery</h2>
+            <h2 className="mb-2 text-xl font-semibold text-ink">7. Delivery</h2>
             <p>
               Delivery estimates are indicative and may be affected by
               location, weather, traffic, product availability or other
@@ -84,7 +84,7 @@ export default function TermsAndConditionsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">8. Cancellation, Returns and Refunds</h2>
+            <h2 className="mb-2 text-xl font-semibold text-ink">8. Cancellation, Returns and Refunds</h2>
             <p>
               Order cancellation, returns and refunds are governed by our
               Refund & Cancellation Policy. Please review that policy before
@@ -93,7 +93,7 @@ export default function TermsAndConditionsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">9. Acceptable Use</h2>
+            <h2 className="mb-2 text-xl font-semibold text-ink">9. Acceptable Use</h2>
             <p>
               You agree not to misuse the website, provide false information,
               interfere with its operation or attempt unauthorised access to
@@ -102,7 +102,7 @@ export default function TermsAndConditionsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">10. Limitation of Liability</h2>
+            <h2 className="mb-2 text-xl font-semibold text-ink">10. Limitation of Liability</h2>
             <p>
               SundayShop will make reasonable efforts to provide reliable
               services. To the extent permitted by applicable law, we are not
@@ -114,7 +114,7 @@ export default function TermsAndConditionsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">11. Privacy</h2>
+            <h2 className="mb-2 text-xl font-semibold text-ink">11. Privacy</h2>
             <p>
               Your use of SundayShop is also subject to our Privacy Policy,
               which explains how we handle personal information.
@@ -122,7 +122,7 @@ export default function TermsAndConditionsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">12. Changes to These Terms</h2>
+            <h2 className="mb-2 text-xl font-semibold text-ink">12. Changes to These Terms</h2>
             <p>
               We may update these terms from time to time. Updated terms will
               be published on this page with a revised update date.
@@ -130,14 +130,14 @@ export default function TermsAndConditionsPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">13. Contact Us</h2>
+            <h2 className="mb-2 text-xl font-semibold text-ink">13. Contact Us</h2>
             <p>
               For questions about these terms, contact us at:
               <br />
               Email:{" "}
               <a
                 href="mailto:mmc.javed@gmail.com"
-                className="font-semibold text-green-700 underline"
+                className="font-semibold text-brand underline"
               >
                 mmc.javed@gmail.com
               </a>
@@ -147,7 +147,7 @@ export default function TermsAndConditionsPage() {
           </section>
         </div>
 
-        <Link href="/" className="mt-10 inline-block font-medium text-green-700">
+        <Link href="/" className="mt-10 inline-block font-medium text-brand">
           ← Back to Home
         </Link>
       </section>

@@ -1,24 +1,25 @@
+
 import Link from "next/link";
 
 export default function PrivacyPolicyPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-bg">
       <section className="mx-auto max-w-5xl px-6 py-16">
-        <p className="mb-3 font-semibold text-green-600">
+        <p className="mb-3 font-semibold text-brand">
           SUNDAYSHOP
         </p>
 
-        <h1 className="mb-4 text-4xl font-bold text-gray-900">
+        <h1 className="mb-4 text-4xl font-bold text-ink">
           Privacy Policy
         </h1>
 
-        <p className="mb-10 text-sm text-gray-500">
+        <p className="mb-10 text-sm text-muted">
           Last updated: November 1, 2026
         </p>
 
-        <div className="space-y-8 leading-7 text-gray-600">
+        <div className="space-y-8 leading-7 text-muted">
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               1. Introduction
             </h2>
             <p>
@@ -29,7 +30,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               2. Information We Collect
             </h2>
             <p>
@@ -41,7 +42,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               3. How We Use Your Information
             </h2>
             <p>We use your information to:</p>
@@ -56,7 +57,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               4. Payments
             </h2>
             <p>
@@ -69,7 +70,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               5. Sharing of Information
             </h2>
             <p>
@@ -82,7 +83,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               6. Data Security
             </h2>
             <p>
@@ -93,7 +94,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               7. Cookies
             </h2>
             <p>
@@ -105,7 +106,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               8. Your Choices
             </h2>
             <p>
@@ -116,7 +117,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               9. Changes to This Policy
             </h2>
             <p>
@@ -127,7 +128,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            <h2 className="mb-2 text-xl font-semibold text-ink">
               10. Contact Us
             </h2>
             <p>
@@ -138,7 +139,7 @@ export default function PrivacyPolicyPage() {
               Email:{" "}
               <a
                 href="mailto:mmc.javed@gmail.com"
-                className="font-semibold text-green-700 underline"
+                className="font-semibold text-brand underline"
               >
                 mmc.javed@gmail.com
               </a>
@@ -150,7 +151,7 @@ export default function PrivacyPolicyPage() {
 
         <Link
           href="/"
-          className="mt-10 inline-block font-medium text-green-700"
+          className="mt-10 inline-block font-medium text-brand hover:underline"
         >
           ← Back to Home
         </Link>

@@ -932,6 +932,11 @@ export function Footer() {
 
   <ul className="mt-3 space-y-2 text-sm text-muted">
     <li><Link href="/pricing" className="hover:text-brand">Pricing</Link></li>
+    <li>
+  <Link href="/delivery-information" className="hover:text-brand">
+    Delivery Information
+  </Link>
+</li>
     <li><Link href="/privacy-policy" className="hover:text-brand">Privacy Policy</Link></li>
     <li><Link href="/terms-and-conditions" className="hover:text-brand">Terms & Conditions</Link></li>
     <li><Link href="/refund-policy" className="hover:text-brand">Refund & Cancellation</Link></li>
