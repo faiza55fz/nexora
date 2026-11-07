@@ -58,6 +58,10 @@ export function ProductCard({
   } = useStore();
 
   const saved = wishlist.includes(product.id);
+  console.log("PRODUCT IMAGE CHECK:", {
+  name: product.name,
+  image: product.image,
+});
   const compared = compare.includes(product.id);
 
   const [notifyLoading, setNotifyLoading] = useState(false);
