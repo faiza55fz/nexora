@@ -342,7 +342,7 @@ export default function CartPage() {
                           <div>
                             {product.brand && (
                               <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted">
-                                {product.brand}
+                                sundayshop
                               </p>
                             )}
 

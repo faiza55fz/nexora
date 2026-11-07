@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import crypto from "node:crypto";
 
 function slugify(value: string) {
   return value
@@ -26,6 +27,33 @@ function makeSku(name: string, unit?: string) {
   return `${namePart}-${unitPart}`;
 }
 
+function normalize(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[^\p{L}\p{N}\s]/gu, "");
+}
+
+function makeHash(input: string): string {
+  return crypto
+    .createHash("sha256")
+    .update(input)
+    .digest("hex")
+    .slice(0, 10)
+    .toUpperCase();
+}
+
+function makeBarcode(
+  name: string,
+  brand: string,
+  weight: string,
+): string {
+  const key = `${normalize(name)}|${normalize(brand)}|${normalize(weight)}`;
+
+  return `SS${makeHash(key)}`;
+}
+
 async function getProducts() {
   const { data, error } = await supabaseAdmin
     .from("products")
@@ -49,6 +77,7 @@ moderation_status,
       product_variants (
         id,
         sku,
+        barcode,
         variant_name,
         mrp,
         selling_price,
@@ -220,6 +249,7 @@ export async function POST(request: Request) {
     const cleanUnit = unit?.trim() || "1 unit";
 
     const sku = makeSku(name, cleanUnit);
+    const barcode = makeBarcode(name, brand, cleanUnit);
 
     const { data: variant, error: variantError } =
       await supabaseAdmin
@@ -227,6 +257,7 @@ export async function POST(request: Request) {
         .insert({
           product_id: product.id,
           sku,
+          barcode,
           variant_name: cleanUnit,
           mrp: Number(mrp),
           selling_price: Number(price),

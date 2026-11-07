@@ -313,6 +313,180 @@ export async function PATCH(
         { status: 400 },
       );
     }
+        // Handle delivery partner assignment separately.
+    if (
+      Object.prototype.hasOwnProperty.call(
+        body,
+        "deliveryPartnerId",
+      )
+    ) {
+      const newPartnerId =
+        typeof body.deliveryPartnerId === "string" &&
+        body.deliveryPartnerId.trim()
+          ? body.deliveryPartnerId.trim()
+          : null;
+
+      const { data: currentOrder, error: currentOrderError } =
+        await supabaseAdmin
+          .from("orders")
+          .select("id, delivery_partner_id")
+          .eq("id", orderId)
+          .single();
+
+      if (currentOrderError || !currentOrder) {
+        return NextResponse.json(
+          { error: "Order not found." },
+          { status: 404 },
+        );
+      }
+
+      const previousPartnerId =
+        currentOrder.delivery_partner_id;
+
+      // Verify the selected delivery partner.
+      if (newPartnerId) {
+        const { data: partner, error: partnerError } =
+          await supabaseAdmin
+            .from("delivery_partners")
+            .select("id, status")
+            .eq("id", newPartnerId)
+            .maybeSingle();
+
+        if (partnerError || !partner) {
+          return NextResponse.json(
+            { error: "Delivery partner not found." },
+            { status: 404 },
+          );
+        }
+
+        if (
+          partner.status === "offline" &&
+          newPartnerId !== previousPartnerId
+        ) {
+          return NextResponse.json(
+            { error: "This delivery partner is offline." },
+            { status: 400 },
+          );
+        }
+      }
+
+      // Save or remove the assignment.
+      const { data: updatedOrder, error: assignmentError } =
+        await supabaseAdmin
+          .from("orders")
+          .update({
+            delivery_partner_id: newPartnerId,
+          })
+          .eq("id", orderId)
+          .select("id, order_number, delivery_partner_id")
+          .single();
+
+      if (assignmentError || !updatedOrder) {
+        console.error(
+          "Delivery assignment failed:",
+          assignmentError,
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              assignmentError?.message ||
+              "Unable to update delivery assignment.",
+          },
+          { status: 500 },
+        );
+      }
+
+      // Recalculate status using the partner's remaining active orders.
+      const syncPartnerStatus = async (partnerId: string) => {
+        const { data: partner, error: fetchPartnerError } =
+          await supabaseAdmin
+            .from("delivery_partners")
+            .select("id, status")
+            .eq("id", partnerId)
+            .maybeSingle();
+
+        if (fetchPartnerError || !partner) {
+          throw fetchPartnerError ||
+            new Error("Delivery partner not found.");
+        }
+
+        // Never automatically change an offline partner's status.
+        if (partner.status === "offline") {
+          return;
+        }
+
+        const { data: activeOrders, error: activeOrdersError } =
+          await supabaseAdmin
+            .from("orders")
+            .select("status")
+            .eq("delivery_partner_id", partnerId)
+            .in("status", [
+              "placed",
+              "confirmed",
+              "packed",
+              "shipped",
+              "out-for-delivery",
+            ]);
+
+        if (activeOrdersError) {
+          throw activeOrdersError;
+        }
+
+        const hasActiveOrders =
+          (activeOrders ?? []).length > 0;
+
+        const hasOutForDelivery =
+          (activeOrders ?? []).some(
+            (order) =>
+              order.status === "shipped" ||
+              order.status === "out-for-delivery",
+          );
+
+        const nextStatus = !hasActiveOrders
+          ? "available"
+          : hasOutForDelivery
+            ? "on-delivery"
+            : "assigned";
+
+        const { error: updatePartnerError } =
+          await supabaseAdmin
+            .from("delivery_partners")
+            .update({
+              status: nextStatus,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", partnerId);
+
+        if (updatePartnerError) {
+          throw updatePartnerError;
+        }
+      };
+
+      try {
+        const partnerIds = [
+          ...new Set(
+            [previousPartnerId, newPartnerId].filter(
+              (id): id is string => Boolean(id),
+            ),
+          ),
+        ];
+
+        for (const partnerId of partnerIds) {
+          await syncPartnerStatus(partnerId);
+        }
+      } catch (syncError) {
+        console.error(
+          "Delivery partner status sync failed:",
+          syncError,
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        order: updatedOrder,
+      });
+    }
 
     const allowedRefundStatuses = [
       "not_requested",

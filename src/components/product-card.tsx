@@ -200,7 +200,7 @@ export function ProductCard({
           {/* Brand & Unit */}
           <div className="flex items-center justify-between gap-1 text-[11px] leading-tight">
             <span className="truncate font-medium uppercase tracking-wider text-muted">
-              {product.brand || "SundayShop"}
+              SUNDAYSHOP  
             </span>
 
             {unitSize ? (

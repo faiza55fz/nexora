@@ -13,11 +13,7 @@ import {
   CircleCheck,
 } from "lucide-react";
 
-import {
-  findBestDeliveryPartner,
-  getDeliveryAssignments,
-  getDeliveryMembers,
-} from "@/lib/delivery-assignment";
+
 
 type DeliveryStatus =
   | "available"
@@ -68,8 +64,7 @@ type AdminOrder = {
   }[];
 };
 
-const MEMBERS_KEY = "nexora-delivery-members";
-const ASSIGNMENTS_KEY = "nexora-order-delivery";
+
 const DELIVERY_STAGES_KEY =
   "nexora-delivery-order-stages";
 
@@ -158,30 +153,7 @@ function normalizeMembers(
   }));
 }
 
-function readAssignments(): Record<
-  string,
-  DeliveryAssignment
-> {
-  try {
-    const saved =
-      localStorage.getItem(
-        ASSIGNMENTS_KEY,
-      );
 
-    if (!saved) {
-      return {};
-    }
-
-    const parsed = JSON.parse(saved);
-
-    return parsed &&
-      typeof parsed === "object"
-      ? parsed
-      : {};
-  } catch {
-    return {};
-  }
-}
 
 function readStages(): Record<
   string,
@@ -288,182 +260,150 @@ export default function AdminOrdersPage() {
     ) ?? null;
 
   useEffect(() => {
-    async function loadOrders() {
-      try {
-        const response =
-          await fetch("/api/orders", {
-            method: "GET",
-            cache: "no-store",
-          });
-
-        const data =
-          await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data?.error ||
-              "Unable to fetch orders.",
-          );
-        }
-        const mappedOrders: AdminOrder[] =
-  (data.orders ?? []).map(
-    (order: any) => ({
-      id: order.id,
-      orderNumber:
-        order.order_number,
-      customerName:
-        order.customer_name,
-      customerEmail:
-        order.customer_email,
-      customerPhone:
-        order.customer_phone ?? "",
-      address:
-        order.address,
-      subtotal:
-        Number(order.subtotal),
-      deliveryFee:
-        Number(order.delivery_fee),
-      total:
-        Number(order.total),
-      payment:
-        String(
-          order.payment_method ??
-            "COD",
-        ).toUpperCase(),
-      status:
-        order.status ?? "placed",
-
-      createdAt:
-        order.created_at,
-
-      items:
-        Array.isArray(
-          order.order_items,
-        )
-          ? order.order_items.map(
-              (item: any) => ({
-                id: item.id,
-                productId:
-                  item.product_id,
-                productName:
-                  item.product_name,
-                quantity:
-                  Number(item.quantity),
-                price:
-                  Number(item.price),
-              }),
-            )
-          : [],
-    }),
-  );
-
-        
-          (data.orders ?? []).map(
-            (order: any) => ({
-              id: order.id,
-              orderNumber:
-                order.order_number,
-              customerName:
-                order.customer_name,
-              customerEmail:
-                order.customer_email,
-              customerPhone:
-                order.customer_phone ?? "",
-              address:
-                order.address,
-              subtotal:
-                Number(order.subtotal),
-              deliveryFee:
-                Number(
-                  order.delivery_fee,
-                ),
-              total:
-                Number(order.total),
-              payment:
-                String(
-                  order.payment_method ??
-                    "COD",
-                ).toUpperCase(),
-              status:
-                order.status ?? "placed",
-
-              createdAt:
-                order.created_at,
-
-              items:
-                Array.isArray(
-                  order.order_items,
-                )
-                  ? order.order_items.map(
-                      (item: any) => ({
-                        id: item.id,
-                        productId:
-                          item.product_id,
-                        productName:
-                          item.product_name,
-                        quantity:
-                          Number(
-                            item.quantity,
-                          ),
-                        price:
-                          Number(
-                            item.price,
-                          ),
-                      }),
-                    )
-                  : [],
-            }),
-          );
-
-        setOrders(mappedOrders);
-      } catch (error) {
-        console.error(
-          "Failed to load admin orders:",
-          error,
-        );
-
-        setOrders([]);
-      }
-    }
-
-    loadOrders();
-  }, []);
-
-  function loadDeliveryData() {
+  async function loadOrders() {
     try {
-      const storedMembers =
-        localStorage.getItem(
-          MEMBERS_KEY,
+      const [ordersResponse, partnersResponse] =
+        await Promise.all([
+          fetch("/api/orders", {
+            cache: "no-store",
+          }),
+          fetch("/api/admin/delivery-partners", {
+            cache: "no-store",
+          }),
+        ]);
+
+      const data = await ordersResponse.json();
+      const partnersData = await partnersResponse.json();
+
+      if (!ordersResponse.ok) {
+        throw new Error(
+          data?.error || "Unable to fetch orders.",
+        );
+      }
+
+      if (
+        !partnersResponse.ok ||
+        !partnersData?.success
+      ) {
+        throw new Error(
+          partnersData?.error ||
+            "Unable to fetch delivery partners.",
+        );
+      }
+
+      const mappedMembers: DeliveryMember[] =
+        (partnersData.partners ?? []).map(
+          (partner: any) => ({
+            id: partner.id,
+            name: partner.name || "Delivery member",
+            phone: partner.phone || "",
+            status: normalizeStatus(partner.status),
+            area: partner.area || "",
+          }),
         );
 
-      const parsedMembers =
-        storedMembers
-          ? normalizeMembers(
-              JSON.parse(
-                storedMembers,
-              ),
-            )
-          : [];
+      const mappedAssignments: Record<
+        string,
+        DeliveryAssignment
+      > = {};
 
-      const currentAssignments =
-        readAssignments();
+      const mappedOrders: AdminOrder[] =
+        (data.orders ?? []).map((order: any) => {
+          const partner = Array.isArray(
+            order.delivery_partner,
+          )
+            ? order.delivery_partner[0]
+            : order.delivery_partner;
 
-      const currentStages =
-        readStages();
+          if (order.delivery_partner_id) {
+            mappedAssignments[order.id] = {
+              memberId: order.delivery_partner_id,
+              memberName:
+                partner?.name ||
+                mappedMembers.find(
+                  (member) =>
+                    member.id ===
+                    order.delivery_partner_id,
+                )?.name ||
+                "Delivery member",
+              memberPhone:
+                partner?.phone ||
+                mappedMembers.find(
+                  (member) =>
+                    member.id ===
+                    order.delivery_partner_id,
+                )?.phone ||
+                "",
+            };
+          }
 
-      setMembers(parsedMembers);
-      setAssignments(
-        currentAssignments,
-      );
-      setDeliveryStages(
-        currentStages,
-      );
-    } catch {
+          return {
+            id: order.id,
+            orderNumber: order.order_number,
+            customerName:
+              order.customer_name || "Customer",
+            customerEmail: order.customer_email || "",
+            customerPhone: order.customer_phone || "",
+            address: order.address || "",
+            subtotal: Number(order.subtotal) || 0,
+            deliveryFee: Number(order.delivery_fee) || 0,
+            total: Number(order.total) || 0,
+            payment: String(
+              order.payment_method ?? "COD",
+            ).toUpperCase(),
+            status: order.status ?? "placed",
+            createdAt: order.created_at,
+            deliveryPartnerId:
+              order.delivery_partner_id || null,
+            items: Array.isArray(order.order_items)
+              ? order.order_items.map((item: any) => ({
+                  id: item.id,
+                  productId: item.product_id,
+                  productName:
+                    item.product_name || "Product",
+                  quantity: Number(item.quantity) || 0,
+                  price: Number(item.price) || 0,
+                }))
+              : [],
+          };
+        });
+
+      setOrders(mappedOrders);
+      setMembers(mappedMembers);
+      setAssignments(mappedAssignments);
+    } catch (error) {
+      console.error("Failed to load admin orders:", error);
+      setOrders([]);
       setMembers([]);
       setAssignments({});
-      setDeliveryStages({});
     }
   }
+
+  loadOrders();
+}, []);
+async function loadDeliveryData() {
+  try {
+    const response = await fetch(
+      "/api/admin/delivery-partners",
+      { cache: "no-store" },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.success) {
+      throw new Error("Unable to load delivery partners.");
+    }
+
+    const parsedMembers = normalizeMembers(
+      data.partners,
+    );
+
+    setMembers(parsedMembers);
+    setDeliveryStages(readStages());
+  } catch (error) {
+    console.error("Failed to load delivery partners:", error);
+  }
+}
 
   useEffect(() => {
     loadDeliveryData();
@@ -506,157 +446,7 @@ export default function AdminOrdersPage() {
     };
   }, []);
 
-  useEffect(() => {
-    const runAutoDispatch = () => {
-      try {
-        const currentMembers =
-          getDeliveryMembers();
-
-        const currentAssignments =
-          getDeliveryAssignments();
-
-        let nextMembers = [
-          ...currentMembers,
-        ];
-
-        let nextAssignments = {
-          ...currentAssignments,
-        };
-
-        let changed = false;
-
-        for (const order of orders) {
-          const alreadyAssigned =
-            nextAssignments[
-              order.id
-            ];
-
-          if (alreadyAssigned) {
-            continue;
-          }
-
-          const needsDeliveryAssignment =
-            order.status ===
-              "confirmed" ||
-            order.status ===
-              "packed" ||
-            order.status ===
-              "shipped" ||
-            order.status ===
-              "out-for-delivery";
-
-          if (
-            !needsDeliveryAssignment
-          ) {
-            continue;
-          }
-
-          const availableMembers =
-            nextMembers.filter(
-              (member) =>
-                member.status ===
-                "available",
-            );
-
-          if (
-            availableMembers.length ===
-            0
-          ) {
-            continue;
-          }
-
-          const selectedMember =
-            findBestDeliveryPartner(
-              order as any,
-              availableMembers,
-              nextAssignments,
-            );
-
-          if (!selectedMember) {
-            continue;
-          }
-
-          nextAssignments[
-            order.id
-          ] = {
-            memberId:
-              selectedMember.id,
-            memberName:
-              selectedMember.name,
-            memberPhone:
-              selectedMember.phone,
-          };
-
-          nextMembers =
-            nextMembers.map(
-              (member) =>
-                member.id ===
-                selectedMember.id
-                  ? {
-                      ...member,
-                      status:
-                        "assigned" as DeliveryStatus,
-                      assignedOrder:
-                        order.id,
-                    }
-                  : member,
-            );
-
-          changed = true;
-        }
-
-        if (changed) {
-          localStorage.setItem(
-            MEMBERS_KEY,
-            JSON.stringify(
-              nextMembers,
-            ),
-          );
-
-          localStorage.setItem(
-            ASSIGNMENTS_KEY,
-            JSON.stringify(
-              nextAssignments,
-            ),
-          );
-        }
-
-        setMembers(nextMembers);
-
-        setAssignments(
-          nextAssignments,
-        );
-      } catch {
-        // Ignore invalid localStorage data.
-      }
-    };
-
-    if (orders.length > 0) {
-      runAutoDispatch();
-    }
-
-    window.addEventListener(
-      "storage",
-      runAutoDispatch,
-    );
-
-    window.addEventListener(
-      "focus",
-      runAutoDispatch,
-    );
-
-    return () => {
-      window.removeEventListener(
-        "storage",
-        runAutoDispatch,
-      );
-
-      window.removeEventListener(
-        "focus",
-        runAutoDispatch,
-      );
-    };
-  }, [orders]);
+ 
 
   useEffect(() => {
     const handleClickOutside = (
@@ -749,215 +539,79 @@ export default function AdminOrdersPage() {
   }
   
 
-  function saveDeliveryState(
-    nextMembers: DeliveryMember[],
-    nextAssignments: Record<
-      string,
-      DeliveryAssignment
-    >,
-  ) {
-    setMembers(nextMembers);
+async function assignDeliveryMember(
+  orderId: string,
+  memberId: string,
+) {
+  setStatusError("");
+  setUpdatingStatus(true);
 
-    setAssignments(
-      nextAssignments,
-    );
-
-    localStorage.setItem(
-      MEMBERS_KEY,
-      JSON.stringify(
-        nextMembers,
-      ),
-    );
-
-    localStorage.setItem(
-      ASSIGNMENTS_KEY,
-      JSON.stringify(
-        nextAssignments,
-      ),
-    );
-
-    window.dispatchEvent(
-      new Event(
-        DELIVERY_UPDATED_EVENT,
-      ),
-    );
-  }
-
-  function assignDeliveryMember(
-    orderId: string,
-    memberId: string,
-  ) {
-    const previousAssignment =
-      assignments[orderId];
-
-    if (!memberId) {
-      const nextAssignments = {
-        ...assignments,
-      };
-
-      delete nextAssignments[
-        orderId
-      ];
-
-      const nextMembers =
-        members.map(
-          (
-            member,
-          ): DeliveryMember => {
-            if (
-              previousAssignment &&
-              member.id ===
-                previousAssignment.memberId
-            ) {
-              return {
-                ...member,
-                status:
-                  member.status ===
-                  "offline"
-                    ? "offline"
-                    : "available",
-                assignedOrder:
-                  undefined,
-              };
-            }
-
-            return member;
-          },
-        );
-
-      saveDeliveryState(
-        nextMembers,
-        nextAssignments,
-      );
-
-      setOpenOrderId(null);
-
-      return;
-    }
-
-    const selectedMember =
-      members.find(
-        (member) =>
-          member.id ===
-          memberId,
-      );
-
-    if (!selectedMember) {
-      return;
-    }
-
-    if (
-      selectedMember.status ===
-      "offline"
-    ) {
-      return;
-    }
-
-    const alreadyAssigned =
-      Object.entries(
-        assignments,
-      ).some(
-        ([
-          existingOrderId,
-          assignment,
-        ]) =>
-          existingOrderId !==
-            orderId &&
-          assignment.memberId ===
-            memberId &&
-          !isDeliveryCompleted(
-            existingOrderId,
-            deliveryStages,
-          ),
-      );
-
-    if (alreadyAssigned) {
-      return;
-    }
-
-    let nextMembers =
-      members.map(
-        (
-          member,
-        ): DeliveryMember => {
-          if (
-            previousAssignment &&
-            member.id ===
-              previousAssignment.memberId &&
-            member.id !==
-              memberId
-          ) {
-            return {
-              ...member,
-              status:
-                member.status ===
-                "offline"
-                  ? "offline"
-                  : "available",
-              assignedOrder:
-                undefined,
-            };
-          }
-
-          return member;
-        },
-      );
-
-    nextMembers =
-      nextMembers.map(
-        (
-          member,
-        ): DeliveryMember =>
-          member.id ===
-          memberId
-            ? {
-                ...member,
-                status:
-                  "assigned",
-                assignedOrder:
-                  orderId,
-              }
-            : member,
-      );
-
-    const nextAssignments = {
-      ...assignments,
-      [orderId]: {
-        memberId:
-          selectedMember.id,
-        memberName:
-          selectedMember.name,
-        memberPhone:
-          selectedMember.phone,
+  try {
+    const response = await fetch("/api/orders", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
       },
-    };
+      body: JSON.stringify({
+        orderId,
+        deliveryPartnerId: memberId || null,
+      }),
+    });
 
-    const nextStages = {
-      ...deliveryStages,
-      [orderId]:
-        deliveryStages[
-          orderId
-        ] ?? "assigned",
-    };
+    const data = await response.json();
 
-    setDeliveryStages(
-      nextStages,
+    if (!response.ok) {
+      throw new Error(
+        data?.error || "Unable to update delivery assignment.",
+      );
+    }
+
+    const selectedMember = members.find(
+      (member) => member.id === memberId,
     );
 
-    localStorage.setItem(
-      DELIVERY_STAGES_KEY,
-      JSON.stringify(
-        nextStages,
+    setAssignments((current) => {
+      const next = { ...current };
+
+      if (!memberId) {
+        delete next[orderId];
+      } else if (selectedMember) {
+        next[orderId] = {
+          memberId: selectedMember.id,
+          memberName: selectedMember.name,
+          memberPhone: selectedMember.phone,
+        };
+      }
+
+      return next;
+    });
+
+    setOrders((current) =>
+      current.map((order) =>
+        order.id === orderId
+          ? {
+              ...order,
+              deliveryPartnerId: memberId || null,
+            }
+          : order,
       ),
     );
 
-    saveDeliveryState(
-      nextMembers,
-      nextAssignments,
-    );
+    await loadDeliveryData();
 
     setOpenOrderId(null);
+  } catch (error) {
+    console.error("Delivery assignment failed:", error);
+
+    setStatusError(
+      error instanceof Error
+        ? error.message
+        : "Unable to update delivery assignment.",
+    );
+  } finally {
+    setUpdatingStatus(false);
   }
+}
 
   const pendingOrders =
     orders.filter(
@@ -1004,43 +658,43 @@ export default function AdminOrdersPage() {
 
       {/* Summary */}
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-border bg-white dark:bg-surface p-6 shadow-sm">
           <p className="text-sm text-muted">
             Total orders
           </p>
 
-          <p className="mt-2 text-3xl font-semibold tracking-tight">
+          <p className="mt-2 text-3xl font-semibold tracking-tight text-ink">
             {orders.length}
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-border bg-white dark:bg-surface p-6 shadow-sm">
           <p className="text-sm text-muted">
             Pending orders
           </p>
 
-          <p className="mt-2 text-3xl font-semibold tracking-tight">
+          <p className="mt-2 text-3xl font-semibold tracking-tight text-ink">
             {pendingOrders}
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-border bg-white dark:bg-surface p-6 shadow-sm">
           <p className="text-sm text-muted">
             COD orders
           </p>
 
-          <p className="mt-2 text-3xl font-semibold tracking-tight">
+          <p className="mt-2 text-3xl font-semibold tracking-tight text-ink">
             {codOrders}
           </p>
         </div>
       </div>
 
       {/* Orders */}
-      <div className="overflow-visible rounded-2xl border border-border bg-white shadow-sm">
+      <div className="overflow-visible rounded-2xl border border-border bg-white dark:bg-surface shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1050px] border-collapse">
             <thead>
-              <tr className="border-b border-border bg-slate-50/80 text-left">
+              <tr className="border-b border-border bg-slate-50/80 dark:bg-bg text-left text-ink">
                 <th className="min-w-[180px] px-5 py-4 text-sm font-semibold">
                   Order
                 </th>
@@ -1099,7 +753,7 @@ export default function AdminOrdersPage() {
                       key={
                         order.id
                       }
-                      className="border-b border-border last:border-b-0"
+                      className="border-b border-border last:border-b-0 hover:bg-slate-50/50 dark:hover:bg-brand-soft/30"
                     >
                       {/* Order */}
                       <td className="px-5 py-4 align-middle">
@@ -1149,7 +803,7 @@ export default function AdminOrdersPage() {
 
                       {/* Payment */}
                       <td className="px-5 py-4 align-middle">
-                        <span className="inline-flex max-w-[125px] rounded-full bg-slate-100 px-3 py-1.5 text-sm leading-5 text-ink">
+                        <span className="inline-flex max-w-[125px] rounded-full bg-slate-100 dark:bg-bg px-3 py-1.5 text-sm leading-5 text-ink">
                           {
                             order.payment
                           }
@@ -1184,7 +838,7 @@ export default function AdminOrdersPage() {
                                   : order.id,
                               )
                             }
-                            className={`flex w-full items-center justify-between rounded-xl border bg-white px-4 py-3 text-left transition ${
+                            className={`"flex w-full items-center justify-between rounded-xl border border-border bg-white dark:bg-bg px-4 py-3 text-left text-ink transition <${
                               isOpen
                                 ? "border-teal-700 ring-2 ring-teal-100"
                                 : "border-border hover:border-slate-400"
@@ -1270,8 +924,8 @@ export default function AdminOrdersPage() {
 
                           {/* Dropdown */}
                           {isOpen && (
-                            <div className="absolute left-0 right-0 z-[100] mt-2 overflow-hidden rounded-2xl border border-border bg-white shadow-2xl">
-                              <div className="border-b border-border bg-slate-50 px-4 py-3">
+                            <div className="absolute left-0 right-0 z-[100] mt-2 overflow-hidden rounded-2xl border border-border bg-white dark:bg-surface text-ink shadow-2xl">
+                              <div className="border-b border-border bg-slate-50 dark:bg-bg px-4 py-3">
                                 <p className="text-xs font-semibold uppercase tracking-wide text-muted">
                                   Delivery partner
                                 </p>
@@ -1336,18 +990,23 @@ export default function AdminOrdersPage() {
                                         assignment?.memberId ===
                                         member.id;
 
-                                      const assignedElsewhere =
-                                        Boolean(
-                                          member.assignedOrder &&
-                                            member.assignedOrder !==
-                                              order.id,
-                                        );
+                                      const assignedOrderCount =
+  Object.entries(assignments).filter(
+    ([assignedOrderId, assignment]) =>
+      assignedOrderId !== order.id &&
+      assignment.memberId === member.id &&
+      !isDeliveryCompleted(
+        assignedOrderId,
+        deliveryStages,
+      ),
+  ).length;
 
-                                      const canSelect =
-                                        selected ||
-                                        (member.status ===
-                                          "available" &&
-                                          !assignedElsewhere);
+const assignedElsewhere =
+  assignedOrderCount > 0;
+
+const canSelect =
+  selected ||
+  member.status !== "offline";
 
                                       return (
                                         <button
@@ -1366,13 +1025,13 @@ export default function AdminOrdersPage() {
                                           }
                                           className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${
                                             selected
-                                              ? "bg-teal-50"
+                                              ? "bg-teal-50 dark:bg-brand-soft"
                                               : canSelect
-                                                ? "hover:bg-slate-50"
+                                                ? "hover:bg-slate-50  dark:hover:bg-brand-soft/50"
                                                 : "cursor-not-allowed opacity-50"
                                           }`}
                                         >
-                                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-bg text-slate-600 dark:text-ink">
                                             <UserRound
                                               size={
                                                 17
@@ -1443,10 +1102,8 @@ export default function AdminOrdersPage() {
 
                                             {assignedElsewhere && (
                                               <p className="mt-1 text-xs text-amber-600">
-                                                Currently assigned to{" "}
-                                                {
-                                                  member.assignedOrder
-                                                }
+                                                Currently handling {assignedOrderCount} other order
+{assignedOrderCount === 1 ? "" : "s"}
                                               </p>
                                             )}
 
@@ -1459,7 +1116,7 @@ export default function AdminOrdersPage() {
 
                                             {member.status ===
                                                 "out-on-delivery" &&
-                                              !assignedElsewhere && (
+                                              (
                                                 <p className="mt-1 text-xs text-amber-600">
                                                   Currently out on delivery
                                                 </p>

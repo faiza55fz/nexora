@@ -557,7 +557,7 @@ if (product.active === false) {
     </p>
 
     <p className="mt-1 text-sm text-muted">
-      {product.brand} · {product.subcategory}
+      SUNDAYSHOP· {product.subcategory}
     </p>
 
     <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">

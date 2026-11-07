@@ -388,7 +388,7 @@ export default function FamilyGroceryPackage({
                             {product.brand ? (
                               <p className="truncate text-xs text-muted">
                                 {
-                                  product.brand
+                                  product.brand 
                                 }
                               </p>
                             ) : null}
