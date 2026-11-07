@@ -548,79 +548,157 @@ export default function AdminAnalytics() {
         </div>
       )}
 
-      {/* Orders popup */}
-      {selectedAnalytics === "orders" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-background p-6 shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  Total Orders Details
-                </h2>
-                <p className="mt-1 text-sm text-muted">
-                  Overview of all valid B2C orders
-                </p>
-              </div>
+      ```tsx
+{/* Orders popup */}
+{selectedAnalytics === "orders" && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden overscroll-contain bg-black/60 p-4">
+    <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white p-6 text-gray-900 shadow-2xl">
 
-              <button
-                type="button"
-                onClick={() => setSelectedAnalytics(null)}
-                className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="mt-6 rounded-xl border border-border p-5">
-              <p className="text-sm text-muted">Total Orders</p>
-              <p className="mt-2 text-3xl font-semibold">
-                {totalOrders.toLocaleString("en-IN")}
-              </p>
-              <p className="mt-2 text-sm text-muted">
-                Cancelled orders are excluded from this count.
-              </p>
-            </div>
-          </div>
+      {/* Header */}
+      <div className="flex shrink-0 items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">
+            Total Orders Details
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            Overview of all orders
+          </p>
         </div>
-      )}
+
+        <button
+          type="button"
+          onClick={() => setSelectedAnalytics(null)}
+          className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
+        >
+          Close
+        </button>
+      </div>
+
+      {/* Scrollable Content */}
+      <div className="mt-6 min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-xl border border-gray-300 p-5">
+
+        <p className="text-sm text-muted">
+          Total Orders
+        </p>
+
+        <p className="mt-2 text-3xl font-semibold">
+          {totalOrders.toLocaleString("en-IN")}
+        </p>
+
+        <p className="mt-2 text-sm text-muted">
+          Cancelled orders are excluded from this count.
+        </p>
+
+        <div className="mt-6">
+          <h3 className="mb-3 text-base font-semibold">
+            Order Details
+          </h3>
+
+          {orders.length === 0 ? (
+            <p className="text-sm text-muted">
+              No orders available.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {orders.map((order, index) => (
+                <div
+                  key={`${order.created_at}-${index}`}
+                  className="rounded-lg border border-gray-300 bg-gray-50 p-4 text-gray-900"
+                >
+                  <p className="font-medium">
+                    Order #{index + 1}
+                  </p>
+
+                  <p className="mt-1 text-sm text-muted">
+                    Amount: {inr(order.total, true)}
+                  </p>
+
+                  <p className="text-sm text-muted">
+                    Status: {order.status}
+                  </p>
+
+                  <p className="text-sm text-muted">
+                    Date:{" "}
+                    {order.created_at
+                      ? new Date(order.created_at).toLocaleDateString("en-IN")
+                      : "Not available"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
 
       {/* AOV popup */}
-      {selectedAnalytics === "aov" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-background p-6 shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  Average Order Value Details
-                </h2>
-                <p className="mt-1 text-sm text-muted">
-                  Average amount spent per valid order
-                </p>
-              </div>
+{selectedAnalytics === "aov" && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden overscroll-contain bg-black/60 p-4">
+    <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white p-6 text-gray-900 shadow-2xl">
 
-              <button
-                type="button"
-                onClick={() => setSelectedAnalytics(null)}
-                className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
-              >
-                Close
-              </button>
-            </div>
+      {/* Header */}
+      <div className="flex shrink-0 items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">
+            Average Order Value Details
+          </h2>
 
-            <div className="mt-6 rounded-xl border border-border p-5">
-              <p className="text-sm text-muted">
-                Average Order Value
-              </p>
-              <p className="mt-2 text-3xl font-semibold">
-                {inr(aov, true)}
-              </p>
-              <p className="mt-2 text-sm text-muted">
-                Calculated using {totalOrders.toLocaleString("en-IN")} valid orders.
-              </p>
-            </div>
-          </div>
+          <p className="mt-1 text-sm text-muted">
+            Average amount spent per valid order
+          </p>
         </div>
-      )}
+
+        <button
+          type="button"
+          onClick={() => setSelectedAnalytics(null)}
+          className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
+        >
+          Close
+        </button>
+      </div>
+
+      {/* Scrollable Content */}
+      <div className="mt-6 min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-xl border border-gray-300 p-5">
+
+        <p className="text-sm text-muted">
+          Average Order Value
+        </p>
+
+        <p className="mt-2 text-3xl font-semibold">
+          {inr(aov, true)}
+        </p>
+
+        <p className="mt-2 text-sm text-muted">
+          Calculated using {totalOrders.toLocaleString("en-IN")} valid orders.
+        </p>
+
+        <div className="mt-6 rounded-lg border border-gray-300 bg-gray-50 p-4">
+          <p className="text-sm text-muted">
+            Total B2C GMV
+          </p>
+
+          <p className="mt-2 text-xl font-semibold">
+            {inr(gmv, true)}
+          </p>
+        </div>
+
+        <div className="mt-4 rounded-lg border border-gray-300 bg-gray-50 p-4">
+          <p className="text-sm text-muted">
+            Total Valid Orders
+          </p>
+
+          <p className="mt-2 text-xl font-semibold">
+            {totalOrders.toLocaleString("en-IN")}
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Customers popup */}
       {selectedAnalytics === "customers" && (
