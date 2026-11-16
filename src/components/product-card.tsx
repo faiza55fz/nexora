@@ -13,8 +13,12 @@ type ProductCardProps = {
   product: Product & {
     variantId?: string;
     maxOrderQuantity?: number;
+     festive_sale?: boolean;
+    festive_discount?: number;
   };
   addToOrderMode?: boolean;
+  showFestivePrice?: boolean;
+  campaignDiscount?: number;
 };
 
 export function Stars({
@@ -45,6 +49,8 @@ export function Stars({
 export function ProductCard({
   product,
   addToOrderMode = false,
+  showFestivePrice = false,
+  campaignDiscount,
 }: ProductCardProps) {
   const {
     mode,
@@ -71,6 +77,25 @@ export function ProductCard({
     mode === "b2b"
       ? wholesalePrice(product.tiers, product.moq)
       : product.price;
+
+      const festiveDiscount =
+  showFestivePrice && mode !== "b2b"
+    ? Math.min(
+        90,
+        Math.max(
+          0,
+          Number(
+            campaignDiscount ??
+              (product.festive_sale ? product.festive_discount : 0),
+          ),
+        ),
+      )
+    : 0;
+
+const displayUnit =
+  festiveDiscount > 0
+    ? Number((unit * (1 - festiveDiscount / 100)).toFixed(2))
+    : unit;
 
   const off = discountPct(product.mrp, unit);
 
@@ -164,13 +189,19 @@ export function ProductCard({
           />
         </Link>
 
-        {off > 0 ? (
-          <div className="absolute left-2 top-2 pointer-events-none">
-            <span className="rounded-md bg-cta px-1.5 py-0.5 text-[10px] sm:text-[11px] font-bold text-white shadow-xs">
-              {off}% OFF
-            </span>
-          </div>
-        ) : null}
+        {festiveDiscount > 0 ? (
+  <div className="absolute left-2 top-2 pointer-events-none">
+    <span className="rounded-md bg-cta px-1.5 py-0.5 text-[10px] sm:text-[11px] font-bold text-white shadow-xs">
+      {festiveDiscount}% FESTIVE OFF
+    </span>
+  </div>
+) : off > 0 ? (
+  <div className="absolute left-2 top-2 pointer-events-none">
+    <span className="rounded-md bg-cta px-1.5 py-0.5 text-[10px] sm:text-[11px] font-bold text-white shadow-xs">
+      {off}% OFF
+    </span>
+  </div>
+) : null}
 
         {mode === "b2b" ? (
           <div className="absolute left-2 bottom-2 pointer-events-none">
@@ -240,17 +271,21 @@ export function ProductCard({
 
         {/* Price & Add Section */}
         <div className="mt-2.5 border-t border-line/60 pt-2">
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-sm sm:text-base font-bold text-ink">
-              {inr(unit)}
-            </span>
+          <div className="flex items-baseline gap-1.5 flex-wrap">
+  <span className="text-sm sm:text-base font-bold text-ink">
+    {inr(displayUnit)}
+  </span>
 
-            {product.mrp > unit ? (
-              <span className="text-xs text-muted line-through">
-                {inr(product.mrp)}
-              </span>
-            ) : null}
-          </div>
+  {festiveDiscount > 0 ? (
+    <span className="text-xs text-muted line-through">
+      {inr(unit)}
+    </span>
+  ) : product.mrp > unit ? (
+    <span className="text-xs text-muted line-through">
+      {inr(product.mrp)}
+    </span>
+  ) : null}
+</div>
 
           <div className="mt-2">
             {unavailable ? (

@@ -232,6 +232,7 @@ export const adminNav = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/catalog", label: "Products & Inventory" },
+    { href: "/admin/festivals", label: "Festival Campaigns" },
   { href: "/admin/users", label: "Customers" },
   { href: "/admin/returns", label: "Returns" },
   { href: "/admin/disputes", label: "Complaints" },

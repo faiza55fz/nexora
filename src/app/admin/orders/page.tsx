@@ -944,9 +944,9 @@ async function assignDeliveryMember(
                                       "",
                                     )
                                   }
-                                  className="flex w-full items-center gap-3 border-b border-border px-4 py-3 text-left text-sm text-red-600 transition hover:bg-red-50"
+                                  className="flex w-full items-center gap-3 border-b border-border px-4 py-3 text-left text-sm text-red-600 transition hover:bg-red-50 dark:hover:bg-red-50/50"
                                 >
-                                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50">
+                                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 dark:bg-red-50/50">
                                     ×
                                   </div>
 

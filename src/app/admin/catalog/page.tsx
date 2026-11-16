@@ -162,6 +162,8 @@ type Product = (typeof products)[number] & {
   moderation_status?: "pending" | "approved" | "rejected";
   variants?: ProductVariant[];
   productImages?: ProductImage[];
+  festive_sale?: boolean;
+  festive_discount?: number;
 };
 
 const emptyProduct: Product = {
@@ -191,6 +193,8 @@ const emptyProduct: Product = {
   tiers: [],
   active: true,
   moderation_status: "pending",
+  festive_sale: false,
+  festive_discount: 0,
 };
 
 export default function AdminCatalog() {
@@ -251,6 +255,8 @@ export default function AdminCatalog() {
               active: product.active !== false,
               moderation_status:
                 product.moderation_status || "approved",
+                festive_sale: product.festive_sale === true,
+festive_discount: Number(product.festive_discount || 0),
               rating: Number(product.rating || 0),
               reviewCount: Number(
                 product.review_count || 0,
@@ -329,6 +335,8 @@ export default function AdminCatalog() {
           stock: updatedProduct.stock,
           unit: updatedProduct.specs?.Unit || "",
           active: updatedProduct.active !== false,
+          festive_sale: updatedProduct.festive_sale === true,
+festive_discount: Number(updatedProduct.festive_discount || 0),
         }),
       });
 
@@ -1707,7 +1715,46 @@ async function saveAdditionalImage() {
                     )
                   }
                 />
-              </Field>
+                            </Field>
+
+              {/* Festive Sale Settings */}
+              <div className="rounded-xl border border-line p-4 sm:col-span-2">
+                <label className="flex items-center gap-3 text-sm font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={form.festive_sale === true}
+                    onChange={(e) =>
+                      updateField("festive_sale", e.target.checked)
+                    }
+                    className="h-4 w-4"
+                  />
+                  Include in Festive Sale
+                </label>
+
+                <p className="mt-1 text-xs text-muted">
+                  Display this product in the homepage festive sale section.
+                </p>
+
+                {form.festive_sale && (
+                  <div className="mt-4 max-w-xs">
+                    <Field label="Festive Discount (%)">
+                      <Input
+                        type="number"
+                        min="1"
+                        max="90"
+                        step="1"
+                        value={form.festive_discount ?? 0}
+                        onChange={(e) =>
+                          updateField(
+                            "festive_discount",
+                            Math.min(90, Math.max(0, Number(e.target.value)))
+                          )
+                        }
+                      />
+                    </Field>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="mt-4">

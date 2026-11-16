@@ -12,6 +12,8 @@ import { Check, Clock, Leaf, Truck } from "lucide-react";
 
 type CatalogProduct = (typeof defaultProducts)[number] & {
   active?: boolean;
+  festive_sale?: boolean;
+  festive_discount?: number;
 };
 
 type Coupon = {
@@ -25,8 +27,38 @@ type Coupon = {
   first_order_only: boolean;
 };
 
+type FestivalCampaign = {
+  id: string;
+  festival_name: string;
+  campaign_name: string;
+  heading: string | null;
+  subtitle: string | null;
+  theme: string;
+  background_color: string | null;
+  button_text: string | null;
+  campaign_products: {
+    id: string;
+    product_id: string;
+    festive_discount: number;
+    display_order: number;
+    products: {
+      id: string;
+      name: string;
+      brand: string | null;
+      product_images: {
+        image_url: string;
+        display_order: number;
+        is_primary: boolean;
+      }[];
+    } | null;
+  }[];
+};
+
 export default function HomePage() {
   const { user } = useStore();
+  const [festivalCampaigns, setFestivalCampaigns] = useState<
+  FestivalCampaign[]
+>([]);
 
   const [catalogProducts, setCatalogProducts] =
     useState<CatalogProduct[]>([]);
@@ -88,6 +120,12 @@ export default function HomePage() {
 
               active:
                 product.active !== false,
+
+               festive_sale:
+  product.festive_sale === true,
+
+festive_discount:
+  Number(product.festive_discount || 0),
 
               rating:
                 Number(product.rating || 0),
@@ -187,6 +225,23 @@ export default function HomePage() {
     loadCoupons();
   }, []);
 
+  useEffect(() => {
+  async function loadFestivalCampaigns() {
+    try {
+      const response = await fetch("/api/festival-campaigns");
+      const result = await response.json();
+
+      if (result.success) {
+        setFestivalCampaigns(result.campaigns || []);
+      }
+    } catch (error) {
+      console.error("Failed to load festival campaigns:", error);
+    }
+  }
+
+  loadFestivalCampaigns();
+}, []);
+
   function formatCouponDiscount(coupon: Coupon) {
     if (coupon.discount_type === "percentage") {
       return `${coupon.discount_value}% OFF`;
@@ -220,9 +275,14 @@ export default function HomePage() {
     }
   }
 
-  const activeProducts = (
+  const activeProducts: CatalogProduct[]= (
     catalogProducts.length > 0 ? catalogProducts : defaultProducts
   ).filter((product) => product.active !== false);
+  const festiveProducts = activeProducts.filter(
+  (product) =>
+    product.festive_sale === true &&
+    Number(product.festive_discount || 0) > 0,
+);
 
   const homeCategories = [
     {
@@ -650,6 +710,106 @@ export default function HomePage() {
     </div>
   </div>
 </section>
+
+{/* Festival Campaign Banner */}
+{festivalCampaigns.length > 0 ? (
+  festivalCampaigns.slice(0, 1).map((campaign) => (
+    <section
+      key={campaign.id}
+      className="mx-auto max-w-7xl px-3 pt-6 sm:px-4 sm:pt-10"
+    >
+      <div
+        className="relative overflow-hidden rounded-2xl p-5 sm:p-8 lg:p-10"
+        style={{
+          backgroundColor: campaign.background_color || "#FFF0D9",
+        }}
+      >
+        <div className="grid items-center gap-6 md:grid-cols-2">
+          <div className="relative z-10">
+            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-cta">
+              {campaign.festival_name} Specials
+            </p>
+
+            <h2 className="text-2xl font-extrabold text-ink sm:text-4xl">
+              {campaign.heading || campaign.campaign_name}
+            </h2>
+
+            {campaign.subtitle && (
+              <p className="mt-3 max-w-md text-sm text-ink/80 sm:text-base">
+                {campaign.subtitle}
+              </p>
+            )}
+
+            <Link
+              href={`/festivals/${campaign.id}`}
+              className="mt-5 inline-flex rounded-full bg-cta px-6 py-3 text-sm font-bold text-white transition hover:opacity-90"
+            >
+              {campaign.button_text || "Shop Now"} →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {campaign.campaign_products.slice(0, 4).map((item) => {
+              const product = item.products;
+              const image =
+                product?.product_images?.find(
+                  (img) => img.is_primary
+                )?.image_url ||
+                product?.product_images?.[0]?.image_url;
+
+              return (
+                <div
+                  key={item.id}
+                  className="flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-white/80 p-2 shadow-sm"
+                >
+                  {image ? (
+                    <img
+                      src={image}
+                      alt={product?.name || "Festival product"}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-sm font-medium text-muted">
+                      {product?.name || "Product"}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
+  ))
+) : (
+  /* Keep the existing product-level festive sale as a fallback */
+  festiveProducts.length > 0 && (
+    <section className="mx-auto max-w-7xl px-3 pt-6 sm:px-4 sm:pt-10">
+      <div className="mb-4">
+        <p className="text-xs font-bold uppercase tracking-wider text-cta">
+          Limited Time Offers
+        </p>
+        <h2 className="text-xl font-bold text-ink sm:text-2xl">
+          🎉 Festive Specials
+        </h2>
+        <p className="mt-1 text-xs text-muted sm:text-sm">
+          Celebrate with special savings on selected products!
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {festiveProducts.slice(0, 8).map((product) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            showFestivePrice
+          />
+        ))}
+      </div>
+    </section>
+  )
+)}
+
       
     {/* 3. Shop by Category */}
 <section className="mx-auto max-w-7xl px-3 sm:px-4 pt-3 sm:pt-8">

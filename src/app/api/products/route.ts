@@ -70,6 +70,8 @@ async function getProducts() {
       created_at,
       updated_at,
 moderation_status,
+festive_sale,
+festive_discount,
       categories (
         id,
         name
@@ -432,6 +434,13 @@ export async function PATCH(request: Request) {
           updated_at: new Date().toISOString(),
           ...(moderation_status !== undefined && {
     moderation_status,
+  }),
+  ...(body.festive_sale !== undefined && {
+    festive_sale: Boolean(body.festive_sale),
+  }),
+
+  ...(body.festive_discount !== undefined && {
+    festive_discount: Number(body.festive_discount),
   }),
         })
         .eq("id", id);
