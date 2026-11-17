@@ -323,8 +323,8 @@ export default function CartPage() {
                   (product as { lowStockThreshold?: number }).lowStockThreshold ?? 5,
                 );
 
-                const exceedsStock =
-                  currentStock > 0 && row.qty > currentStock;
+                const exceedsLimit =
+                  currentStock > 0 && row.qty > quantityLimit;
 
                 const stockIsLimit =
                   currentStock < maxOrderQuantity;
@@ -493,17 +493,20 @@ export default function CartPage() {
                           <p className="mt-2 text-[11px] font-medium text-danger">
                             Currently out of stock
                           </p>
-                        ) : exceedsStock ? (
+                        ) : exceedsLimit ? (
                           <p className="mt-2 flex flex-wrap items-center gap-x-2 text-[11px] font-medium text-danger">
                             <span>
-                              Only {currentStock} in stock. Reduce the quantity to continue.
+                              {stockIsLimit
+                                ? `Only ${currentStock} in stock.`
+                                : `Maximum ${quantityLimit} units per order.`}{" "}
+                              Reduce the quantity to continue.
                             </span>
                             <button
                               type="button"
-                              onClick={() => setQty(row.productId, currentStock)}
+                              onClick={() => setQty(row.productId, quantityLimit)}
                               className="font-semibold underline hover:no-underline"
                             >
-                              Update to {currentStock}
+                              Update to {quantityLimit}
                             </button>
                           </p>
                         ) : row.qty >= quantityLimit ? (
