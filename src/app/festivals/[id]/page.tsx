@@ -1,77 +1,64 @@
-
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui";
-import type { Product } from "@/lib/types";
+import {
+  buildFestiveCollections,
+  mapCampaignProducts,
+  maxCampaignDiscount,
+  type FestivalCampaign,
+  type FestiveProduct,
+} from "@/components/festive/campaign-utils";
+import { FestiveCarousel } from "@/components/festive/festive-carousel";
+import { FestiveCategoryTiles } from "@/components/festive/festive-category-tiles";
+import { FestivalHero } from "@/components/festive/festival-hero";
+import { FestiveProductCard } from "@/components/festive/festive-product-card";
+import { FestiveSection } from "@/components/festive/festive-section";
+import { FESTIVE_PRICE_NOTE } from "@/components/festive/festive-showcase";
+import { resolveFestivalTheme } from "@/components/festive/festival-themes";
 
-type FestivalCampaign = {
-  id: string;
-  festival_name: string;
-  campaign_name: string;
-  heading: string | null;
-  subtitle: string | null;
-  theme: string;
-  background_color: string | null;
-  button_text: string | null;
-  campaign_products: {
-    id: string;
-    product_id: string;
-    festive_discount: number;
-    display_order: number;
-    products: {
-      id: string;
-      name: string;
-      brand: string | null;
-      category_id: string | null;
-      subcategory: string | null;
-      description: string | null;
-      active: boolean;
-      rating: number | null;
-      review_count: number | null;
-      categories: { id: string; name: string } | null;
-      product_variants: {
-        id: string;
-        variant_name: string;
-        mrp: number;
-        selling_price: number;
-        gst_rate: number;
-        active: boolean;
-        inventory: {
-          stock_quantity: number;
-          reserved_quantity: number;
-        }[];
-      }[];
-      product_images: {
-        id: string;
-        image_url: string;
-        display_order: number;
-        is_primary: boolean;
-      }[];
-    } | null;
-  }[];
-};
+type SortKey = "featured" | "festive" | "price-asc" | "price-desc" | "rating";
 
-type CampaignProduct = Product & {
-  variantId?: string;
-  maxOrderQuantity?: number;
-};
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "featured", label: "Featured" },
+  { value: "festive", label: "Biggest festive offer" },
+  { value: "price-asc", label: "Price: Low to High" },
+  { value: "price-desc", label: "Price: High to Low" },
+  { value: "rating", label: "Customer rating" },
+];
 
-type CampaignVariant = {
-  id: string;
-  variant_name: string;
-  mrp: number;
-  selling_price: number;
-  gst_rate: number;
-  active: boolean;
-  inventory: {
-    stock_quantity: number;
-    reserved_quantity: number;
-  }[];
-};
+function sortProducts(products: FestiveProduct[], sort: SortKey) {
+  const sorted = [...products];
+  switch (sort) {
+    case "festive":
+      return sorted.sort((a, b) => b.festiveDiscount - a.festiveDiscount);
+    case "price-asc":
+      return sorted.sort((a, b) => a.price - b.price);
+    case "price-desc":
+      return sorted.sort((a, b) => b.price - a.price);
+    case "rating":
+      return sorted.sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount);
+    default:
+      return sorted.sort((a, b) => a.displayOrder - b.displayOrder);
+  }
+}
+
+function LoadingState() {
+  return (
+    <main className="mx-auto max-w-7xl px-3 py-6 sm:px-4 sm:py-10" aria-busy="true">
+      <div className="h-[420px] animate-pulse rounded-3xl bg-surface-2 sm:h-[360px]" />
+      <div className="mt-8 h-6 w-56 animate-pulse rounded bg-surface-2" />
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div key={index} className="aspect-[3/5] animate-pulse rounded-2xl bg-surface-2" />
+        ))}
+      </div>
+      <span className="sr-only">Loading festival offers...</span>
+    </main>
+  );
+}
 
 export default function FestivalOffersPage() {
   const params = useParams<{ id: string }>();
@@ -80,6 +67,8 @@ export default function FestivalOffersPage() {
   const [campaign, setCampaign] = useState<FestivalCampaign | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [sort, setSort] = useState<SortKey>("featured");
 
   useEffect(() => {
     async function loadCampaign() {
@@ -110,90 +99,39 @@ export default function FestivalOffersPage() {
     if (campaignId) loadCampaign();
   }, [campaignId]);
 
-  const products: {
-    product: CampaignProduct;
-    discount: number;
-  }[] = (campaign?.campaign_products ?? [])
-    .map((item) => {
-      const product = Array.isArray(item.products)
-        ? item.products[0]
-        : item.products;
+  const theme = resolveFestivalTheme(campaign ?? {});
+  const products = useMemo(() => mapCampaignProducts(campaign), [campaign]);
 
-      if (!product) return null;
+  const collections = useMemo(
+    () =>
+      buildFestiveCollections(products, campaign?.festival_name ?? "festive", {
+        includeCategories: true,
+      }),
+    [products, campaign?.festival_name],
+  );
 
-const variants = product.product_variants as CampaignVariant[];
+  const categoryFilters = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const product of products) {
+      if (product.category) {
+        counts.set(product.category, (counts.get(product.category) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  }, [products]);
 
-const activeVariants = variants.filter(
-  (variant: CampaignVariant) => variant.active !== false,
-);
-
-const selectedVariant =
-  activeVariants.find((variant: CampaignVariant) =>
-    variant.inventory.some(
-      (stock) =>
-        stock.stock_quantity - stock.reserved_quantity > 0,
-    ),
-  ) || activeVariants[0];
-
-const stock =
-  selectedVariant?.inventory.reduce(
-    (total: number, inventory) =>
-      total +
-      Math.max(
-        0,
-        inventory.stock_quantity - inventory.reserved_quantity,
+  const visibleProducts = useMemo(
+    () =>
+      sortProducts(
+        activeCategory === "all"
+          ? products
+          : products.filter((product) => product.category === activeCategory),
+        sort,
       ),
-    0,
-  ) ?? 0;
+    [products, activeCategory, sort],
+  );
 
-      const images = [...product.product_images].sort(
-        (a, b) => a.display_order - b.display_order,
-      );
-
-      const primaryImage =
-        images.find((image) => image.is_primary)?.image_url ||
-        images[0]?.image_url ||
-        "/placeholder.png";
-
-      const mappedProduct: CampaignProduct = {
-        id: product.id,
-        name: product.name,
-        brand: product.brand || "",
-        category: product.categories?.name || "",
-        subcategory: product.subcategory || "",
-        description: product.description || "",
-        image: primaryImage,
-        images: images.map((image) => image.image_url),
-        price: Number(selectedVariant?.selling_price || 0),
-        mrp: Number(selectedVariant?.mrp || 0),
-        stock,
-        active: product.active,
-        rating: Number(product.rating || 0),
-        reviewCount: Number(product.review_count || 0),
-        moq: 1,
-        tiers: [],
-        specs: {},
-        variantId: selectedVariant?.id,
-        maxOrderQuantity: stock,
-      }as unknown as CampaignProduct;
-
-      return {
-        product: mappedProduct,
-        discount: Number(item.festive_discount || 0),
-      };
-    })
-    .filter(
-      (item): item is { product: CampaignProduct; discount: number } =>
-        item !== null,
-    );
-
-  if (loading) {
-    return (
-      <main className="mx-auto max-w-7xl px-4 py-16 text-center">
-        Loading festival offers...
-      </main>
-    );
-  }
+  if (loading) return <LoadingState />;
 
   if (error || !campaign) {
     return (
@@ -212,54 +150,111 @@ const stock =
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-3 py-6 sm:px-4 sm:py-10">
-      <div
-        className="overflow-hidden rounded-2xl px-5 py-10 sm:px-10 sm:py-14"
-        style={{
-          backgroundColor: campaign.background_color || "#FFF0D9",
-        }}
-      >
-        <p className="text-xs font-bold uppercase tracking-widest text-cta">
-          {campaign.festival_name} Specials
-        </p>
+    <main className="mx-auto max-w-7xl px-3 py-4 sm:px-4 sm:py-8">
+      <nav className="mb-3 text-xs text-muted" aria-label="Breadcrumb">
+        <Link href="/" className="hover:text-brand">Home</Link>
+        <span className="mx-1.5">/</span>
+        <span className="font-semibold text-ink">{campaign.festival_name}</span>
+      </nav>
 
-        <h1 className="mt-3 text-3xl font-extrabold text-ink sm:text-5xl">
-          {campaign.heading || campaign.campaign_name}
-        </h1>
-
-        {campaign.subtitle && (
-          <p className="mt-3 max-w-2xl text-sm text-ink/80 sm:text-base">
-            {campaign.subtitle}
-          </p>
-        )}
-
-        <p className="mt-5 text-sm font-semibold text-ink">
-          Celebrate more. Save more!
-        </p>
-      </div>
-
-      <div className="mb-5 mt-8">
-        <h2 className="text-xl font-bold text-ink sm:text-2xl">
-          Shop {campaign.festival_name} Offers
-        </h2>
-        <p className="mt-1 text-sm text-muted">
-          Special savings on products selected for this festival.
-        </p>
-      </div>
+      <FestivalHero
+        campaign={campaign}
+        products={products}
+        theme={theme}
+        maxDiscount={maxCampaignDiscount(products)}
+        ctaHref="#all-offers"
+        headingLevel="h1"
+      />
 
       {products.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {products.map(({ product, discount }) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              showFestivePrice
-              campaignDiscount={discount}
+        <>
+          <div
+            className="mt-4 rounded-3xl border px-3 pb-5 sm:px-6 sm:pb-7"
+            style={{ background: theme.soft, borderColor: theme.softBorder }}
+          >
+            <FestiveCategoryTiles
+              theme={theme}
+              products={products}
+              festivalName={campaign.festival_name}
             />
-          ))}
-        </div>
+
+            {collections.map((collection) => (
+              <FestiveSection
+                key={collection.key}
+                theme={theme}
+                eyebrow={collection.eyebrow}
+                title={collection.title}
+                subtitle={collection.subtitle}
+              >
+                <FestiveCarousel ariaLabel={collection.title}>
+                  {collection.products.map((product) => (
+                    <FestiveProductCard key={product.id} product={product} theme={theme} />
+                  ))}
+                </FestiveCarousel>
+              </FestiveSection>
+            ))}
+          </div>
+
+          <FestiveSection
+            id="all-offers"
+            theme={theme}
+            eyebrow="More to explore"
+            title={`All ${campaign.festival_name} Offers`}
+            subtitle={`${products.length} ${products.length === 1 ? "product" : "products"} selected for this festival`}
+          >
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
+                {[["all", products.length] as [string, number], ...categoryFilters].map(
+                  ([category, count]) => {
+                    const active = activeCategory === category;
+                    return (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => setActiveCategory(category)}
+                        aria-pressed={active}
+                        className="shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-bold transition sm:text-sm"
+                        style={
+                          active
+                            ? { background: theme.pageAccent, borderColor: theme.pageAccent, color: "#ffffff" }
+                            : undefined
+                        }
+                      >
+                        {category === "all" ? "All" : category}
+                        <span className="ml-1 opacity-70">({count})</span>
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+
+              <label className="flex shrink-0 items-center gap-2 text-xs font-semibold text-muted sm:text-sm">
+                Sort by
+                <select
+                  value={sort}
+                  onChange={(event) => setSort(event.target.value as SortKey)}
+                  className="rounded-xl border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink outline-none focus:border-brand sm:text-sm"
+                >
+                  {SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+              {visibleProducts.map((product) => (
+                <FestiveProductCard key={product.id} product={product} theme={theme} />
+              ))}
+            </div>
+          </FestiveSection>
+
+          <p className="mt-4 text-[11px] text-muted">{FESTIVE_PRICE_NOTE}</p>
+        </>
       ) : (
-        <div className="rounded-xl border border-line p-10 text-center">
+        <div className="mt-8 rounded-2xl border border-line bg-surface p-10 text-center text-muted">
           No products are currently available in this campaign.
         </div>
       )}

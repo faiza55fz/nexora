@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { categories, products as defaultProducts } from "@/lib/data";
 import { ProductCard } from "@/components/product-card";
+import { FestiveShowcase } from "@/components/festive/festive-showcase";
+import type { FestivalCampaign } from "@/components/festive/campaign-utils";
 import RecommendedProducts from "@/components/recommended-products";
 import FamilyGroceryPackage from "@/components/family-grocery-package";
 import { Badge, Button } from "@/components/ui";
@@ -25,33 +27,6 @@ type Coupon = {
   maximum_discount: number | null;
   expires_at: string | null;
   first_order_only: boolean;
-};
-
-type FestivalCampaign = {
-  id: string;
-  festival_name: string;
-  campaign_name: string;
-  heading: string | null;
-  subtitle: string | null;
-  theme: string;
-  background_color: string | null;
-  button_text: string | null;
-  campaign_products: {
-    id: string;
-    product_id: string;
-    festive_discount: number;
-    display_order: number;
-    products: {
-      id: string;
-      name: string;
-      brand: string | null;
-      product_images: {
-        image_url: string;
-        display_order: number;
-        is_primary: boolean;
-      }[];
-    } | null;
-  }[];
 };
 
 export default function HomePage() {
@@ -714,72 +689,7 @@ festive_discount:
 {/* Festival Campaign Banner */}
 {festivalCampaigns.length > 0 ? (
   festivalCampaigns.slice(0, 1).map((campaign) => (
-    <section
-      key={campaign.id}
-      className="mx-auto max-w-7xl px-3 pt-6 sm:px-4 sm:pt-10"
-    >
-      <div
-        className="relative overflow-hidden rounded-2xl p-5 sm:p-8 lg:p-10"
-        style={{
-          backgroundColor: campaign.background_color || "#FFF0D9",
-        }}
-      >
-        <div className="grid items-center gap-6 md:grid-cols-2">
-          <div className="relative z-10">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-cta">
-              {campaign.festival_name} Specials
-            </p>
-
-            <h2 className="text-2xl font-extrabold text-ink sm:text-4xl">
-              {campaign.heading || campaign.campaign_name}
-            </h2>
-
-            {campaign.subtitle && (
-              <p className="mt-3 max-w-md text-sm text-ink/80 sm:text-base">
-                {campaign.subtitle}
-              </p>
-            )}
-
-            <Link
-              href={`/festivals/${campaign.id}`}
-              className="mt-5 inline-flex rounded-full bg-cta px-6 py-3 text-sm font-bold text-white transition hover:opacity-90"
-            >
-              {campaign.button_text || "Shop Now"} →
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            {campaign.campaign_products.slice(0, 4).map((item) => {
-              const product = item.products;
-              const image =
-                product?.product_images?.find(
-                  (img) => img.is_primary
-                )?.image_url ||
-                product?.product_images?.[0]?.image_url;
-
-              return (
-                <div
-                  key={item.id}
-                  className="flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-white/80 p-2 shadow-sm"
-                >
-                  {image ? (
-                    <img
-                      src={image}
-                      alt={product?.name || "Festival product"}
-                      className="h-full w-full object-contain"
-                    />
-                  ) : (
-                    <span className="text-sm font-medium text-muted">
-                      {product?.name || "Product"}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </section>
+    <FestiveShowcase key={campaign.id} campaign={campaign} />
   ))
 ) : (
   /* Keep the existing product-level festive sale as a fallback */
