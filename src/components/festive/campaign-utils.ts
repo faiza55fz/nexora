@@ -107,7 +107,7 @@ function availableStock(variant: CampaignVariant | undefined) {
 export function clampDiscount(value: unknown) {
   const discount = Number(value || 0);
   if (!Number.isFinite(discount)) return 0;
-  return Math.min(90, Math.max(0, Math.round(discount)));
+  return Math.min(90, Math.max(0, Math.round(discount * 100) / 100));
 }
 
 export function mapCampaignProducts(
