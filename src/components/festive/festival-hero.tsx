@@ -131,7 +131,16 @@ export function FestivalHero({
             <Link
               href={ctaHref}
               onClick={(event) => {
-                if (!ctaHref.startsWith("#")) return;
+                if (
+                  !ctaHref.startsWith("#") ||
+                  event.button !== 0 ||
+                  event.metaKey ||
+                  event.ctrlKey ||
+                  event.shiftKey ||
+                  event.altKey
+                ) {
+                  return;
+                }
                 const target = document.getElementById(ctaHref.slice(1));
                 if (!target) return;
                 event.preventDefault();
