@@ -113,10 +113,15 @@ export default function CartPage() {
                   variant?.gst_rate || 0,
                 ),
 
-              stock:
-                Number(
-                  inventory?.stock_quantity || 0,
-                ),
+              stock: Math.max(
+                0,
+                Number(inventory?.stock_quantity || 0) -
+                  Number(inventory?.reserved_quantity || 0),
+              ),
+
+              lowStockThreshold: Number(
+                inventory?.low_stock_threshold ?? 5,
+              ),
 
               maxOrderQuantity:
                 Number(
@@ -314,6 +319,16 @@ export default function CartPage() {
                 const canIncrease =
                   row.qty < quantityLimit;
 
+                const lowStockThreshold = Number(
+                  (product as { lowStockThreshold?: number }).lowStockThreshold ?? 5,
+                );
+
+                const exceedsStock =
+                  currentStock > 0 && row.qty > currentStock;
+
+                const stockIsLimit =
+                  currentStock < maxOrderQuantity;
+
                 const hasDiscount = product.mrp > product.price;
                 const unitText = product.specs.Unit ?? product.specs.Weight ?? "Pack";
 
@@ -474,17 +489,34 @@ export default function CartPage() {
                         </div>
 
                         {/* Quantity Limit Notice */}
-                        {row.qty >= quantityLimit && quantityLimit > 0 && (
-                          <p className="mt-2 text-[11px] font-medium text-amber-700">
-                            Maximum order limit reached ({quantityLimit} units)
-                          </p>
-                        )}
-
-                        {currentStock === 0 && (
+                        {currentStock === 0 ? (
                           <p className="mt-2 text-[11px] font-medium text-danger">
                             Currently out of stock
                           </p>
-                        )}
+                        ) : exceedsStock ? (
+                          <p className="mt-2 flex flex-wrap items-center gap-x-2 text-[11px] font-medium text-danger">
+                            <span>
+                              Only {currentStock} in stock. Reduce the quantity to continue.
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setQty(row.productId, currentStock)}
+                              className="font-semibold underline hover:no-underline"
+                            >
+                              Update to {currentStock}
+                            </button>
+                          </p>
+                        ) : row.qty >= quantityLimit ? (
+                          <p className="mt-2 text-[11px] font-medium text-amber-700">
+                            {stockIsLimit
+                              ? `Only ${currentStock} in stock`
+                              : `Maximum order limit reached (${quantityLimit} units)`}
+                          </p>
+                        ) : currentStock <= lowStockThreshold ? (
+                          <p className="mt-2 text-[11px] font-medium text-amber-700">
+                            Only {currentStock} left
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                   </div>

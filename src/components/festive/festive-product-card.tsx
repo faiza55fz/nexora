@@ -8,6 +8,9 @@ import { discountPct, inr } from "@/lib/format";
 import { showFallbackImage, type FestiveProduct } from "./campaign-utils";
 import type { FestivalTheme } from "./festival-themes";
 
+// Matches the cart's default per-item order limit.
+const MAX_ORDER_QUANTITY = 5;
+
 type FestiveProductCardProps = {
   product: FestiveProduct;
   theme: FestivalTheme;
@@ -34,10 +37,12 @@ export function FestiveProductCard({
 
   const mrpOff = discountPct(product.mrp, product.price);
   const unavailable = !product.active || product.stock <= 0 || !product.variantId;
+  const cartLimit = Math.min(MAX_ORDER_QUANTITY, product.stock);
+  const atCartLimit = inCartQty >= cartLimit;
   const href = `/products/${product.id}`;
 
   function handleAdd() {
-    if (unavailable) return;
+    if (unavailable || atCartLimit) return;
     addToCart(product.id, 1);
     setJustAdded(true);
   }
@@ -153,13 +158,16 @@ export function FestiveProductCard({
             <button
               type="button"
               onClick={handleAdd}
-              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all hover:brightness-95 active:scale-[0.98] sm:text-sm"
+              disabled={atCartLimit}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all hover:brightness-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
               style={{ background: theme.accent, color: theme.accentInk }}
             >
               {justAdded ? <Check size={14} /> : <ShoppingCart size={14} />}
               {justAdded
                 ? "Added"
-                : inCartQty > 0
+                : atCartLimit
+                  ? `Max ${cartLimit} in cart`
+                  : inCartQty > 0
                   ? `Add more (${inCartQty})`
                   : "Add to Cart"}
             </button>
