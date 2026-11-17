@@ -130,6 +130,14 @@ export function FestivalHero({
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3 md:justify-start">
             <Link
               href={ctaHref}
+              onClick={(event) => {
+                if (!ctaHref.startsWith("#")) return;
+                const target = document.getElementById(ctaHref.slice(1));
+                if (!target) return;
+                event.preventDefault();
+                target.scrollIntoView({ behavior: "smooth", block: "start" });
+                window.history.replaceState(null, "", ctaHref);
+              }}
               className="inline-flex h-12 items-center gap-2 rounded-full px-7 text-sm font-extrabold uppercase tracking-wide shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] sm:text-[15px]"
               style={{ background: theme.accent, color: theme.accentInk }}
             >

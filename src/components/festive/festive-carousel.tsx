@@ -64,7 +64,7 @@ export function FestiveCarousel({ children, ariaLabel }: FestiveCarouselProps) {
       <div
         ref={trackRef}
         onScroll={updateArrows}
-        className="-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-3 pb-3 pt-1 [scrollbar-width:none] sm:-mx-4 sm:gap-4 sm:px-4 [&::-webkit-scrollbar]:hidden"
+        className="-mx-3 flex snap-x snap-mandatory scroll-px-3 gap-3 sm:scroll-px-4 overflow-x-auto scroll-smooth px-3 pb-3 pt-1 [scrollbar-width:none] sm:-mx-4 sm:gap-4 sm:px-4 [&::-webkit-scrollbar]:hidden"
       >
         {Children.map(children, (child) => (
           <div className="w-[44vw] max-w-[200px] shrink-0 snap-start sm:w-[200px] sm:max-w-none lg:w-[212px]">
