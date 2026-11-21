@@ -136,11 +136,12 @@ export function mapCampaignProducts(
         PLACEHOLDER_IMAGE;
 
       const categoryName = first(product.categories)?.name || "";
+      const brand = product.brand?.trim() || "";
 
       return {
         id: product.id,
         name: product.name,
-        brand: product.brand?.trim() || "",
+        brand: brand.toUpperCase() === "NEXORA" ? "SUNDAYSHOP" : brand,
         category: categoryName,
         categorySlug: categoryName.trim().toLowerCase(),
         unit: selectedVariant?.variant_name || product.subcategory || "",

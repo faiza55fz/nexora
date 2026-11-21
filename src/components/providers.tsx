@@ -215,7 +215,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         name:
           customer?.name ||
           authUser.user_metadata?.name ||
-          "Nexora Customer",
+          "SundayShop Customer",
         email:
           customer?.email ||
           authUser.email ||
@@ -670,7 +670,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               "granted"
           ) {
             new Notification(
-              "Nexora — Back in stock",
+              "SundayShop — Back in stock",
               {
                 body: `${product.name} is available again.`,
               },

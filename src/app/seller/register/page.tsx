@@ -11,7 +11,7 @@ export default function SellerRegister() {
   const router = useRouter();
   const { user, login } = useStore();
   if (!user) {
-    return <div className="mx-auto max-w-xl px-4 py-12"><Card className="p-8 text-center"><h1 className="text-2xl font-bold">Login first</h1><p className="mt-2 text-muted">Create or log in to your Nexora account before registering as a vendor.</p><Button className="mt-6" size="lg" onClick={() => router.push("/login?next=/seller/register")}>Go to login</Button></Card></div>;
+    return <div className="mx-auto max-w-xl px-4 py-12"><Card className="p-8 text-center"><h1 className="text-2xl font-bold">Login first</h1><p className="mt-2 text-muted">Create or log in to your SundayShop account before registering as a vendor.</p><Button className="mt-6" size="lg" onClick={() => router.push("/login?next=/seller/register")}>Go to login</Button></Card></div>;
   }
 
   if (submitted) {
